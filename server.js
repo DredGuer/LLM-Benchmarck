@@ -370,18 +370,24 @@ function getMachineManufacturer() {
  */
 app.get('/api/memory', async (req, res) => {
   try {
+    console.log('[DEBUG] /api/memory - Fetching Ollama PID...');
     const pid = await getOllamaPID();
+    console.log('[DEBUG] /api/memory - Ollama PID:', pid);
     
     if (!pid) {
+      console.log('[DEBUG] /api/memory - Ollama not running');
       return res.status(404).json({
         error: 'Ollama process not found. Make sure Ollama is running.',
         system: getSystemMemory()
       });
     }
     
+    console.log('[DEBUG] /api/memory - Getting memory for PID:', pid);
     const mem = await getProcessMemory(pid);
+    console.log('[DEBUG] /api/memory - Raw memory data:', mem);
     
     if (!mem) {
+      console.log('[DEBUG] /api/memory - Could not get memory for PID:', pid);
       return res.status(404).json({
         error: 'Could not get memory for Ollama process',
         pid: pid,
@@ -389,6 +395,7 @@ app.get('/api/memory', async (req, res) => {
       });
     }
     
+    console.log('[DEBUG] /api/memory - Returning memory:', mem.memoryMB, 'MB');
     res.json({
       success: true,
       pid: pid,
@@ -401,6 +408,7 @@ app.get('/api/memory', async (req, res) => {
       timestamp: Date.now()
     });
   } catch (err) {
+    console.log('[DEBUG] /api/memory - Error:', err.message);
     res.status(500).json({
       error: err.message,
       system: getSystemMemory()
