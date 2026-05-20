@@ -29,16 +29,23 @@ ollamaMemoryMonitor = {
    */
   init: async function() {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 1000);
+      
       const response = await fetch(this._getBackendUrl('/api/ollama/status'), {
         method: 'GET',
-        timeout: 1000
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
+      
       this.backendAvailable = response.ok;
       if (this.backendAvailable) {
         addDebugLog('✅ Backend de monitoring RAM détecté sur port 3001', 'success');
       }
     } catch (err) {
       this.backendAvailable = false;
+      addDebugLog('⚠️ Backend monitoring RAM non détecté : ' + err.message, 'warn');
     }
   },
   
