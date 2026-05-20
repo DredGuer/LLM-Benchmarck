@@ -1,0 +1,16 @@
+# macOS
+.DS_Store
+
+# Fichiers originaux/backup
+*.html~
+artifact-*
+
+# IDE/Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Build/Log files
+*.log
+*.tmp
