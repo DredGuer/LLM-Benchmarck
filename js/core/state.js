@@ -4,7 +4,7 @@
  */
 
 // Global state object
-var state = {
+state = {
   runner: 'ollama',
   model: '',
   selectedPrompts: new Set(['conversation']),
@@ -16,9 +16,9 @@ var state = {
 };
 
 // Benchmark state variables
-var manualHardwareConfig = null;
-var currentAbortController = null;
-var currentTestState = {
+manualHardwareConfig = null;
+currentAbortController = null;
+currentTestState = {
   model: null,
   promptType: null,
   promptText: null,
@@ -28,10 +28,10 @@ var currentTestState = {
   startTime: null,
   logs: [],
 };
-var skipToNextFlag = false;
-var retryCurrentFlag = false;
+skipToNextFlag = false;
+retryCurrentFlag = false;
 
 // Storage keys
-var HARDWARE_CONFIG_KEY = 'llm_bench_hardware_config';
-var HISTORY_KEY = 'llm_bench_history';
-var API_KEYS_KEY = 'llm_bench_keys';
+HARDWARE_CONFIG_KEY = 'llm_bench_hardware_config';
+HISTORY_KEY = 'llm_bench_history';
+API_KEYS_KEY = 'llm_bench_keys';

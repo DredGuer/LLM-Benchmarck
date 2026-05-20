@@ -1,16 +1,16 @@
 /**
  * LLM Benchmarker - Configuration Loading
- * Loads runner and prompt configurations from inline JSON scripts
+ * Loads runner and prompt configurations from inline JSON script tags
  */
 
 // Load configurations from inline JSON script tags
-var runnersConfig = JSON.parse(document.getElementById('runnersConfig').textContent);
-var promptsConfig = JSON.parse(document.getElementById('promptsConfig').textContent);
+runnersConfig = JSON.parse(document.getElementById('runnersConfig').textContent);
+promptsConfig = JSON.parse(document.getElementById('promptsConfig').textContent);
 
 // Global configurations
-var RUNNERS = runnersConfig.runners;
-var DEFAULT_MODELS = {};
+RUNNERS = runnersConfig.runners;
+DEFAULT_MODELS = {};
 for (var key in RUNNERS) {
   DEFAULT_MODELS[key] = RUNNERS[key].defaultModels || [];
 }
-var PROMPT_TYPES = promptsConfig.promptTypes;
+PROMPT_TYPES = promptsConfig.promptTypes;
