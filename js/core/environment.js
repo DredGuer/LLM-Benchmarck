@@ -38,6 +38,7 @@ async function fetchBackendEnvironment() {
 
 /**
  * Full hardware detection using various browser APIs
+ */
 function detectFullHardware() {
   var ua = navigator.userAgent;
   var os = 'Inconnu', osVersion = '';
