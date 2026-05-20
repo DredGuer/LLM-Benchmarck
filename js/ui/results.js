@@ -46,6 +46,7 @@ function renderResultCard(result) {
     html += '<div class="metric-box"><div class="metric-value">' + (m.totalTime/1000).toFixed(2) + 's</div><div class="metric-label">Temps total</div></div>';
     if (result.memory && result.memory.peak > 0) {
       html += '<div class="metric-box highlight-purple"><div class="metric-value">' + result.memory.peak + ' MB</div><div class="metric-label">RAM pic</div></div>';
+      html += '<div class="metric-box highlight-green"><div class="metric-value">' + result.memory.average + ' MB</div><div class="metric-label">RAM moyenne</div></div>';
     }
     html += '</div>';
     html += '<div class="prompt-echo"><strong>Prompt :</strong> ' + escapeHtml(result.promptText.substring(0, 180)) + (result.promptText.length > 180 ? '…' : '') + '</div>';
@@ -79,16 +80,17 @@ function exportMarkdown() {
   md += '| GPU | ' + (env.gpu || 'N/A') + ' |\n\n';
   md += '---\n\n';
   md += '## 📈 Résumé des tests\n\n';
-  md += '| # | Modèle | Runner | Type | Tokens | Tok/s | TTFT | Temps total | RAM | Statut |\n';
-  md += '|---|--------|--------|------|--------|-------|------|-------------|-----|--------|\n';
+  md += '| # | Modèle | Runner | Type | Tokens | Tok/s | TTFT | Temps total | RAM pic | RAM moy | Statut |\n';
+  md += '|---|--------|--------|------|--------|-------|------|-------------|---------|---------|--------|\n';
   
   for (var i = 0; i < state.results.length; i++) {
     var r = state.results[i];
     var m = r.metrics;
     var ttftStr = m.ttft !== null ? m.ttft + ' ms' : 'N/A';
-    var ramStr = (r.memory && r.memory.peak > 0) ? r.memory.peak + ' MB' : 'N/A';
+    var ramPeakStr = (r.memory && r.memory.peak > 0) ? r.memory.peak + ' MB' : 'N/A';
+    var ramAvgStr = (r.memory && r.memory.average > 0) ? r.memory.average + ' MB' : 'N/A';
     var status = r.error ? '❌ Erreur' : '✅ OK';
-    md += '| ' + (i+1) + ' | `'+ r.model +'` | ' + r.runner + ' | ' + r.promptEmoji + ' ' + r.promptTypeName + ' | ' + m.totalTokens + ' | ' + m.tokensPerSec + ' | ' + ttftStr + ' | ' + (m.totalTime/1000).toFixed(2) + 's | ' + ramStr + ' | ' + status + ' |\n';
+    md += '| ' + (i+1) + ' | `'+ r.model +'` | ' + r.runner + ' | ' + r.promptEmoji + ' ' + r.promptTypeName + ' | ' + m.totalTokens + ' | ' + m.tokensPerSec + ' | ' + ttftStr + ' | ' + (m.totalTime/1000).toFixed(2) + 's | ' + ramPeakStr + ' | ' + ramAvgStr + ' | ' + status + ' |\n';
   }
   
   md += '\n---\n\n';
