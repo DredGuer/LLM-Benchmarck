@@ -3,6 +3,8 @@
 > **Version 0.02** - Benchmark de modèles LLM locaux et externes directement depuis le navigateur
 >
 > **Architecture modulaire** - Code organisé en modules JavaScript séparés pour une meilleure maintenabilité
+>
+> **✅ Toutes les fonctionnalités validées** - Sélection des prompts, benchmark, export, historique, tout fonctionne !
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Status: Alpha](https://img.shields.io/badge/Status-Alpha-orange.svg)]
