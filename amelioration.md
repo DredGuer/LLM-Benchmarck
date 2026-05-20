@@ -559,8 +559,27 @@ Si tu bloques sur une phase, tu peux :
 - [x] Phase 1 : Extraction CSS (Commit `51820e9` - 20/05/2025)
 - [x] Phase 2 : Extraction JSON (Commit `f6b2d91` - 20/05/2025)
 - [x] Phase 3 : Déplacement JS vers main.js (Commit `99fb98a` - 20/05/2025)
-- [ ] Phase 3 : Refactorisation JS en modules (en cours)
-- [ ] Phase 4 : Nettoyage
+- [x] Phase 3 : Refactorisation JS en modules (en cours)
+  - [x] Création des dossiers js/core/, js/ui/, js/utils/
+  - [x] Extraction de js/config/load.js - Chargement des configurations
+  - [x] Extraction de js/core/state.js - État global
+  - [x] Extraction de js/utils/helpers.js - Fonctions utilitaires
+  - [x] Extraction de js/ui/toast.js - Notifications toast
+  - [x] Extraction de js/ui/modals.js - Gestion des modales
+  - [x] Extraction de js/ui/tabs.js - Gestion des onglets
+  - [x] Extraction de js/core/storage.js - Stockage localStorage
+  - [x] Extraction de js/core/environment.js - Détection matérielle
+  - [x] Extraction de js/core/runners.js - Gestion des runners
+  - [x] Extraction de js/core/prompts.js - Types de prompts
+  - [x] Extraction de js/core/streaming.js - Streaming et output live
+  - [x] Extraction de js/core/benchmark.js - Moteur de benchmark
+  - [x] Extraction de js/ui/results.js - Affichage et export des résultats
+  - [x] Extraction de js/core/apiKeys.js - Gestion des clés API
+  - [x] Extraction de js/core/connectivity.js - Tests de connectivité
+  - [x] Extraction de js/core/history.js - Gestion de l'historique
+  - [x] Mise à jour de llm-benchmarker.html - Chargement des modules
+  - [x] Mise à jour de js/main.js - Initialisation
+- [ ] Phase 4 : Nettoyage et validation
 - [ ] Phase 5 : Merge
 
 **Prochaine étape :** Continuer la Phase 3 - Split JavaScript en modules individuels (benchmark.js, environment.js, streaming.js, etc.)
