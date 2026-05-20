@@ -260,13 +260,6 @@ function buildErrorResult(model, promptType, errorMsg, rep) {
   };
 }
 
-function showResultsArea(show) {
-  var emptyState = document.getElementById('emptyState');
-  var resultsList = document.getElementById('resultsList');
-  if (emptyState) emptyState.style.display = show ? 'none' : 'flex';
-  if (resultsList) resultsList.style.display = show ? 'flex' : 'none';
-}
-
 function setProgress(percent, detail) {
   var bar = document.getElementById('progressBar');
   var statusText = document.getElementById('statusText');

@@ -2,6 +2,14 @@
  * LLM Benchmarker - Results Rendering & Export
  */
 
+// Show/hide results area
+function showResultsArea(show) {
+  var emptyState = document.getElementById('emptyState');
+  var resultsList = document.getElementById('resultsList');
+  if (emptyState) emptyState.style.display = show ? 'none' : 'flex';
+  if (resultsList) resultsList.style.display = show ? 'flex' : 'none';
+}
+
 function renderResultCard(result) {
   showResultsArea(true);
   var list = document.getElementById('resultsList');
