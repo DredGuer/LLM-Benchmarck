@@ -449,142 +449,85 @@
 <!-- TOAST CONTAINER -->
 <div class="toast-container" id="toastContainer"></div>
 
-<!-- Load JSON configurations inline -->
-<script type="application/json" id="runnersConfig">
-{
-  "runners": {
-    "ollama": {
-      "name": "Ollama",
-      "base": "http://localhost:11434",
-      "type": "local",
-      "streaming": true,
-      "endpoints": {
-        "generate": "/api/generate",
-        "tags": "/api/tags",
-        "pull": "/api/pull",
-        "delete": "/api/delete"
-      },
-      "defaultModels": ["llama3.2:3b", "llama3.2:1b", "mistral:7b", "phi3:mini", "qwen2:7b", "codellama:7b"]
-    },
-    "lmstudio": {
-      "name": "LM Studio",
-      "base": "http://localhost:1234",
-      "type": "local",
-      "streaming": false,
-      "endpoints": {
-        "models": "/v1/models",
-        "completions": "/v1/chat/completions"
-      },
-      "defaultModels": ["local-model"]
-    },
-    "llamacpp": {
-      "name": "llama.cpp",
-      "base": "http://localhost:8080",
-      "type": "local",
-      "streaming": false,
-      "endpoints": {
-        "completions": "/v1/chat/completions"
-      },
-      "defaultModels": ["local-model"]
-    },
-    "openai": {
-      "name": "OpenAI",
-      "base": "https://api.openai.com",
-      "type": "api",
-      "streaming": false,
-      "endpoints": {
-        "completions": "/v1/chat/completions"
-      },
-      "defaultModels": ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"]
-    },
-    "mistral": {
-      "name": "Mistral AI",
-      "base": "https://api.mistral.ai",
-      "type": "api",
-      "streaming": false,
-      "endpoints": {
-        "completions": "/v1/chat/completions"
-      },
-      "defaultModels": ["mistral-small-latest", "mistral-medium-latest", "mistral-large-latest", "open-mistral-7b"]
-    },
-    "claude": {
-      "name": "Claude",
-      "base": "https://api.anthropic.com",
-      "type": "api",
-      "streaming": false,
-      "endpoints": {
-        "messages": "/v1/messages"
-      },
-      "defaultModels": ["claude-3-haiku-20240307", "claude-3-5-sonnet-20241022", "claude-3-opus-20240229"]
-    },
-    "custom": {
-      "name": "Personnalisé",
-      "base": "",
-      "type": "custom",
-      "streaming": false,
-      "defaultModels": []
-    }
+<!-- Load JSON configurations as global variables -->
+<script>
+// RUNNERS configuration
+window.RUNNERS = {
+  "ollama": {
+    "name": "Ollama",
+    "base": "http://localhost:11434",
+    "type": "local",
+    "streaming": true,
+    "endpoints": {"generate": "/api/generate", "tags": "/api/tags", "pull": "/api/pull", "delete": "/api/delete"},
+    "defaultModels": ["llama3.2:3b", "llama3.2:1b", "mistral:7b", "phi3:mini", "qwen2:7b", "codellama:7b"]
+  },
+  "lmstudio": {
+    "name": "LM Studio",
+    "base": "http://localhost:1234",
+    "type": "local",
+    "streaming": false,
+    "endpoints": {"models": "/v1/models", "completions": "/v1/chat/completions"},
+    "defaultModels": ["local-model"]
+  },
+  "llamacpp": {
+    "name": "llama.cpp",
+    "base": "http://localhost:8080",
+    "type": "local",
+    "streaming": false,
+    "endpoints": {"completions": "/v1/chat/completions"},
+    "defaultModels": ["local-model"]
+  },
+  "openai": {
+    "name": "OpenAI",
+    "base": "https://api.openai.com",
+    "type": "api",
+    "streaming": false,
+    "endpoints": {"completions": "/v1/chat/completions"},
+    "defaultModels": ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"]
+  },
+  "mistral": {
+    "name": "Mistral AI",
+    "base": "https://api.mistral.ai",
+    "type": "api",
+    "streaming": false,
+    "endpoints": {"completions": "/v1/chat/completions"},
+    "defaultModels": ["mistral-small-latest", "mistral-medium-latest", "mistral-large-latest", "open-mistral-7b"]
+  },
+  "claude": {
+    "name": "Claude",
+    "base": "https://api.anthropic.com",
+    "type": "api",
+    "streaming": false,
+    "endpoints": {"messages": "/v1/messages"},
+    "defaultModels": ["claude-3-haiku-20240307", "claude-3-5-sonnet-20241022", "claude-3-opus-20240229"]
+  },
+  "custom": {
+    "name": "Personnalisé",
+    "base": "",
+    "type": "custom",
+    "streaming": false,
+    "defaultModels": []
   }
+};
+
+// DEFAULT_MODELS
+window.DEFAULT_MODELS = {};
+for (var key in window.RUNNERS) {
+  window.DEFAULT_MODELS[key] = window.RUNNERS[key].defaultModels || [];
 }
-</script>
-<script type="application/json" id="promptsConfig">
-{
-  "promptTypes": [
-    {
-      "id": "conversation",
-      "name": "Conversation",
-      "emoji": "💬",
-      "desc": "Dialogue libre et réponse générale",
-      "prompt": "Bonjour ! Présente-toi brièvement et explique ce que tu peux faire pour m'aider au quotidien."
-    },
-    {
-      "id": "factual",
-      "name": "Datation / Factuel",
-      "emoji": "🏛️",
-      "desc": "Questions de culture générale datées",
-      "prompt": "Quand la Tour Eiffel a-t-elle été construite ? Donne-moi les dates précises de construction et d'inauguration."
-    },
-    {
-      "id": "math",
-      "name": "Mathématiques",
-      "emoji": "🔢",
-      "desc": "Résolution de problèmes mathématiques",
-      "prompt": "Résous ce problème étape par étape :\nUne voiture roule à 80 km/h. Combien de temps lui faudra-t-il pour parcourir 360 km ? Exprime le résultat en heures et minutes."
-    },
-    {
-      "id": "code",
-      "name": "Code",
-      "emoji": "💻",
-      "desc": "Génération ou analyse de code",
-      "prompt": "Écris une fonction Python qui calcule le n-ième nombre de Fibonacci de manière récursive avec mémoïsation. Ajoute des docstrings et un exemple d'utilisation."
-    },
-    {
-      "id": "creative",
-      "name": "Créatif",
-      "emoji": "🎨",
-      "desc": "Rédaction créative et brainstorming",
-      "prompt": "Écris un haïku sur l'intelligence artificielle, puis propose 5 idées originales d'applications pour améliorer le quotidien des développeurs."
-    },
-    {
-      "id": "logic",
-      "name": "Logique",
-      "emoji": "🧠",
-      "desc": "Résolution de problèmes logiques et raisonnement",
-      "prompt": "Je dois aller laver ma voiture, mais je suis à 200 mètres de la station de lavage. Je me demande si je dois y aller à pied ou en voiture. Analyse la situation et donne-moi une réponse logique."
-    },
-    {
-      "id": "custom",
-      "name": "Prompt personnalisé",
-      "emoji": "✏️",
-      "desc": "Votre propre question ou instruction",
-      "prompt": null
-    }
-  ]
-}
+
+// PROMPT_TYPES configuration
+window.PROMPT_TYPES = [
+  {"id": "conversation", "name": "Conversation", "emoji": "💬", "desc": "Dialogue libre et réponse générale", "prompt": "Bonjour ! Présente-toi brièvement et explique ce que tu peux faire pour m'aider au quotidien."},
+  {"id": "factual", "name": "Datation / Factuel", "emoji": "🏛️", "desc": "Questions de culture générale datées", "prompt": "Quand la Tour Eiffel a-t-elle été construite ? Donne-moi les dates précises de construction et d'inauguration."},
+  {"id": "math", "name": "Mathématiques", "emoji": "🔢", "desc": "Résolution de problèmes mathématiques", "prompt": "Résous ce problème étape par étape :\nUne voiture roule à 80 km/h. Combien de temps lui faudra-t-il pour parcourir 360 km ? Exprime le résultat en heures et minutes."},
+  {"id": "code", "name": "Code", "emoji": "💻", "desc": "Génération ou analyse de code", "prompt": "Écris une fonction Python qui calcule le n-ième nombre de Fibonacci de manière récursive avec mémoïsation. Ajoute des docstrings et un exemple d'utilisation."},
+  {"id": "creative", "name": "Créatif", "emoji": "🎨", "desc": "Rédaction créative et brainstorming", "prompt": "Écris un haïku sur l'intelligence artificielle, puis propose 5 idées originales d'applications pour améliorer le quotidien des développeurs."},
+  {"id": "logic", "name": "Logique", "emoji": "🧠", "desc": "Résolution de problèmes logiques et raisonnement", "prompt": "Je dois aller laver ma voiture, mais je suis à 200 mètres de la station de lavage. Je me demande si je dois y aller à pied ou en voiture. Analyse la situation et donne-moi une réponse logique."},
+  {"id": "custom", "name": "Prompt personnalisé", "emoji": "✏️", "desc": "Votre propre question ou instruction", "prompt": null}
+];
 </script>
 
-<!-- Load application modules -->
-<script src="js/config/load.js"></script>
 <script src="js/core/state.js"></script>
 <script src="js/utils/helpers.js"></script>
 <script src="js/ui/toast.js"></script>
