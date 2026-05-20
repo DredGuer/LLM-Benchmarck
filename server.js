@@ -57,37 +57,46 @@ function getOllamaPID() {
           }
           
           // Si plusieurs PIDs, trouver celui avec la plus grosse RAM
-          if (pids.length > 1 && (platform === 'darwin' || platform === 'linux')) {
+          if (pids.length > 1) {
             console.log('[DEBUG] Multiple Ollama PIDs found:', pids);
-            exec('ps -p ' + pids.join(',') + ' -o pid,rss= --no-headers', { encoding: 'utf-8' }, (err, result) => {
+            
+            // Méthode unifiée : parser ps aux pour tous les PIDs Ollama
+            // Compatible macOS (BSD) et Linux (GNU)
+            exec('ps aux | grep ollama | grep -v grep', { encoding: 'utf-8' }, (err, result) => {
               if (err || !result) {
-                console.log('[DEBUG] Could not get RSS for PIDs, using first:', pids[0]);
+                console.log('[DEBUG] Could not parse ps aux, using first PID:', pids[0]);
                 resolve(pids[0]);
                 return;
               }
-              
+
               const lines = result.trim().split('\n');
               let maxPid = pids[0];
               let maxRss = 0;
-              
+
               for (const line of lines) {
-                if (!line.trim()) continue;
-                const parts = line.trim().split(/\s+/);
-                if (parts.length >= 2) {
-                  const pid = parseInt(parts[0]);
-                  const rssKb = parseInt(parts[1]);
-                  if (pid && !isNaN(rssKb) && rssKb > maxRss) {
+                // Format macOS/Linux: user pid %cpu %mem vsz rss tt stat started time command
+                const parts = line.trim().split(/\s+/).filter(p => p.trim());
+                // RSS est en 5ème position (index 4)
+                if (parts.length >= 5) {
+                  const pid = parseInt(parts[1]);
+                  const rssKb = parseInt(parts[4]);
+                  if (!isNaN(pid) && pid > 0 && !isNaN(rssKb) && rssKb > maxRss) {
                     maxRss = rssKb;
                     maxPid = pid;
                   }
                 }
               }
-              
-              console.log('[DEBUG] Selected PID with highest RSS (' + (maxRss / 1024).toFixed(0) + ' MB):', maxPid);
-              resolve(maxPid);
+
+              if (maxRss > 0) {
+                console.log('[DEBUG] Selected PID with highest RSS (' + (maxRss / 1024).toFixed(0) + ' MB):', maxPid);
+                resolve(maxPid);
+              } else {
+                console.log('[DEBUG] No valid RSS data, using first PID:', pids[0]);
+                resolve(pids[0]);
+              }
             });
           } else {
-            // Un seul PID ou plateforme non supportée
+            // Un seul PID
             resolve(pids[0]);
           }
         } else {
