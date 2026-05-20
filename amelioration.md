@@ -584,17 +584,24 @@ Si tu bloques sur une phase, tu peux :
   - [x] Mise à jour LICENSE et .gitignore (Commit `cf2a668`)
   - [x] Correction bug PROMPT_TYPES undefined (Commit `5a0343c`)
   - [x] Correction bug state non accessible (Commit `5a0343c`)
+  - [x] **Correction sélecteur de prompts** (Commit `c8b07f1`)
+    - Suppression de load.js
+    - Définition directe des configs globales dans HTML
+    - Simplification de prompts.js
   - [x] Push sur main avec toutes les corrections
 
-**Dernière étape :** Toutes les phases principales sont terminées !
+**✅ Toutes les phases principales sont terminées !**
 
 ### Prochaines améliorations possibles
 - Migration vers ES6 modules (import/export)
-- Ajout de tests automatisés
-- Implémentation d'un système de build
-- Ajout de graphiques pour la visualisation des résultats
+- Ajout de tests automatisés (Jest, Cypress)
+- Implémentation d'un système de build (Webpack, Rollup)
+- Ajout de graphiques pour la visualisation des résultats (Chart.js)
+- Support de plus de runners locaux (VLLM, Kobold)
+- Benchmark comparatif entre plusieurs modèles
+- Interface multilingue
 
 ---
 
 *Document généré par Mistral Vibe - 20 Mai 2025*
-*Dernière mise à jour : 20 Mai 2025 - 18:45*
+*Dernière mise à jour : 20 Mai 2025 - 19:15*
