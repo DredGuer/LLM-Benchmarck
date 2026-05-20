@@ -901,10 +901,72 @@
       <div style="font-size:0.75rem;color:var(--text3);margin-top:6px;" id="progressDetail"></div>
     </div>
 
+    <!-- BOUTONS DE CONTRÔLE -->
+    <div id="controlButtons" style="display:none; margin-top:12px; gap:8px; display:flex;">
+      <button class="btn btn-danger btn-sm" id="stopBtn" onclick="stopCurrentTest()" disabled>
+        ⏹ Arrêter
+      </button>
+      <button class="btn btn-secondary btn-sm" id="nextBtn" onclick="skipToNextTest()" disabled>
+        ▶ Suivant
+      </button>
+      <button class="btn btn-primary btn-sm" id="retryBtn" onclick="retryCurrentTest()" disabled>
+        🔄 Recommencer
+      </button>
+    </div>
+
   </aside>
 
   <!-- ── CONTENT AREA ─────────────────────────── -->
   <section class="content-area">
+
+    <!-- ZONE DE VISUALISATION EN DIRECT -->
+    <div id="liveOutputSection" style="display:none; margin-bottom:24px;">
+      <div class="card">
+        <div class="card-header" style="display:flex;align-items:center;gap:12px;">
+          <span class="icon">💭</span>
+          <span class="card-title" style="margin:0;">Thinking en direct</span>
+          <span id="tokenCounter" style="margin-left:auto; font-size:0.85rem; color:var(--text2);">Tokens: 0/0</span>
+        </div>
+        <div id="thinkingOutput" style="
+          background:var(--surface3);
+          border-radius:var(--radius-sm);
+          padding:16px;
+          font-family:monospace;
+          font-size:0.875rem;
+          white-space:pre-wrap;
+          word-wrap:break-word;
+          max-height:300px;
+          overflow-y:auto;
+          line-height:1.5;
+          color:var(--text);
+        "></div>
+        <div class="progress-container" style="margin-top:12px;">
+          <div class="progress-bar" id="tokenProgressBar" style="width:0%;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ZONE DE LOGS EN TEMPS RÉEL -->
+    <div id="debugLogsSection" style="display:none; margin-bottom:24px;">
+      <div class="card">
+        <div class="card-header" style="display:flex;align-items:center;gap:12px;">
+          <span class="icon">📝</span>
+          <span class="card-title" style="margin:0;">Logs de débogage</span>
+          <button class="btn btn-sm btn-secondary" onclick="clearDebugLogs()" style="margin-left:auto;">Effacer</button>
+        </div>
+        <div id="debugLogs" style="
+          background:var(--surface3);
+          border-radius:var(--radius-sm);
+          padding:12px;
+          font-family:monospace;
+          font-size:0.75rem;
+          white-space:pre-wrap;
+          max-height:200px;
+          overflow-y:auto;
+          color:var(--text2);
+        "></div>
+      </div>
+    </div>
 
     <div class="tabs">
       <button class="tab-btn active" onclick="switchTab('results')">📊 Résultats</button>
@@ -1095,6 +1157,19 @@ let state = {
   env: {},
   apiKeys: {},
   customBase: '',
+};
+
+// Contrôle du benchmark en cours
+let currentAbortController = null;
+let currentTestState = {
+  model: null,
+  promptType: null,
+  promptText: null,
+  maxTokens: 512,
+  tokensReceived: 0,
+  isStreaming: false,
+  startTime: null,
+  logs: [],
 };
 
 /* ═══════════════════════════════════════════
@@ -1317,6 +1392,121 @@ function togglePromptType(id, el) {
 }
 
 /* ═══════════════════════════════════════════
+   LIVE OUTPUT & DEBUG LOGGING
+═══════════════════════════════════════════ */
+
+// Afficher le thinking en temps réel
+function updateThinkingOutput(text, reset = false) {
+  const output = document.getElementById('thinkingOutput');
+  if (reset) {
+    output.textContent = '';
+    return;
+  }
+  output.textContent += text;
+  output.scrollTop = output.scrollHeight;
+}
+
+// Mettre à jour le compteur de tokens
+function updateTokenProgress(current, max) {
+  const counter = document.getElementById('tokenCounter');
+  const bar = document.getElementById('tokenProgressBar');
+  if (counter) counter.textContent = `Tokens: ${current}/${max}`;
+  if (bar) bar.style.width = `${Math.min(100, (current / max) * 100)}%`;
+  
+  // Avertissement à 90%
+  if (current >= max * 0.9 && current < max) {
+    addDebugLog(`⚠️ Approche de la limite de tokens (${current}/${max})`, 'warn');
+  }
+}
+
+// Ajouter un log de débogage
+function addDebugLog(message, type = 'info') {
+  const logsDiv = document.getElementById('debugLogs');
+  const timestamp = new Date().toLocaleTimeString('fr-FR');
+  let prefix;
+  switch (type) {
+    case 'error': prefix = '❌'; break;
+    case 'warn': prefix = '⚠️'; break;
+    case 'success': prefix = '✅'; break;
+    default: prefix = 'ℹ️'; break;
+  }
+  const logEntry = `[${timestamp}] ${prefix} ${message}`;
+  currentTestState.logs.push({ timestamp: Date.now(), type, message });
+  
+  if (logsDiv) {
+    const p = document.createElement('p');
+    p.textContent = logEntry;
+    p.style.color = type === 'error' ? 'var(--accent3)' : 
+                   type === 'warn' ? 'var(--accent5)' : 
+                   type === 'success' ? 'var(--accent2)' : 'var(--text2)';
+    logsDiv.appendChild(p);
+    logsDiv.scrollTop = logsDiv.scrollHeight;
+  }
+}
+
+// Effacer les logs
+function clearDebugLogs() {
+  document.getElementById('debugLogs').textContent = '';
+  currentTestState.logs = [];
+}
+
+// Arrêter le test en cours
+function stopCurrentTest() {
+  if (currentAbortController) {
+    addDebugLog('Arrêt demandé par l\'utilisateur', 'warn');
+    currentAbortController.abort();
+    currentAbortController = null;
+  }
+}
+
+// Passer au test suivant (appelé depuis runBenchmark)
+let skipToNextFlag = false;
+function skipToNextTest() {
+  skipToNextFlag = true;
+  stopCurrentTest();
+}
+
+// Recommencer le test en cours
+let retryCurrentFlag = false;
+function retryCurrentTest() {
+  retryCurrentFlag = true;
+  stopCurrentTest();
+}
+
+// Réinitialiser les zones live
+function resetLiveOutput() {
+  updateThinkingOutput('', true);
+  updateTokenProgress(0, 100);
+  clearDebugLogs();
+  currentTestState = {
+    model: null,
+    promptType: null,
+    promptText: null,
+    maxTokens: 512,
+    tokensReceived: 0,
+    isStreaming: false,
+    startTime: null,
+    logs: [],
+  };
+}
+
+// Activer/désactiver les boutons de contrôle
+function setControlButtons(enabled, stopOnly = false) {
+  document.getElementById('stopBtn').disabled = !enabled;
+  if (!stopOnly) {
+    document.getElementById('nextBtn').disabled = !enabled;
+    document.getElementById('retryBtn').disabled = !enabled;
+  }
+}
+
+// Afficher/masquer les sections live
+function showLiveSections(show) {
+  document.getElementById('liveOutputSection').style.display = show ? 'block' : 'none';
+  document.getElementById('debugLogsSection').style.display = show ? 'block' : 'none';
+  document.getElementById('controlButtons').style.display = show ? 'flex' : 'none';
+}
+
+/* ═══════════════════════════════════════════
    BENCHMARK ENGINE
 ═══════════════════════════════════════════ */
 async function runBenchmark() {
@@ -1343,11 +1533,23 @@ async function runBenchmark() {
   let   completedTests = 0;
   const sessionResults = [];
 
+  // Réinitialiser les flags de contrôle
+  skipToNextFlag = false;
+  retryCurrentFlag = false;
+
   // Préparer l'affichage résultats
   showResultsArea(true);
+  showLiveSections(false);
+  setControlButtons(false);
 
   for (const pt of selectedTypes) {
+    // Réinitialiser le flag à chaque nouveau type de prompt
+    skipToNextFlag = false;
+    
     for (let rep = 0; rep < repetitions; rep++) {
+      // Réinitialiser le flag à chaque répétition
+      retryCurrentFlag = false;
+      
       const progress = (completedTests / totalTests) * 100;
       setProgress(progress, `Test : ${pt.name}${repetitions > 1 ? ` (${rep+1}/${repetitions})` : ''}`);
 
@@ -1355,24 +1557,82 @@ async function runBenchmark() {
         ? (document.getElementById('customPromptText').value.trim() || 'Dis bonjour.')
         : pt.prompt;
 
+      // Créer un AbortController pour ce test
+      const abortController = new AbortController();
+      currentAbortController = abortController;
+
       try {
-        const result = await executeTest(model, pt, promptText, rep + 1);
+        // Afficher les sections live pour ce test
+        showLiveSections(true);
+        setControlButtons(true);
+        
+        const result = await executeTest(model, pt, promptText, rep + 1, abortController.signal);
+        
+        // Si l'utilisateur a demandé de passer au suivant, on sort de la boucle de répétition
+        if (skipToNextFlag) {
+          addDebugLog(`Test ${pt.name} intercepté - Passage au suivant`, 'warn');
+          skipToNextFlag = false;
+          break;
+        }
+        
+        // Si l'utilisateur a demandé de recommencer, on relance cette répétition
+        if (retryCurrentFlag) {
+          addDebugLog(`Test ${pt.name} - Relance demandée`, 'info');
+          retryCurrentFlag = false;
+          rep--; // Décrémenter pour relancer
+          continue;
+        }
+        
         sessionResults.push(result);
         state.results.unshift(result);
         renderResultCard(result);
         completedTests++;
+        
       } catch (err) {
+        // Masquer les sections live après une erreur
+        showLiveSections(false);
+        setControlButtons(false);
+        
         const errResult = buildErrorResult(model, pt, err.message, rep + 1);
+        // Ajouter les logs aux résultats pour le débogage
+        errResult.debugLogs = [...currentTestState.logs];
+        errResult.tokensReceived = currentTestState.tokensReceived;
+        
         sessionResults.push(errResult);
         state.results.unshift(errResult);
         renderResultCard(errResult);
         completedTests++;
+        
+        // Réinitialiser l'AbortController
+        currentAbortController = null;
+        
+        // Si l'utilisateur a demandé de passer au suivant ou recommencer, gérer ça
+        if (skipToNextFlag) {
+          skipToNextFlag = false;
+          break;
+        }
+        if (retryCurrentFlag) {
+          retryCurrentFlag = false;
+          rep--;
+          continue;
+        }
+        
+        return; // Sortir complètement sur erreur
       }
+      
+      // Masquer les sections live entre chaque test
+      showLiveSections(false);
+      setControlButtons(false);
+      currentAbortController = null;
     }
   }
 
+  // Fin du benchmark
   setProgress(100, 'Terminé !');
   document.getElementById('statusDot').className = 'status-dot done';
+  showLiveSections(false);
+  setControlButtons(false);
+  currentAbortController = null;
 
   // Sauvegarder la session
   saveSessionToHistory({ model, runner: state.runner, results: sessionResults, env: state.env });
@@ -1384,12 +1644,16 @@ async function runBenchmark() {
     runBtn.disabled = false;
     runBtn.innerHTML = '⚡ Lancer le benchmark';
     state.isRunning = false;
+    
+    // Réinitialiser les flags
+    skipToNextFlag = false;
+    retryCurrentFlag = false;
   }, 1500);
 
   showToast(`Benchmark terminé : ${completedTests} test(s)`, 'success');
 }
 
-async function executeTest(model, promptType, promptText, rep) {
+async function executeTest(model, promptType, promptText, rep, signal = null) {
   const temperature = parseFloat(document.getElementById('temperature').value) || 0.7;
   const maxTokens   = parseInt(document.getElementById('maxTokens').value)     || 512;
 
@@ -1397,41 +1661,113 @@ async function executeTest(model, promptType, promptText, rep) {
   let firstTokenTime = null;
   let fullText = '';
   let tokensGenerated = 0;
+  
+  // Initialiser l'état du test courant
+  currentTestState = {
+    model: model,
+    promptType: promptType,
+    promptText: promptText,
+    maxTokens: maxTokens,
+    tokensReceived: 0,
+    isStreaming: false,
+    startTime: Date.now(),
+    logs: [],
+  };
+  
+  // Réinitialiser l'affichage
+  resetLiveOutput();
+  showLiveSections(true);
+  setControlButtons(true);
+  
+  // Log du démarrage
+  addDebugLog(`Démarrage du test: ${model} - ${promptType.name || promptType.id}`, 'info');
+  addDebugLog(`Config: temp=${temperature}, max_tokens=${maxTokens}`, 'info');
 
   // ── ROUTING ──────────────────────────────────
   if (state.runner === 'ollama') {
-    const res = await fetchWithTimeout(
-      `${RUNNERS.ollama.base}/api/generate`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model, prompt: promptText, stream: true,
-                               options: { temperature, num_predict: maxTokens } }),
-      },
-      60000
-    );
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      const chunk = decoder.decode(value);
-      const lines = chunk.split('\n').filter(Boolean);
-      for (const line of lines) {
-        try {
-          const json = JSON.parse(line);
-          if (json.response) {
-            if (firstTokenTime === null) firstTokenTime = performance.now() - t0;
-            fullText += json.response;
-            tokensGenerated++;
+    currentTestState.isStreaming = true;
+    
+    try {
+      const res = await fetchWithTimeout(
+        `${RUNNERS.ollama.base}/api/generate`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model, prompt: promptText, stream: true,
+                                 options: { temperature, num_predict: maxTokens } }),
+          signal: signal,
+        },
+        60000
+      );
+      
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      
+      while (true) {
+        // Vérifier si annulé
+        if (signal && signal.aborted) {
+          addDebugLog('Test annulé par l\'utilisateur', 'warn');
+          throw new Error('Test annulé');
+        }
+        
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n').filter(Boolean);
+        
+        for (const line of lines) {
+          try {
+            const json = JSON.parse(line);
+            
+            if (json.response) {
+              if (firstTokenTime === null) {
+                firstTokenTime = performance.now() - t0;
+                addDebugLog(`Premier token reçu (TTFT: ${firstTokenTime.toFixed(0)}ms)`, 'success');
+              }
+              
+              // Afficher en direct
+              fullText += json.response;
+              updateThinkingOutput(json.response);
+              
+              tokensGenerated++;
+              currentTestState.tokensReceived = tokensGenerated;
+              updateTokenProgress(tokensGenerated, maxTokens);
+            }
+            
+            if (json.done && json.eval_count) {
+              tokensGenerated = json.eval_count;
+              currentTestState.tokensReceived = tokensGenerated;
+              updateTokenProgress(tokensGenerated, maxTokens);
+            }
+            
+            // Vérifier limite de tokens
+            if (json.done && tokensGenerated >= maxTokens) {
+              addDebugLog(`Limite de tokens atteinte: ${tokensGenerated}/${maxTokens}`, 'warn');
+            }
+            
+          } catch(e) {
+            addDebugLog(`Erreur parsing JSON: ${e.message}`, 'error');
           }
-          if (json.done && json.eval_count) tokensGenerated = json.eval_count;
-        } catch(_) {}
+        }
       }
+      
+      addDebugLog(`Stream terminé - Tokens totaux: ${tokensGenerated}`, 'info');
+      
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        addDebugLog('Requête annulée', 'warn');
+        throw new Error('Test annulé par l\'utilisateur');
+      }
+      throw err;
+    } finally {
+      currentTestState.isStreaming = false;
     }
 
   } else if (state.runner === 'lmstudio' || state.runner === 'llamacpp') {
     const base = state.runner === 'lmstudio' ? RUNNERS.lmstudio.base : RUNNERS.llamacpp.base;
+    addDebugLog('Envoi requête à LM Studio/llama.cpp (non-streaming)', 'info');
+    
     const res = await fetchWithTimeout(
       `${base}/v1/chat/completions`,
       {
@@ -1442,6 +1778,7 @@ async function executeTest(model, promptType, promptText, rep) {
           messages: [{ role: 'user', content: promptText }],
           temperature, max_tokens: maxTokens, stream: false,
         }),
+        signal: signal,
       },
       60000
     );
@@ -1449,10 +1786,17 @@ async function executeTest(model, promptType, promptText, rep) {
     fullText = data.choices?.[0]?.message?.content || '';
     tokensGenerated = data.usage?.completion_tokens || estimateTokens(fullText);
     firstTokenTime = 0;
+    
+    // Afficher le résultat final (non-streaming)
+    updateThinkingOutput(fullText);
+    updateTokenProgress(tokensGenerated, maxTokens);
+    addDebugLog(`Réponse reçue: ${tokensGenerated} tokens`, 'success');
 
   } else if (state.runner === 'openai') {
     const key = state.apiKeys['openai'];
     if (!key) throw new Error('Clé API OpenAI manquante');
+    addDebugLog('Envoi requête à OpenAI (non-streaming)', 'info');
+    
     const res = await fetchWithTimeout(
       'https://api.openai.com/v1/chat/completions',
       {
@@ -1463,6 +1807,7 @@ async function executeTest(model, promptType, promptText, rep) {
           messages: [{ role: 'user', content: promptText }],
           temperature, max_tokens: maxTokens, stream: false,
         }),
+        signal: signal,
       },
       60000
     );
@@ -1471,10 +1816,16 @@ async function executeTest(model, promptType, promptText, rep) {
     fullText = data.choices?.[0]?.message?.content || '';
     tokensGenerated = data.usage?.completion_tokens || estimateTokens(fullText);
     firstTokenTime = 0;
+    
+    updateThinkingOutput(fullText);
+    updateTokenProgress(tokensGenerated, maxTokens);
+    addDebugLog(`Réponse OpenAI: ${tokensGenerated} tokens`, 'success');
 
   } else if (state.runner === 'mistral') {
     const key = state.apiKeys['mistral'];
     if (!key) throw new Error('Clé API Mistral manquante');
+    addDebugLog('Envoi requête à Mistral (non-streaming)', 'info');
+    
     const res = await fetchWithTimeout(
       'https://api.mistral.ai/v1/chat/completions',
       {
@@ -1485,6 +1836,7 @@ async function executeTest(model, promptType, promptText, rep) {
           messages: [{ role: 'user', content: promptText }],
           temperature, max_tokens: maxTokens,
         }),
+        signal: signal,
       },
       60000
     );
@@ -1493,10 +1845,16 @@ async function executeTest(model, promptType, promptText, rep) {
     fullText = data.choices?.[0]?.message?.content || '';
     tokensGenerated = data.usage?.completion_tokens || estimateTokens(fullText);
     firstTokenTime = 0;
+    
+    updateThinkingOutput(fullText);
+    updateTokenProgress(tokensGenerated, maxTokens);
+    addDebugLog(`Réponse Mistral: ${tokensGenerated} tokens`, 'success');
 
   } else if (state.runner === 'claude') {
     const key = state.apiKeys['claude'];
     if (!key) throw new Error('Clé API Claude manquante');
+    addDebugLog('Envoi requête à Claude (non-streaming)', 'info');
+    
     const res = await fetchWithTimeout(
       'https://api.anthropic.com/v1/messages',
       {
@@ -1511,6 +1869,7 @@ async function executeTest(model, promptType, promptText, rep) {
           max_tokens: maxTokens,
           messages: [{ role: 'user', content: promptText }],
         }),
+        signal: signal,
       },
       60000
     );
@@ -1519,9 +1878,15 @@ async function executeTest(model, promptType, promptText, rep) {
     fullText = data.content?.[0]?.text || '';
     tokensGenerated = data.usage?.output_tokens || estimateTokens(fullText);
     firstTokenTime = 0;
+    
+    updateThinkingOutput(fullText);
+    updateTokenProgress(tokensGenerated, maxTokens);
+    addDebugLog(`Réponse Claude: ${tokensGenerated} tokens`, 'success');
 
   } else if (state.runner === 'custom') {
     const base = state.customBase || 'http://localhost:8080';
+    addDebugLog(`Envoi requête à ${base} (non-streaming)`, 'info');
+    
     const res = await fetchWithTimeout(
       `${base}/v1/chat/completions`,
       {
@@ -1532,6 +1897,7 @@ async function executeTest(model, promptType, promptText, rep) {
           messages: [{ role: 'user', content: promptText }],
           temperature, max_tokens: maxTokens, stream: false,
         }),
+        signal: signal,
       },
       60000
     );
@@ -1539,6 +1905,10 @@ async function executeTest(model, promptType, promptText, rep) {
     fullText = data.choices?.[0]?.message?.content || '';
     tokensGenerated = data.usage?.completion_tokens || estimateTokens(fullText);
     firstTokenTime = 0;
+    
+    updateThinkingOutput(fullText);
+    updateTokenProgress(tokensGenerated, maxTokens);
+    addDebugLog(`Réponse Custom: ${tokensGenerated} tokens`, 'success');
   }
 
   const totalTime     = performance.now() - t0;
