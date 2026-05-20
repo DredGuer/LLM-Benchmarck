@@ -5,7 +5,14 @@
 
 // Initialize immediately since scripts are loaded at end of body
 loadHardwareConfig();
-detectEnvironment();
+
+// Initialize environment detection (async to try backend)
+detectEnvironment().catch(function(err) {
+  console.error('Environment detection failed:', err);
+  // Fallback to browser detection only
+  detectFullHardware();
+});
+
 renderPromptTypes();
 updateRunnerConfig();
 populateModelSelect();

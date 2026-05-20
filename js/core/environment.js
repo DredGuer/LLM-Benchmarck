@@ -3,7 +3,42 @@
  * Handles environment detection, hardware info, and manual configuration
  */
 
-// Full hardware detection using various browser APIs
+// Backend environment config
+window.BACKEND_ENV_CONFIG = {
+  url: 'http://localhost:3001',
+  timeout: 2000
+};
+
+/**
+ * Fetch environment from backend server
+ * Returns promise with backend env data or null
+ */
+async function fetchBackendEnvironment() {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), window.BACKEND_ENV_CONFIG.timeout);
+    
+    const response = await fetch(window.BACKEND_ENV_CONFIG.url + '/api/environment', {
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeout);
+    
+    if (response.ok) {
+      const data = await response.json();
+      if (data.success) {
+        return data;
+      }
+    }
+    return null;
+  } catch (err) {
+    return null;
+  }
+}
+
+/**
+ * Full hardware detection using various browser APIs
+ */
 function detectFullHardware() {
   var ua = navigator.userAgent;
   var os = 'Inconnu', osVersion = '';
@@ -125,20 +160,37 @@ function detectFullHardware() {
   };
 }
 
-// Detect environment and populate state
-function detectEnvironment() {
+// Detect environment and populate state (async now)
+async function detectEnvironment() {
   var hw = detectFullHardware();
   var manual = manualHardwareConfig || {};
+  
+  // Try to fetch from backend first
+  var backendEnv = null;
+  try {
+    backendEnv = await fetchBackendEnvironment();
+  } catch (e) {
+    // Silently fail - will use browser detection
+  }
+  
+  // Build environment from best available source
+  // Priority: Manual > Backend > Browser
   state.env = {
-    os: manual.os || hw.os || 'Inconnu',
-    osVersion: manual.osVersion || hw.osVersion || '',
+    os: manual.os || (backendEnv ? backendEnv.os.name + (backendEnv.os.version ? ' ' + backendEnv.os.version : '') : hw.os) || 'Inconnu',
+    osVersion: manual.osVersion || (backendEnv ? backendEnv.os.version : hw.osVersion) || '',
     browser: hw.browser || 'Inconnu',
-    cores: hw.cores || '?',
-    chip: manual.chip || hw.chip || '',
-    ram: manual.ram || hw.ram || '?',
-    gpu: manual.gpu || hw.gpu || 'Non disponible',
-    gpuRam: manual.gpuRam || (hw.isApple ? 'Unifiée' : hw.gpuRam || '?')
+    cores: manual.cores || (backendEnv ? backendEnv.cpu.cores : hw.cores) || '?',
+    chip: manual.chip || (backendEnv ? backendEnv.machine.model : hw.chip) || '',
+    ram: manual.ram || (backendEnv ? backendEnv.memory.totalStr : hw.ram) || '?',
+    gpu: manual.gpu || (backendEnv ? backendEnv.gpu.model : hw.gpu) || 'Non disponible',
+    gpuRam: manual.gpuRam || (backendEnv ? backendEnv.gpu.vramStr : (hw.isApple ? 'Unifiée' : hw.gpuRam)) || '?'
   };
+  
+  // Store backend availability for debugging
+  if (backendEnv) {
+    addDebugLog('✅ Environnement détecté via backend (précis)', 'success');
+  }
+  
   updateEnvDisplayWithIndicators();
 }
 
@@ -151,19 +203,28 @@ function loadHardwareConfig() {
   return manualHardwareConfig;
 }
 
-// Load and apply hardware configuration
-function loadAndApplyHardwareConfig() {
+// Load and apply hardware configuration (async to try backend)
+async function loadAndApplyHardwareConfig() {
   var hw = detectFullHardware();
   var config = manualHardwareConfig || {};
+  
+  // Try backend if manual config not set
+  var backendEnv = null;
+  if (!config.os && !config.chip && !config.ram) {
+    try {
+      backendEnv = await fetchBackendEnvironment();
+    } catch (e) {}
+  }
+  
   state.env = {
-    os: config.os || hw.os || 'Inconnu',
-    osVersion: config.osVersion || hw.osVersion || '',
+    os: config.os || (backendEnv ? backendEnv.os.name + (backendEnv.os.version ? ' ' + backendEnv.os.version : '') : hw.os) || 'Inconnu',
+    osVersion: config.osVersion || (backendEnv ? backendEnv.os.version : hw.osVersion) || '',
     browser: hw.browser || 'Inconnu',
-    cores: hw.cores || '?',
-    chip: config.chip || hw.chip || '',
-    ram: config.ram || hw.ram || '?',
-    gpu: config.gpu || hw.gpu || 'Non disponible',
-    gpuRam: config.gpuRam || (hw.isApple ? 'Unifiée' : hw.gpuRam || '?')
+    cores: config.cores || (backendEnv ? backendEnv.cpu.cores : hw.cores) || '?',
+    chip: config.chip || (backendEnv ? backendEnv.machine.model : hw.chip) || '',
+    ram: config.ram || (backendEnv ? backendEnv.memory.totalStr : hw.ram) || '?',
+    gpu: config.gpu || (backendEnv ? backendEnv.gpu.model : hw.gpu) || 'Non disponible',
+    gpuRam: config.gpuRam || (backendEnv ? backendEnv.gpu.vramStr : (hw.isApple ? 'Unifiée' : hw.gpuRam)) || '?'
   };
   updateEnvDisplayWithIndicators();
 }
@@ -237,7 +298,9 @@ function saveHardwareConfig() {
     localStorage.setItem(HARDWARE_CONFIG_KEY, JSON.stringify(manualHardwareConfig));
     showToast('Configuration matérielle sauvegardée', 'success');
   } catch (e) { showToast('Erreur lors de la sauvegarde', 'error'); }
-  loadAndApplyHardwareConfig();
+  loadAndApplyHardwareConfig().catch(function(err) {
+    console.error('Failed to load hardware config:', err);
+  });
   closeModal('hardwareModal');
 }
 
@@ -248,6 +311,8 @@ function resetHardwareConfig() {
     localStorage.removeItem(HARDWARE_CONFIG_KEY);
     showToast('Configuration réinitialisée - détection automatique', 'success');
   } catch (e) { showToast('Erreur lors de la réinitialisation', 'error'); }
-  detectEnvironment();
+  detectEnvironment().catch(function(err) {
+    console.error('Environment detection failed:', err);
+  });
   closeModal('hardwareModal');
 }

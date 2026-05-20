@@ -28,17 +28,30 @@ ollamaMemoryMonitor = {
    * Initialize - check if backend is available
    */
   init: async function() {
+    addDebugLog('[MEMORY] Initializing memory monitor...', 'info');
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 1000);
+      
+      addDebugLog('[MEMORY] Checking backend at: ' + this._getBackendUrl('/api/ollama/status'), 'info');
       const response = await fetch(this._getBackendUrl('/api/ollama/status'), {
         method: 'GET',
-        timeout: 1000
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
+      
+      addDebugLog('[MEMORY] Backend status response: ' + response.status + ' ' + response.statusText, 'info');
       this.backendAvailable = response.ok;
       if (this.backendAvailable) {
         addDebugLog('✅ Backend de monitoring RAM détecté sur port 3001', 'success');
+      } else {
+        addDebugLog('⚠️ Backend non disponible (statut: ' + response.status + ')', 'warn');
       }
     } catch (err) {
       this.backendAvailable = false;
+      addDebugLog('[MEMORY] Backend check failed: ' + err.message, 'error');
+      addDebugLog('⚠️ Backend monitoring RAM non détecté : ' + err.message, 'warn');
     }
   },
   
@@ -46,6 +59,7 @@ ollamaMemoryMonitor = {
    * Start monitoring memory usage
    */
   start: function() {
+    addDebugLog('[MEMORY] Starting memory monitoring. backendAvailable=' + this.backendAvailable, 'info');
     this.peakMemory = 0;
     this.currentMemory = 0;
     this.memoryReadings = [];
@@ -53,16 +67,17 @@ ollamaMemoryMonitor = {
     
     // Try backend first
     if (this.backendAvailable) {
-      addDebugLog('Monitoring RAM via backend (process Ollama)', 'info');
+      addDebugLog('[MEMORY] Using backend for Ollama process memory', 'info');
       this._startBackendMonitoring();
     } 
     // Fallback to browser API
     else if (window.performance && window.performance.memory) {
-      addDebugLog('Monitoring RAM via performance.memory (navigateur)', 'info');
+      addDebugLog('[MEMORY] Using performance.memory (browser) as fallback', 'info');
       this._startBrowserMonitoring();
     }
     // Last fallback
     else {
+      addDebugLog('[MEMORY] ERROR: No memory monitoring available!', 'error');
       addDebugLog('⚠️ Monitoring RAM désactivé. Backend non détecté et performance.memory non disponible.', 'warn');
       addDebugLog('   Solution 1: Lancez `node server.js` dans ce dossier', 'warn');
       addDebugLog('   Solution 2: Utilisez Chrome avec --enable-precision-memory-info', 'warn');
@@ -97,28 +112,41 @@ ollamaMemoryMonitor = {
   _fetchBackendMemory: function() {
     var self = this;
     
+    addDebugLog('[MEMORY] Fetching from backend: ' + this._getBackendUrl('/api/memory'), 'info');
+    
     fetch(this._getBackendUrl('/api/memory'))
-      .then(function(response) { return response.json(); })
-      .then(function(data) {
-        var memMB = 0;
-        
-        if (data.success && data.process && data.process.memoryMB) {
-          memMB = data.process.memoryMB;
-        } else if (data.system && data.system.usedMB) {
-          memMB = data.system.usedMB;
+      .then(function(response) { 
+        addDebugLog('[MEMORY] Backend response status: ' + response.status, 'info');
+        if (!response.ok) {
+          throw new Error('Ollama non détecté ou backend erreur: ' + response.status);
         }
+        return response.json(); 
+      })
+      .then(function(data) {
+        addDebugLog('[MEMORY] Backend data received: ' + JSON.stringify(data).substring(0, 200), 'info');
         
-        if (memMB > 0) {
+        // UNIQUEMENT la mémoire du PROCESSUS Ollama (pas la RAM système)
+        if (data.success && data.process && data.process.memoryMB && data.process.memoryMB > 0) {
+          var memMB = data.process.memoryMB;
+          addDebugLog('[MEMORY] Using process memory: ' + memMB + ' MB (PID: ' + data.pid + ')', 'success');
           if (memMB > self.peakMemory) {
             self.peakMemory = memMB;
           }
           self.currentMemory = memMB;
           self.memoryReadings.push({ timestamp: Date.now(), memory: memMB });
+        } else {
+          addDebugLog('[MEMORY] WARNING: No valid process memory in response. Success=' + data.success + ', process=' + (data.process ? 'yes' : 'no'), 'error');
+          if (data.error) {
+            addDebugLog('[MEMORY] Backend error: ' + data.error, 'error');
+          }
         }
       })
       .catch(function(err) {
-        // Backend became unavailable, try to continue
-        addDebugLog('Erreur récupération mémoire backend: ' + err.message, 'warn');
+        addDebugLog('[MEMORY] Fetch error: ' + err.message, 'error');
+        // Ollama n'est pas en cours d'exécution
+        if (self.memoryReadings.length === 0) {
+          addDebugLog('⚠️ Ollama non détecté - lancez `ollama serve` pour le monitoring RAM', 'warn');
+        }
       });
   },
   
@@ -144,19 +172,24 @@ ollamaMemoryMonitor = {
    * Stop monitoring and return stats
    */
   stop: function() {
+    addDebugLog('[MEMORY] Stopping memory monitoring. Readings: ' + this.memoryReadings.length + ', Peak: ' + this.peakMemory + ' MB, Avg: ' + this._calculateAverage() + ' MB', 'info');
+    
     if (this.monitoringInterval) {
       clearInterval(this.monitoringInterval);
       this.monitoringInterval = null;
     }
     this.isActive = false;
     
-    return {
+    var result = {
       peakMemory: this.peakMemory > 0 ? this.peakMemory : null,
       averageMemory: this._calculateAverage(),
       currentMemory: this.currentMemory > 0 ? this.currentMemory : null,
       readings: this.memoryReadings,
       backendAvailable: this.backendAvailable
     };
+    
+    addDebugLog('[MEMORY] Final stats: peak=' + result.peakMemory + ' MB, avg=' + result.averageMemory + ' MB', 'info');
+    return result;
   },
   
   /**
