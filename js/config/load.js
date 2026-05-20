@@ -4,13 +4,20 @@
  */
 
 // Load configurations from inline JSON script tags
-runnersConfig = JSON.parse(document.getElementById('runnersConfig').textContent);
-promptsConfig = JSON.parse(document.getElementById('promptsConfig').textContent);
+var runnersEl = document.getElementById('runnersConfig');
+var promptsEl = document.getElementById('promptsConfig');
 
-// Global configurations
-RUNNERS = runnersConfig.runners;
-DEFAULT_MODELS = {};
-for (var key in RUNNERS) {
-  DEFAULT_MODELS[key] = RUNNERS[key].defaultModels || [];
+if (runnersEl && promptsEl) {
+  runnersConfig = JSON.parse(runnersEl.textContent);
+  promptsConfig = JSON.parse(promptsEl.textContent);
+  
+  // Global configurations
+  RUNNERS = runnersConfig.runners;
+  DEFAULT_MODELS = {};
+  for (var key in RUNNERS) {
+    DEFAULT_MODELS[key] = RUNNERS[key].defaultModels || [];
+  }
+  PROMPT_TYPES = promptsConfig.promptTypes;
+} else {
+  console.error('ERROR: Could not find runnersConfig or promptsConfig elements');
 }
-PROMPT_TYPES = promptsConfig.promptTypes;
