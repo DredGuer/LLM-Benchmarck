@@ -50,11 +50,12 @@
 ### Types de prompts
 
 - 💬 **Conversation** - Dialogue libre et réponses générales
-- 🏛️ **Datation/Factuel** - Questions de culture générale
-- 🔢 **Mathématiques** - Résolution de problèmes
-- 💻 **Code** - Génération et analyse de code
+- 🏛️ **Datation / Factuel** - Questions de culture générale datées
+- 🔢 **Mathématiques** - Résolution de problèmes mathématiques
+- 💻 **Code** - Génération ou analyse de code
+- 🧠 **Logique** - Résolution de problèmes logiques et raisonnement
 - 🎨 **Créatif** - Rédaction créative et brainstorming
-- ✏️ **Personnalisé** - Votre propre prompt
+- ✏️ **Personnalisé** - Votre propre question ou instruction
 
 ### Métriques collectées
 
@@ -62,9 +63,21 @@
 |----------|-------------|
 | Tokens générés | Nombre total de tokens produits |
 | Tokens/seconde | Vitesse de génération |
-| TTFT (Time To First Token) | Temps avant le premier token |
+| TTFT (Time To First Token) | Temps avant le premier token (Ollama uniquement) |
 | Temps total | Durée complète de la réponse |
-| Température | Paramètre de créativité |
+| Température | Paramètre de créativité utilisé |
+
+### Fonctionnalités de debugging
+
+- **Streaming en temps réel** : Visualisation de la réponse token par token pour Ollama
+- **Logs de débogage** : Suivi détaillé de chaque test avec horodatage
+- **Compteur de tokens** : Suivi en direct du nombre de tokens reçus
+- **Barre de progression** : Visualisation du % de tokens reçus vs max
+- **Arrêt/Interrompre** : Contrôle manuel pendant le benchmark
+
+---
+
+## 🎯 Version actuelle : **v0.02** - Toutes fonctionnalités validées ✅
 
 ---
 
@@ -97,11 +110,11 @@ LLM-Benchmarck/
 │   │   ├── toast.js              # Notifications toast
 │   │   ├── modals.js             # Gestion des modales
 │   │   ├── tabs.js               # Gestion des onglets
-│   │   └── results.js            # Affichage et export
+│   │   └── results.js            # Affichage et export des résultats
 │   ├── utils/
 │   │   └── helpers.js            # Fonctions utilitaires
 │   └── main.js                   # Initialisation
-├── amelioration.md              # Roadmap et suivi
+└── LICENSE                       # Licence Apache 2.0
 ├── README.md                     # Ce fichier
 └── LICENSE                       # Licence Apache 2.0
 ```
@@ -202,11 +215,13 @@ npx serve
 
 1. **Sélectionnez un runner** (Ollama, LM Studio, etc.)
 2. **Choisissez un modèle** (la liste se remplit automatiquement pour les runners locaux)
-3. **Sélectionnez les types de prompts** à tester
+3. **Sélectionnez un ou plusieurs types de prompts** à tester (cliquez pour cocher/décocher)
+   - 💬 Conversation, 🏛️ Datation/Factuel, 🔢 Mathématiques, 💻 Code, 🧠 Logique, 🎨 Créatif, ✏️ Personnalisé
 4. **Configurez les options** (température, tokens max, répétitions)
 5. **Cliquez sur "⚡ Lancer le benchmark"**
-6. **Consultez les résultats** dans l'onglet 📊 Résultats
-7. **Exportez en Markdown** avec le bouton 📄 Exporter .md
+6. **Suivez le streaming** en temps réel dans l'onglet "Thinking en direct"
+7. **Consultez les résultats** dans l'onglet 📊 Résultats
+8. **Exportez en Markdown** avec le bouton 📄 Exporter .md
 
 ---
 
