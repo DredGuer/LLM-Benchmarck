@@ -1248,24 +1248,66 @@ function detectEnvironment() {
   // Cores
   const cores = navigator.hardwareConcurrency || '?';
 
-  // RAM - Essayer plusieurs méthodes
+  // RAM - Essayer plusieurs méthodes (par ordre de priorité)
   let ram = '?';
+  
+  // Méthode 1: navigator.deviceMemory (Chrome, Edge, Firefox >95)
   if (navigator.deviceMemory) {
     ram = navigator.deviceMemory + ' Go';
-  } else {
-    // Estimation pour Mac (approximative)
-    if (os === 'macOS') {
-      try {
-        // Méthode alternative via performance.memory (non-standard mais supporté par certains navigateurs)
-        if (window.performance && window.performance.memory) {
-          const memGB = Math.round(window.performance.memory.jsHeapSizeLimit / (1024 * 1024 * 1024));
-          ram = memGB + ' Go (est.)';
-        }
-      } catch(e) {
-        // Si rien ne fonctionne, valeur par défaut pour Mac moderne
-        ram = '16 Go (est.)';
+  }
+  // Méthode 2: navigator.systemMemory (expérimental, certains navigateurs)
+  else if (navigator.systemMemory) {
+    ram = (navigator.systemMemory / (1024 * 1024 * 1024)).toFixed(0) + ' Go';
+  }
+  // Méthode 3: performance.memory (non-standard, Chrome/Edge avec flags)
+  else if (window.performance && window.performance.memory) {
+    try {
+      const memGB = Math.round(window.performance.memory.jsHeapSizeLimit / (1024 * 1024 * 1024));
+      if (memGB > 0) {
+        ram = memGB + ' Go (est.)';
       }
+    } catch(e) {}
+  }
+  // Méthode 4: Estimation basée sur Apple Silicon (M1/M2/M3 ont des configs connues)
+  else if (chip === 'Apple Silicon') {
+    // Détecter le modèle spécifique si possible
+    let macModel = 'inconnu';
+    if (ua.includes('MacBook Air')) macModel = 'air';
+    else if (ua.includes('MacBook Pro')) macModel = 'pro';
+    else if (ua.includes('iMac')) macModel = 'imac';
+    else if (ua.includes('Mac Mini')) macModel = 'mini';
+    else if (ua.includes('Mac Studio')) macModel = 'studio';
+    else if (ua.includes('Mac Pro')) macModel = 'pro';
+    
+    // Estimation par génération (M1 = 2020, M2 = 2022, M3 = 2023+)
+    if (ua.includes('Mac OS X 13_') || ua.includes('Mac OS X 14_') || ua.includes('Mac OS X 15_')) {
+      // macOS Ventura/Sonoma/Sequoia = M1 ou plus récent
+      if (cores >= 16) {
+        ram = '32 Go (est.)';
+      } else if (cores >= 12) {
+        ram = '24 Go (est.)';
+      } else if (cores >= 8) {
+        if (macModel === 'pro' || macModel === 'studio' || macModel === 'imac') {
+          ram = '16 Go (est.)';
+        } else {
+          ram = '8 Go (est.)';
+        }
+      } else {
+        ram = '8 Go (est.)';
+      }
+    } else {
+      ram = '16 Go (est.)';
     }
+  }
+  // Méthode 5: Valeur par défaut pour Mac
+  else if (os === 'macOS') {
+    ram = '16 Go (est.)';
+  }
+  // Méthode 6: Windows - estimation basée sur les cœurs
+  else if (os === 'Windows') {
+    if (cores >= 16) ram = '32 Go (est.)';
+    else if (cores >= 8) ram = '16 Go (est.)';
+    else ram = '8 Go (est.)';
   }
 
   // GPU via WebGL
