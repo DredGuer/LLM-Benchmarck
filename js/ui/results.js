@@ -48,7 +48,7 @@ function renderResultCard(result) {
   html += '</div>';
   
   card.innerHTML = html;
-  if (list && list.firstChild) {
+  if (list) {
     list.insertBefore(card, list.firstChild);
   }
 }
