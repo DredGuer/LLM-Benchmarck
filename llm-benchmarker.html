@@ -795,6 +795,7 @@
         <div class="env-item"><div class="env-label">Cœurs CPU</div><div class="env-value" id="envCores">—</div></div>
         <div class="env-item"><div class="env-label">RAM (approx.)</div><div class="env-value" id="envRAM">—</div></div>
         <div class="env-item"><div class="env-label">GPU</div><div class="env-value" id="envGPU">—</div></div>
+        <div class="env-item"><div class="env-label">Puce</div><div class="env-value" id="envChip" style="display:none;">—</div></div>
         <div class="env-item"><div class="env-label">Heure locale</div><div class="env-value" id="envTime">—</div></div>
       </div>
     </div>
@@ -1198,14 +1199,44 @@ document.addEventListener('DOMContentLoaded', () => {
 ═══════════════════════════════════════════ */
 function detectEnvironment() {
   const ua = navigator.userAgent;
+  const platform = navigator.platform;
 
   // OS
   let os = 'Inconnu';
-  if      (ua.includes('Windows'))  os = 'Windows';
-  else if (ua.includes('Mac'))       os = 'macOS';
+  let osVersion = '';
+  if      (ua.includes('Windows'))  { os = 'Windows'; if (ua.includes('Windows NT 10.0')) osVersion = ' 10/11'; else if (ua.includes('Windows NT 6.3')) osVersion = ' 8.1'; }
+  else if (ua.includes('Mac'))       { os = 'macOS'; if (ua.includes('Mac OS X')) { const match = ua.match(/Mac OS X (\d+[._]\d+)/); if (match) osVersion = ' ' + match[1].replace('_', '.'); } }
   else if (ua.includes('Linux'))     os = 'Linux';
   else if (ua.includes('Android'))   os = 'Android';
   else if (ua.includes('iOS'))       os = 'iOS';
+
+  // Détection Apple Silicon (M1/M2/M3)
+  let chip = '';
+  if (os === 'macOS') {
+    // Vérifier via le GPU ou l'architecture
+    try {
+      const canvas = document.createElement('canvas');
+      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+      if (gl) {
+        const ext = gl.getExtension('WEBGL_debug_renderer_info');
+        if (ext) {
+          const renderer = gl.getParameter(ext.UNMASKED_RENDERER_WEBGL);
+          if (renderer && (renderer.includes('Apple') || renderer.includes('M1') || renderer.includes('M2') || renderer.includes('M3'))) {
+            chip = 'Apple Silicon';
+          }
+        }
+      }
+    } catch(e) {}
+    
+    // Alternative via navigator.oscpu ou userAgent
+    if (!chip && (navigator.oscpu && navigator.oscpu.includes('Apple'))) {
+      chip = 'Apple Silicon';
+    }
+    if (!chip && ua.includes('AppleWebKit')) {
+      // Safari sur Mac moderne = Apple Silicon
+      chip = 'Apple Silicon';
+    }
+  }
 
   // Browser
   let browser = 'Inconnu';
@@ -1217,8 +1248,25 @@ function detectEnvironment() {
   // Cores
   const cores = navigator.hardwareConcurrency || '?';
 
-  // RAM
-  const ram = navigator.deviceMemory ? navigator.deviceMemory + ' GB' : '?';
+  // RAM - Essayer plusieurs méthodes
+  let ram = '?';
+  if (navigator.deviceMemory) {
+    ram = navigator.deviceMemory + ' Go';
+  } else {
+    // Estimation pour Mac (approximative)
+    if (os === 'macOS') {
+      try {
+        // Méthode alternative via performance.memory (non-standard mais supporté par certains navigateurs)
+        if (window.performance && window.performance.memory) {
+          const memGB = Math.round(window.performance.memory.jsHeapSizeLimit / (1024 * 1024 * 1024));
+          ram = memGB + ' Go (est.)';
+        }
+      } catch(e) {
+        // Si rien ne fonctionne, valeur par défaut pour Mac moderne
+        ram = '16 Go (est.)';
+      }
+    }
+  }
 
   // GPU via WebGL
   let gpu = 'Non disponible';
@@ -1229,18 +1277,41 @@ function detectEnvironment() {
       const ext = gl.getExtension('WEBGL_debug_renderer_info');
       if (ext) {
         gpu = gl.getParameter(ext.UNMASKED_RENDERER_WEBGL);
-        if (gpu.length > 28) gpu = gpu.substring(0, 28) + '…';
+        
+        // Standardiser les noms Apple
+        if (gpu.includes('Apple')) {
+          if (gpu.includes('M1')) gpu = 'Apple M1';
+          else if (gpu.includes('M2')) gpu = 'Apple M2';
+          else if (gpu.includes('M3')) gpu = 'Apple M3';
+          else if (gpu.includes('GPU')) gpu = 'Apple GPU';
+        }
+        
+        if (gpu.length > 30) gpu = gpu.substring(0, 30) + '…';
       }
     }
   } catch(e) {}
 
-  state.env = { os, browser, cores, ram, gpu };
+  // Si Apple Silicon détecté, préciser le GPU
+  if (chip === 'Apple Silicon' && gpu === 'Non disponible') {
+    gpu = 'Apple GPU (Intégré)';
+  }
 
-  document.getElementById('envOS').textContent      = os;
+  state.env = { os: os + osVersion, browser, cores, ram, gpu, chip };
+
+  document.getElementById('envOS').textContent      = os + osVersion;
   document.getElementById('envBrowser').textContent = browser;
   document.getElementById('envCores').textContent   = cores + (cores !== '?' ? ' vCPU' : '');
   document.getElementById('envRAM').textContent     = ram;
   document.getElementById('envGPU').textContent     = gpu;
+  
+  // Ajouter la puce Apple Silicon si détectée
+  if (chip) {
+    const envChip = document.getElementById('envChip');
+    if (envChip) {
+      envChip.textContent = chip;
+      envChip.style.display = 'block';
+    }
+  }
 }
 
 function updateTime() {
