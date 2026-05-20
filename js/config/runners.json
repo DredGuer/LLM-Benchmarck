@@ -1,0 +1,75 @@
+{
+  "runners": {
+    "ollama": {
+      "name": "Ollama",
+      "base": "http://localhost:11434",
+      "type": "local",
+      "streaming": true,
+      "endpoints": {
+        "generate": "/api/generate",
+        "tags": "/api/tags",
+        "pull": "/api/pull",
+        "delete": "/api/delete"
+      },
+      "defaultModels": ["llama3.2:3b", "llama3.2:1b", "mistral:7b", "phi3:mini", "qwen2:7b", "codellama:7b"]
+    },
+    "lmstudio": {
+      "name": "LM Studio",
+      "base": "http://localhost:1234",
+      "type": "local",
+      "streaming": false,
+      "endpoints": {
+        "models": "/v1/models",
+        "completions": "/v1/chat/completions"
+      },
+      "defaultModels": ["local-model"]
+    },
+    "llamacpp": {
+      "name": "llama.cpp",
+      "base": "http://localhost:8080",
+      "type": "local",
+      "streaming": false,
+      "endpoints": {
+        "completions": "/v1/chat/completions"
+      },
+      "defaultModels": ["local-model"]
+    },
+    "openai": {
+      "name": "OpenAI",
+      "base": "https://api.openai.com",
+      "type": "api",
+      "streaming": false,
+      "endpoints": {
+        "completions": "/v1/chat/completions"
+      },
+      "defaultModels": ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"]
+    },
+    "mistral": {
+      "name": "Mistral AI",
+      "base": "https://api.mistral.ai",
+      "type": "api",
+      "streaming": false,
+      "endpoints": {
+        "completions": "/v1/chat/completions"
+      },
+      "defaultModels": ["mistral-small-latest", "mistral-medium-latest", "mistral-large-latest", "open-mistral-7b"]
+    },
+    "claude": {
+      "name": "Claude",
+      "base": "https://api.anthropic.com",
+      "type": "api",
+      "streaming": false,
+      "endpoints": {
+        "messages": "/v1/messages"
+      },
+      "defaultModels": ["claude-3-haiku-20240307", "claude-3-5-sonnet-20241022", "claude-3-opus-20240229"]
+    },
+    "custom": {
+      "name": "Personnalisé",
+      "base": "",
+      "type": "custom",
+      "streaming": false,
+      "defaultModels": []
+    }
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "promptTypes": [
+    {
+      "id": "conversation",
+      "name": "Conversation",
+      "emoji": "💬",
+      "desc": "Dialogue libre et réponse générale",
+      "prompt": "Bonjour ! Présente-toi brièvement et explique ce que tu peux faire pour m'aider au quotidien."
+    },
+    {
+      "id": "factual",
+      "name": "Datation / Factuel",
+      "emoji": "🏛️",
+      "desc": "Questions de culture générale datées",
+      "prompt": "Quand la Tour Eiffel a-t-elle été construite ? Donne-moi les dates précises de construction et d'inauguration."
+    },
+    {
+      "id": "math",
+      "name": "Mathématiques",
+      "emoji": "🔢",
+      "desc": "Résolution de problèmes mathématiques",
+      "prompt": "Résous ce problème étape par étape :\nUne voiture roule à 80 km/h. Combien de temps lui faudra-t-il pour parcourir 360 km ? Exprime le résultat en heures et minutes."
+    },
+    {
+      "id": "code",
+      "name": "Code",
+      "emoji": "💻",
+      "desc": "Génération ou analyse de code",
+      "prompt": "Écris une fonction Python qui calcule le n-ième nombre de Fibonacci de manière récursive avec mémoïsation. Ajoute des docstrings et un exemple d'utilisation."
+    },
+    {
+      "id": "creative",
+      "name": "Créatif",
+      "emoji": "🎨",
+      "desc": "Rédaction créative et brainstorming",
+      "prompt": "Écris un haïku sur l'intelligence artificielle, puis propose 5 idées originales d'applications pour améliorer le quotidien des développeurs."
+    },
+    {
+      "id": "logic",
+      "name": "Logique",
+      "emoji": "🧠",
+      "desc": "Résolution de problèmes logiques et raisonnement",
+      "prompt": "Je dois aller laver ma voiture, mais je suis à 200 mètres de la station de lavage. Je me demande si je dois y aller à pied ou en voiture. Analyse la situation et donne-moi une réponse logique."
+    },
+    {
+      "id": "custom",
+      "name": "Prompt personnalisé",
+      "emoji": "✏️",
+      "desc": "Votre propre question ou instruction",
+      "prompt": null
+    }
+  ]
+}
