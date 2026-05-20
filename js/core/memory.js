@@ -105,17 +105,16 @@ ollamaMemoryMonitor = {
     var self = this;
     
     fetch(this._getBackendUrl('/api/memory'))
-      .then(function(response) { return response.json(); })
-      .then(function(data) {
-        var memMB = 0;
-        
-        if (data.success && data.process && data.process.memoryMB) {
-          memMB = data.process.memoryMB;
-        } else if (data.system && data.system.usedMB) {
-          memMB = data.system.usedMB;
+      .then(function(response) { 
+        if (!response.ok) {
+          throw new Error('Ollama non détecté ou backend erreur: ' + response.status);
         }
-        
-        if (memMB > 0) {
+        return response.json(); 
+      })
+      .then(function(data) {
+        // UNIQUEMENT la mémoire du PROCESSUS Ollama (pas la RAM système)
+        if (data.success && data.process && data.process.memoryMB && data.process.memoryMB > 0) {
+          var memMB = data.process.memoryMB;
           if (memMB > self.peakMemory) {
             self.peakMemory = memMB;
           }
@@ -124,8 +123,10 @@ ollamaMemoryMonitor = {
         }
       })
       .catch(function(err) {
-        // Backend became unavailable, try to continue
-        addDebugLog('Erreur récupération mémoire backend: ' + err.message, 'warn');
+        // Ollama n'est pas en cours d'exécution
+        if (self.memoryReadings.length === 0) {
+          addDebugLog('⚠️ Ollama non détecté - lancez `ollama serve` pour le monitoring RAM', 'warn');
+        }
       });
   },
   
