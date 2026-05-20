@@ -90,12 +90,18 @@ async function executeTest(model, promptType, promptText, rep, signal) {
   var maxTokens = parseInt(document.getElementById('maxTokens').value) || 512;
   var t0 = performance.now();
   var firstTokenTime = null, fullText = '', tokensGenerated = 0;
+  var memoryStats = null;
   currentTestState = { model: model, promptType: promptType, promptText: promptText, maxTokens: maxTokens, tokensReceived: 0, isStreaming: false, startTime: Date.now(), logs: [] };
   resetLiveOutput(); 
   showLiveSections(true); 
   setControlButtons(true);
   addDebugLog('Démarrage du test: ' + model + ' - ' + promptType.name, 'info');
   addDebugLog('Config: temp=' + temperature + ', max_tokens=' + maxTokens, 'info');
+  
+  // Start memory monitoring for local runners (Ollama)
+  if (state.runner === 'ollama') {
+    ollamaMemoryMonitor.start();
+  }
 
   if (state.runner === 'ollama') {
     currentTestState.isStreaming = true;
@@ -179,6 +185,14 @@ async function executeTest(model, promptType, promptText, rep, signal) {
       headers['x-api-key'] = key;
       headers['anthropic-version'] = '2023-06-01';
       body = { model: model, max_tokens: maxTokens, messages: [{ role: 'user', content: promptText }] };
+    } else if (state.runner === 'gemini') {
+      var key = state.apiKeys.gemini;
+      if (!key) throw new Error('Clé API Gemini manquante');
+      base = 'https://generativelanguage.googleapis.com';
+      endpoint = '/v1beta/models/' + model + ':generateContent';
+      headers['x-goog-api-key'] = key;
+      headers['Content-Type'] = 'application/json';
+      body = { contents: [{ parts: [{ text: promptText }] }], generationConfig: { temperature: temperature, maxOutputTokens: maxTokens } };
     } else if (state.runner === 'custom') {
       base = state.customBase || 'http://localhost:8080';
       endpoint = '/v1/chat/completions';
@@ -203,6 +217,9 @@ async function executeTest(model, promptType, promptText, rep, signal) {
       if (state.runner === 'claude') {
         fullText = data.content && data.content[0] && data.content[0].text ? data.content[0].text : '';
         tokensGenerated = data.usage && data.usage.output_tokens ? data.usage.output_tokens : estimateTokens(fullText);
+      } else if (state.runner === 'gemini') {
+        fullText = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text ? data.candidates[0].content.parts[0].text : '';
+        tokensGenerated = data.usageMetadata && data.usageMetadata.outputTokenCount ? data.usageMetadata.outputTokenCount : estimateTokens(fullText);
       } else {
         fullText = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content ? data.choices[0].message.content : '';
         tokensGenerated = data.usage && data.usage.completion_tokens ? data.usage.completion_tokens : estimateTokens(fullText);
@@ -214,11 +231,22 @@ async function executeTest(model, promptType, promptText, rep, signal) {
     }
   }
   
+  // Stop memory monitoring for Ollama
+  if (state.runner === 'ollama') {
+    memoryStats = ollamaMemoryMonitor.stop();
+    if (memoryStats.peakMemory) {
+      addDebugLog('RAM pic: ' + memoryStats.peakMemory + ' MB', 'info');
+    } else {
+      addDebugLog('Monitoring RAM : API non disponible. Utilisez Chrome avec --enable-precision-memory-info', 'warn');
+    }
+  }
+  
   var totalTime = performance.now() - t0;
   var tokensPerSec = tokensGenerated > 0 ? (tokensGenerated / (totalTime / 1000)) : 0;
   var ttft = firstTokenTime !== null ? firstTokenTime : null;
   
-  return {
+  // Build result object
+  var result = {
     id: crypto.randomUUID(),
     timestamp: new Date().toISOString(),
     model: model,
@@ -240,6 +268,16 @@ async function executeTest(model, promptType, promptText, rep, signal) {
     rep: rep,
     error: null
   };
+  
+  // Add memory stats for Ollama
+  if (state.runner === 'ollama' && memoryStats && memoryStats.peakMemory) {
+    result.memory = {
+      peak: memoryStats.peakMemory,
+      average: memoryStats.averageMemory
+    };
+  }
+  
+  return result;
 }
 
 function buildErrorResult(model, promptType, errorMsg, rep) {

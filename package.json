@@ -1,0 +1,28 @@
+{
+  "name": "llm-benchmarker-memory-monitor",
+  "version": "1.0.0",
+  "description": "Memory monitoring backend for LLM Benchmarker - tracks Ollama process RAM usage",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "start:dev": "nodemon server.js",
+    "start:port": "node server.js --port"
+  },
+  "keywords": [
+    "llm",
+    "ollama",
+    "memory",
+    "monitoring",
+    "benchmark"
+  ],
+  "author": "LLM Benchmarker",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "pidusage": "^3.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}

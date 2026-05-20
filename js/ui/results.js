@@ -28,6 +28,9 @@ function renderResultCard(result) {
   html += '<span class="badge badge-blue">' + escapeHtml(result.runner) + '</span>';
   html += '<span class="badge ' + (isError ? 'badge-red' : 'badge-green') + '">' + (isError ? '❌ Erreur' : '✅ OK') + '</span>';
   html += '<span class="badge badge-purple">' + escapeHtml(result.promptTypeName) + '</span>';
+  if (result.memory && result.memory.peak > 0) {
+    html += '<span class="badge badge-orange">💾 ' + result.memory.peak + ' MB</span>';
+  }
   html += '<small style="color:var(--text3);font-size:0.75rem;margin-left:auto;">' + new Date(result.timestamp).toLocaleTimeString('fr-FR') + '</small>';
   html += '</div>';
   
@@ -41,6 +44,10 @@ function renderResultCard(result) {
     html += '<div class="metric-box ' + tpsColor + '"><div class="metric-value">' + m.tokensPerSec + '</div><div class="metric-label">Tokens / sec</div></div>';
     html += '<div class="metric-box highlight-orange"><div class="metric-value">' + ttftStr + '</div><div class="metric-label">1er token (TTFT)</div></div>';
     html += '<div class="metric-box"><div class="metric-value">' + (m.totalTime/1000).toFixed(2) + 's</div><div class="metric-label">Temps total</div></div>';
+    if (result.memory && result.memory.peak > 0) {
+      html += '<div class="metric-box highlight-purple"><div class="metric-value">' + result.memory.peak + ' MB</div><div class="metric-label">RAM pic</div></div>';
+      html += '<div class="metric-box highlight-green"><div class="metric-value">' + result.memory.average + ' MB</div><div class="metric-label">RAM moyenne</div></div>';
+    }
     html += '</div>';
     html += '<div class="prompt-echo"><strong>Prompt :</strong> ' + escapeHtml(result.promptText.substring(0, 180)) + (result.promptText.length > 180 ? '…' : '') + '</div>';
     html += '<div class="response-block">' + escapeHtml(result.response) + '</div>';
@@ -73,15 +80,17 @@ function exportMarkdown() {
   md += '| GPU | ' + (env.gpu || 'N/A') + ' |\n\n';
   md += '---\n\n';
   md += '## 📈 Résumé des tests\n\n';
-  md += '| # | Modèle | Runner | Type | Tokens | Tok/s | TTFT | Temps total | Statut |\n';
-  md += '|---|--------|--------|------|--------|-------|------|-------------|--------|\n';
+  md += '| # | Modèle | Runner | Type | Tokens | Tok/s | TTFT | Temps total | RAM pic | RAM moy | Statut |\n';
+  md += '|---|--------|--------|------|--------|-------|------|-------------|---------|---------|--------|\n';
   
   for (var i = 0; i < state.results.length; i++) {
     var r = state.results[i];
     var m = r.metrics;
     var ttftStr = m.ttft !== null ? m.ttft + ' ms' : 'N/A';
+    var ramPeakStr = (r.memory && r.memory.peak > 0) ? r.memory.peak + ' MB' : 'N/A';
+    var ramAvgStr = (r.memory && r.memory.average > 0) ? r.memory.average + ' MB' : 'N/A';
     var status = r.error ? '❌ Erreur' : '✅ OK';
-    md += '| ' + (i+1) + ' | `'+ r.model +'` | ' + r.runner + ' | ' + r.promptEmoji + ' ' + r.promptTypeName + ' | ' + m.totalTokens + ' | ' + m.tokensPerSec + ' | ' + ttftStr + ' | ' + (m.totalTime/1000).toFixed(2) + 's | ' + status + ' |\n';
+    md += '| ' + (i+1) + ' | `'+ r.model +'` | ' + r.runner + ' | ' + r.promptEmoji + ' ' + r.promptTypeName + ' | ' + m.totalTokens + ' | ' + m.tokensPerSec + ' | ' + ttftStr + ' | ' + (m.totalTime/1000).toFixed(2) + 's | ' + ramPeakStr + ' | ' + ramAvgStr + ' | ' + status + ' |\n';
   }
   
   md += '\n---\n\n';
@@ -106,7 +115,12 @@ function exportMarkdown() {
       md += '| Temps 1er token (TTFT) | ' + (m.ttft !== null ? m.ttft + ' ms' : 'N/A') + ' |\n';
       md += '| Temps total | ' + (m.totalTime/1000).toFixed(2) + ' s |\n';
       md += '| Température | ' + m.temperature + ' |\n';
-      md += '| Tokens max | ' + m.maxTokens + ' |\n\n';
+      md += '| Tokens max | ' + m.maxTokens + ' |\n';
+      if (r.memory && r.memory.peak > 0) {
+        md += '| RAM pic | ' + r.memory.peak + ' MB |\n';
+        md += '| RAM moyenne | ' + r.memory.average + ' MB |\n';
+      }
+      md += '\n';
       md += '#### Prompt\n\n';
       md += '```\n' + r.promptText + '\n```\n\n';
       md += '#### Réponse\n\n';
