@@ -98,15 +98,9 @@ async function executeTest(model, promptType, promptText, rep, signal) {
   addDebugLog('Démarrage du test: ' + model + ' - ' + promptType.name, 'info');
   addDebugLog('Config: temp=' + temperature + ', max_tokens=' + maxTokens, 'info');
   
-  // Start memory monitoring for Ollama (local only)
+  // Start memory monitoring for local runners (Ollama)
   if (state.runner === 'ollama') {
-    var pid = await ollamaMemoryMonitor.getOllamaPID();
-    if (pid) {
-      addDebugLog('Monitoring RAM - PID Ollama: ' + pid, 'info');
-      ollamaMemoryMonitor.start(pid);
-    } else {
-      addDebugLog('PID Ollama non trouvé, monitoring RAM limité', 'warn');
-    }
+    ollamaMemoryMonitor.start();
   }
 
   if (state.runner === 'ollama') {
@@ -240,7 +234,11 @@ async function executeTest(model, promptType, promptText, rep, signal) {
   // Stop memory monitoring for Ollama
   if (state.runner === 'ollama') {
     memoryStats = ollamaMemoryMonitor.stop();
-    addDebugLog('RAM pic: ' + memoryStats.peakMemory + ' MB', 'info');
+    if (memoryStats.peakMemory) {
+      addDebugLog('RAM pic: ' + memoryStats.peakMemory + ' MB', 'info');
+    } else {
+      addDebugLog('Monitoring RAM : API non disponible. Utilisez Chrome avec --enable-precision-memory-info', 'warn');
+    }
   }
   
   var totalTime = performance.now() - t0;
@@ -272,7 +270,7 @@ async function executeTest(model, promptType, promptText, rep, signal) {
   };
   
   // Add memory stats for Ollama
-  if (memoryStats && memoryStats.peakMemory > 0) {
+  if (state.runner === 'ollama' && memoryStats && memoryStats.peakMemory) {
     result.memory = {
       peak: memoryStats.peakMemory,
       average: memoryStats.averageMemory

@@ -1,104 +1,78 @@
 /**
  * LLM Benchmarker - Memory Monitoring for Ollama
  * Monitors RAM usage during Ollama model execution
+ * 
+ * Note: Browser-based monitoring has limitations:
+ * - performance.memory requires Chrome with --enable-precision-memory-info flag
+ * - Only provides JS heap size, not actual process memory
+ * - For accurate Ollama process memory, a backend is required
  */
 
-// Global to track Ollama process memory
+// Global to track memory during tests
 ollamaMemoryMonitor = {
-  pid: null,
   peakMemory: 0,
   memoryReadings: [],
   monitoringInterval: null,
+  isActive: false,
   
   /**
-   * Start monitoring Ollama process memory
-   * Uses Node.js backend if available, falls back to system info
+   * Start monitoring memory usage
+   * Uses browser performance.memory API if available
    */
-  start: function(pid) {
-    this.pid = pid;
+  start: function() {
     this.peakMemory = 0;
     this.memoryReadings = [];
+    this.isActive = true;
     
-    // Try to get memory from backend if running
-    if (window.memoryMonitorBackend) {
-      this._startBackendMonitoring(pid);
+    // Check if performance.memory is available (Chrome with flag)
+    if (window.performance && window.performance.memory) {
+      addDebugLog('Monitoring RAM via performance.memory (navigateur)', 'info');
+      this._startBrowserMonitoring();
     } else {
-      // Fallback: monitor system memory (less precise)
-      this._startSystemMonitoring();
+      addDebugLog('performance.memory non disponible. Utilisez Chrome avec --enable-precision-memory-info pour le monitoring RAM.', 'warn');
+      // Still try to monitor, but will return 0
+      this._startFallbackMonitoring();
     }
   },
   
   /**
-   * Start monitoring via backend API
+   * Monitor using browser performance.memory API
    */
-  _startBackendMonitoring: function(pid) {
+  _startBrowserMonitoring: function() {
     var self = this;
-    
-    // Get initial memory
-    this._fetchMemory(pid);
-    
-    // Poll every 500ms
     this.monitoringInterval = setInterval(function() {
-      self._fetchMemory(pid);
+      var mem = window.performance.memory;
+      if (mem && mem.usedJSHeapSize) {
+        var usedMB = Math.round(mem.usedJSHeapSize / 1024 / 1024);
+        if (usedMB > self.peakMemory) {
+          self.peakMemory = usedMB;
+        }
+        self.memoryReadings.push({ timestamp: Date.now(), memory: usedMB });
+      }
     }, 500);
   },
   
   /**
-   * Fetch memory from backend
+   * Fallback monitoring (placeholder)
    */
-  _fetchMemory: function(pid) {
+  _startFallbackMonitoring: function() {
     var self = this;
-    fetch('/api/memory?pid=' + pid)
-      .then(function(response) { return response.json(); })
-      .then(function(data) {
-        var memMB = 0;
-        if (data.process && data.process.memory) {
-          memMB = Math.round(data.process.memory / 1024 / 1024);
-        } else if (data.system) {
-          memMB = Math.round((data.system.total - data.system.free) / 1024 / 1024);
-        }
-        
-        if (memMB > self.peakMemory) {
-          self.peakMemory = memMB;
-        }
-        self.memoryReadings.push({ timestamp: Date.now(), memory: memMB });
-      })
-      .catch(function(err) {
-        addDebugLog('Erreur récupération mémoire: ' + err.message, 'warn');
-      });
+    this.monitoringInterval = setInterval(function() {
+      // No actual monitoring, just placeholder
+    }, 500);
   },
   
   /**
-   * Fallback: monitor system memory
-   */
-  _startSystemMonitoring: function() {
-    var self = this;
-    
-    // Try to get system memory info from browser (Chrome only with flag)
-    if (window.performance && window.performance.memory) {
-      this.monitoringInterval = setInterval(function() {
-        var mem = window.performance.memory;
-        if (mem) {
-          var usedMB = Math.round(mem.usedJSHeapSize / 1024 / 1024);
-          if (usedMB > self.peakMemory) {
-            self.peakMemory = usedMB;
-          }
-          self.memoryReadings.push({ timestamp: Date.now(), memory: usedMB });
-        }
-      }, 500);
-    }
-  },
-  
-  /**
-   * Stop monitoring
+   * Stop monitoring and return stats
    */
   stop: function() {
     if (this.monitoringInterval) {
       clearInterval(this.monitoringInterval);
       this.monitoringInterval = null;
     }
+    this.isActive = false;
     return {
-      peakMemory: this.peakMemory,
+      peakMemory: this.peakMemory > 0 ? this.peakMemory : null,
       averageMemory: this._calculateAverage(),
       readings: this.memoryReadings
     };
@@ -114,36 +88,12 @@ ollamaMemoryMonitor = {
       sum += this.memoryReadings[i].memory;
     }
     return Math.round(sum / this.memoryReadings.length);
-  },
-  
-  /**
-   * Get current Ollama PID from local API
-   */
-  getOllamaPID: async function() {
-    try {
-      var response = await fetch('http://localhost:11434/api/ps');
-      var data = await response.json();
-      if (data.processes && data.processes.length > 0) {
-        return data.processes[0].pid;
-      }
-    } catch (err) {
-      addDebugLog('Impossible de récupérer le PID Ollama: ' + err.message, 'warn');
-    }
-    return null;
   }
 };
 
 /**
- * Alternative: Get system memory info (browser based)
+ * Check if performance.memory API is available
  */
-function getSystemMemoryInfo() {
-  if (window.performance && window.performance.memory) {
-    var mem = window.performance.memory;
-    return {
-      usedJSHeapSize: Math.round(mem.usedJSHeapSize / 1024 / 1024),
-      totalJSHeapSize: Math.round(mem.totalJSHeapSize / 1024 / 1024),
-      jsHeapSizeLimit: Math.round(mem.jsHeapSizeLimit / 1024 / 1024)
-    };
-  }
-  return null;
+function isMemoryMonitoringAvailable() {
+  return window.performance && window.performance.memory;
 }
