@@ -1,9 +1,9 @@
 /**
  * LLM Benchmarker - Configuration Loading
- * Loads runner and prompt configurations from JSON files
+ * Loads runner and prompt configurations from inline JSON scripts
  */
 
-// Load configurations from JSON script tags
+// Load configurations from inline JSON script tags
 var runnersConfig = JSON.parse(document.getElementById('runnersConfig').textContent);
 var promptsConfig = JSON.parse(document.getElementById('promptsConfig').textContent);
 

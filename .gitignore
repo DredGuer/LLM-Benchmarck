@@ -10,7 +10,28 @@ artifact-*
 .vscode/
 *.swp
 *.swo
+*.sublime-workspace
+*.sublime-project
 
 # Build/Log files
 *.log
 *.tmp
+
+# Node.js (si utilisé pour le développement)
+node_modules/
+package-lock.json
+npm-debug.log*
+
+# Distribution
+/dist/
+/build/
+*.zip
+*.tar.gz
+
+# Fichiers de configuration locaux
+.env
+.env.local
+.env.*.local
+
+# Cache
+.cache/

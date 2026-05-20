@@ -1,6 +1,8 @@
 # LLM Benchmarker Local 🚀
 
-> **Maquette fonctionnelle v0.01** - Benchmark de modèles LLM locaux et externes directement depuis le navigateur
+> **Version 0.02** - Benchmark de modèles LLM locaux et externes directement depuis le navigateur
+>
+> **Architecture modulaire** - Code organisé en modules JavaScript séparés pour une meilleure maintenabilité
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Status: Alpha](https://img.shields.io/badge/Status-Alpha-orange.svg)]
@@ -13,6 +15,7 @@
 - [🎯 Fonctionnalités](#-fonctionnalités)
 - [📦 Prérequis](#-prérequis)
 - [🚀 Installation et Utilisation](#-installation-et-utilisation)
+- [🏗️ Architecture](#-architecture)
 - [🔧 Configuration](#-configuration)
 - [📊 Fonctionnement](#-fonctionnement)
 - [📝 Export des résultats](#-export-des-résultats)
@@ -63,6 +66,57 @@
 
 ---
 
+## 🏗️ Architecture
+
+### Structure des fichiers
+
+```
+LLM-Benchmarck/
+├── llm-benchmarker.html          # Page HTML principale
+├── css/
+│   └── styles.css                # Tous les styles CSS
+├── js/
+│   ├── config/
+│   │   ├── runners.json           # Configuration des runners
+│   │   ├── prompts.json           # Configuration des prompts
+│   │   └── load.js                # Chargement des configurations
+│   ├── core/
+│   │   ├── state.js              # État global de l'application
+│   │   ├── storage.js            # Utilitaires localStorage
+│   │   ├── environment.js        # Détection matérielle
+│   │   ├── runners.js            # Gestion des runners
+│   │   ├── prompts.js            # Gestion des prompts
+│   │   ├── streaming.js          # Streaming et output live
+│   │   ├── benchmark.js          # Moteur de benchmarking
+│   │   ├── apiKeys.js            # Gestion des clés API
+│   │   ├── connectivity.js       # Tests de connectivité
+│   │   └── history.js            # Gestion de l'historique
+│   ├── ui/
+│   │   ├── toast.js              # Notifications toast
+│   │   ├── modals.js             # Gestion des modales
+│   │   ├── tabs.js               # Gestion des onglets
+│   │   └── results.js            # Affichage et export
+│   ├── utils/
+│   │   └── helpers.js            # Fonctions utilitaires
+│   └── main.js                   # Initialisation
+├── amelioration.md              # Roadmap et suivi
+├── README.md                     # Ce fichier
+└── LICENSE                       # Licence Apache 2.0
+```
+
+### Approche modulaire
+
+Le code est organisé en modules thématiques partageant un espace de noms global :
+
+- **Core** : Logique métier (benchmark, streaming, configuration)
+- **UI** : Composants d'interface (toasts, modales, onglets, résultats)
+- **Utils** : Fonctions utilitaires réutilisables
+- **Config** : Données de configuration statiques
+
+Tous les modules sont chargés de manière séquentielle dans le HTML, garantissant que les dépendances sont disponibles au bon moment.
+
+---
+
 ## 📦 Prérequis
 
 ### Pour les runners locaux
@@ -93,16 +147,19 @@
 
 ### 1️⃣ Téléchargement
 
-Clônez ce dépôt ou téléchargez le fichier `llm-benchmarker.html` :
+Clônez ce dépôt ou téléchargez les fichiers nécessaires :
 
 ```bash
-# Clone (si disponible)
+# Clone du dépôt complet
 git clone <url-du-depot>
 cd llm-benchmarker
 
-# Ou téléchargez simplement le fichier
-wget https://github.com/<user>/<repo>/raw/main/llm-benchmarker.html
+# Ou téléchargez l'archive complète
+wget https://github.com/<user>/<repo>/archive/refs/heads/main.zip
+unzip main.zip
 ```
+
+**⚠️ Important** : Tous les fichiers sont nécessaires (HTML, CSS, JS, JSON). Ne téléchargez pas seulement `llm-benchmarker.html` seul.
 
 ### 2️⃣ Lancer un serveur web local
 
@@ -321,18 +378,27 @@ Les contributions sont les bienvenues !
 
 1. **Forker** le dépôt
 2. **Créer une branche** (`git checkout -b feature/amazing-feature`)
-3. ** Commiter** vos changements (`git commit -m 'Add amazing feature'`)
+3. **Commiter** vos changements (`git commit -m 'feat: add amazing feature'`)
 4. **Pousser** vers la branche (`git push origin feature/amazing-feature`)
 5. **Ouvrir une Pull Request**
 
+### Conventions de code
+
+- **Commits** : Utilisez des messages clairs (`feat:`, `fix:`, `refactor:`, `docs:`)
+- **Architecture** : Respectez la séparation en modules (core, ui, utils, config)
+- **Noms de fichiers** : Utilisez le kebab-case (`my-module.js`)
+- **Commentaires** : Documentez les fonctions et sections complexes
+
 ### Suggestions d'améliorations
 
-- [ ] Support de plus de runners locaux
+- [ ] Support de plus de runners locaux (VLLM, Kobold, etc.)
 - [ ] Benchmark comparatif entre plusieurs modèles
-- [ ] Graphiques de visualisation des résultats
+- [ ] Graphiques de visualisation des résultats (Chart.js, etc.)
 - [ ] Export en JSON/CSV
-- [ ] Tests automatisés
+- [ ] Tests automatisés (Jest, Cypress)
 - [ ] Interface en anglais
+- [ ] Thème sombre/clair
+- [ ] Migration vers ES6 modules
 
 ---
 
