@@ -1,8 +1,8 @@
 # LLM Benchmarker Local 🚀
 
-> **Version 0.03** - Benchmark de modèles LLM locaux et externes directement depuis le navigateur
+> **Version 0.04** - Benchmark de modèles LLM locaux et externes directement depuis le navigateur
 >
-> **Nouveautés** : Support Gemini ✨ | Monitoring RAM Ollama 💾 | Backend optionnel
+> **Nouveautés** : Support Gemini ✨ | Monitoring RAM Ollama 💾 | Backend optionnel | Fix timeout modèles lourds (>30B) ⏱️
 
 > **✅ Toutes les fonctionnalités validées** - Sélection des prompts, benchmark, export, historique, monitoring RAM
 
@@ -419,7 +419,7 @@ Exemple de structure :
 ```markdown
 # 📊 Rapport de Benchmark LLM
 
-> Généré le 15 janvier 2025 à 14:30 par **LLM Benchmarker v0.03**
+> Généré le 15 janvier 2025 à 14:30 par **LLM Benchmarker v0.04**
 
 ---
 
@@ -464,7 +464,7 @@ Je suis un modèle de langage...
 
 ---
 
-*Rapport généré automatiquement par LLM Benchmarker v0.03*
+*Rapport généré automatiquement par LLM Benchmarker v0.04*
 ```
 
 ---
@@ -556,7 +556,7 @@ Les contributions sont les bienvenues !
 
 ## ⚠️ Limitations connues
 
-### Version v0.03
+### Version v0.04
 
 - **CORS** : Nécessite un serveur web local pour fonctionner (pas de `file://`)
 - **Streaming** : Seule Ollama supporte le streaming pour la mesure du TTFT
@@ -571,7 +571,7 @@ Les contributions sont les bienvenues !
 |----------|----------|
 | Liste des modèles vide | Vérifiez que le runner est lancé et accessible |
 | Erreur CORS | Servez le fichier via un serveur web local |
-| Timeout | Augmentez le timeout ou utilisez un modèle plus léger |
+| Timeout sur modèles >30B (ex: gemma4:31b) | **Fixé en v0.04** - Timeout augmenté à 3 min pour Ollama |
 | Clé API invalide | Vérifiez votre clé dans les paramètres |
 | RAM non affichée | Lancez `node server.js` ou utilisez Chrome avec `--enable-precision-memory-info` |
 | Backend non détecté | Vérifiez que le backend tourne sur `localhost:3001` |
@@ -620,6 +620,6 @@ Pour toute question ou problème :
 
 <div align="center">
   <p>
-    <strong>LLM Benchmarker v0.03</strong> - Développé avec ❤️ pour la communauté LLM
+    <strong>LLM Benchmarker v0.04</strong> - Développé avec ❤️ pour la communauté LLM
   </p>
 </div>
