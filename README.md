@@ -2,6 +2,8 @@
 
 > **Version 0.04** - Benchmark de modèles LLM locaux et externes directement depuis le navigateur
 >
+> **Développé par** [NVNC Tech](https://nvnc.tech) ✨
+>
 > **Nouveautés** : Support Gemini ✨ | Monitoring RAM Ollama 💾 | Backend optionnel | Fix timeout modèles lourds (>30B) ⏱️
 
 > **✅ Toutes les fonctionnalités validées** - Sélection des prompts, benchmark, export, historique, monitoring RAM
@@ -496,7 +498,7 @@ Toutes les données sont stockées localement dans le navigateur :
 
 Ce projet est distribué sous la licence [Apache License, Version 2.0](LICENSE).
 
-© 2025 LLM Benchmarker
+© 2025 [NVNC Tech](https://nvnc.tech)
 
 Voir le fichier [LICENSE](LICENSE) pour le texte complet de la licence.
 
@@ -620,6 +622,6 @@ Pour toute question ou problème :
 
 <div align="center">
   <p>
-    <strong>LLM Benchmarker v0.04</strong> - Développé avec ❤️ pour la communauté LLM
+    <strong>LLM Benchmarker v0.04</strong> - Développé avec ❤️ par [NVNC Tech](https://nvnc.tech) pour la communauté LLM
   </p>
 </div>
