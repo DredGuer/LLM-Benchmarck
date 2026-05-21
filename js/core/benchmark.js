@@ -111,7 +111,7 @@ async function executeTest(model, promptType, promptText, rep, signal) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model: model, prompt: promptText, stream: true, options: { temperature: temperature, num_predict: maxTokens } }),
         signal: signal
-      }, 60000);
+      }, 180000); // 3 minutes pour les modèles lourds (>30B)
       var reader = res.body.getReader();
       var decoder = new TextDecoder();
       while (true) {
