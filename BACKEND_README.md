@@ -30,6 +30,7 @@ node server.js --port 4000
 ```bash
 # Dans un autre terminal
 curl http://localhost:3001/
+curl http://localhost:3001/api/ping
 curl http://localhost:3001/api/memory
 curl http://localhost:3001/api/ollama/status
 ```
@@ -39,10 +40,19 @@ curl http://localhost:3001/api/ollama/status
 | Méthode | Endpoint | Description |
 |---------|----------|-------------|
 | GET | `/` | Health check |
+| GET | `/api/ping` | **Nouveau!** Vérification rapide que le backend est vivant (réponse instantanée) |
 | GET | `/api/memory` | Récupère la mémoire actuelle d'Ollama |
 | GET | `/api/environment` | **Nouveau!** Récupère toutes les infos système (OS, CPU, RAM, **GPU**) |
 | GET | `/api/ollama/status` | Vérifie si Ollama est en cours d'exécution |
 | GET | `/api/ollama/pid` | Récupère le PID du processus Ollama |
+
+### Réponse de `/api/ping`
+```json
+{
+  "status": "ok",
+  "timestamp": 1717986918400
+}
+```
 
 ### Réponse de `/api/memory`
 ```json
