@@ -10,7 +10,7 @@
 
 // Configuration
 window.MEMORY_MONITOR_CONFIG = {
-  backendUrl: 'http://localhost:3001',
+  backendUrl: 'http://localhost:4000',
   pollInterval: 500, // ms
   timeout: 2000 // ms
 };
