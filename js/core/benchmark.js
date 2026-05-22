@@ -271,10 +271,10 @@ async function executeTest(model, promptType, promptText, rep, signal) {
   };
   
   // Add memory stats for Ollama
-  if (state.runner === 'ollama' && memoryStats && memoryStats.peakMemory) {
+  if (state.runner === 'ollama' && memoryStats) {
     result.memory = {
-      peak: memoryStats.peakMemory,
-      average: memoryStats.averageMemory
+      peak: memoryStats.peakMemory || null,
+      average: memoryStats.averageMemory || null
     };
   }
   

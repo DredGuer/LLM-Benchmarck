@@ -31,17 +31,17 @@ ollamaMemoryMonitor = {
     addDebugLog('[MEMORY] Initializing memory monitor...', 'info');
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 1000);
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
       
-      addDebugLog('[MEMORY] Checking backend at: ' + this._getBackendUrl('/api/ollama/status'), 'info');
-      const response = await fetch(this._getBackendUrl('/api/ollama/status'), {
+      addDebugLog('[MEMORY] Checking backend at: ' + this._getBackendUrl('/api/ping'), 'info');
+      const response = await fetch(this._getBackendUrl('/api/ping'), {
         method: 'GET',
         signal: controller.signal
       });
       
       clearTimeout(timeoutId);
       
-      addDebugLog('[MEMORY] Backend status response: ' + response.status + ' ' + response.statusText, 'info');
+      addDebugLog('[MEMORY] Backend ping response: ' + response.status + ' ' + response.statusText, 'info');
       this.backendAvailable = response.ok;
       if (this.backendAvailable) {
         addDebugLog('✅ Backend de monitoring RAM détecté sur port 3001', 'success');
@@ -51,7 +51,14 @@ ollamaMemoryMonitor = {
     } catch (err) {
       this.backendAvailable = false;
       addDebugLog('[MEMORY] Backend check failed: ' + err.message, 'error');
-      addDebugLog('⚠️ Backend monitoring RAM non détecté : ' + err.message, 'warn');
+      if (err.name === 'AbortError') {
+        addDebugLog('⚠️ Backend monitoring RAM non détecté : timeout (le backend met trop de temps à répondre). Essayez d\'augmenter le timeout ou vérifiez que node server.js est lancé.', 'warn');
+      } else if (err.message.includes('Failed to fetch') || err.message.includes('CORS') || err.message.includes('network')) {
+        addDebugLog('⚠️ Backend monitoring RAM non détecté : impossible de contacter http://localhost:3001. Vérifiez que le serveur est lancé avec `node server.js`.', 'warn');
+        addDebugLog('   Si vous avez lancé le serveur, essayez de rafraîchir la page (F5).', 'warn');
+      } else {
+        addDebugLog('⚠️ Backend monitoring RAM non détecté : ' + err.message, 'warn');
+      }
     }
   },
   
@@ -114,13 +121,21 @@ ollamaMemoryMonitor = {
     
     addDebugLog('[MEMORY] Fetching from backend: ' + this._getBackendUrl('/api/memory'), 'info');
     
-    fetch(this._getBackendUrl('/api/memory'))
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    
+    fetch(this._getBackendUrl('/api/memory'), { signal: controller.signal })
       .then(function(response) { 
+        clearTimeout(timeoutId);
         addDebugLog('[MEMORY] Backend response status: ' + response.status, 'info');
         if (!response.ok) {
           throw new Error('Ollama non détecté ou backend erreur: ' + response.status);
         }
         return response.json(); 
+      })
+      .catch(function(err) {
+        clearTimeout(timeoutId);
+        throw err;
       })
       .then(function(data) {
         addDebugLog('[MEMORY] Backend data received: ' + JSON.stringify(data).substring(0, 200), 'info');

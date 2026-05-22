@@ -161,6 +161,16 @@
           <label>Répétitions par test <span class="tooltip-icon" title="Nombre de fois à exécuter chaque test pour une moyenne.">ⓘ</span></label>
           <input type="number" id="repetitions" value="1" min="1" max="5" step="1">
         </div>
+        <div class="form-group" id="gpuSelectorGroup" style="display: none;">
+          <label>GPU à utiliser <span class="tooltip-icon" title="Sélectionnez quelle carte graphique utiliser pour le benchmark. Nécessite le redémarrage d'Ollama avec CUDA_VISIBLE_DEVICES.">ⓘ</span></label>
+          <select id="selectedGPU" onchange="saveSelectedGPU()">
+            <option value="auto">Auto (Détection intelligente)</option>
+          </select>
+          <small style="color:var(--text3);margin-top:4px;display:block;">
+            Changer cette option nécessite de <strong>redémarrer Ollama</strong> avec :<br>
+            <code style="background:var(--bg2);padding:2px 6px;border-radius:4px;">CUDA_VISIBLE_DEVICES=X ollama serve</code>
+          </small>
+        </div>
       </div>
     </div>
 

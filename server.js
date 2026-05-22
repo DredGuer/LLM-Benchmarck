@@ -620,6 +620,13 @@ app.get('/api/environment', (req, res) => {
 });
 
 /**
+ * GET /api/ping - Simple health check (no Ollama check, fast response)
+ */
+app.get('/api/ping', (req, res) => {
+  res.json({ status: 'ok', timestamp: Date.now() });
+});
+
+/**
  * GET /api/ollama/status - Check if Ollama is running
  */
 app.get('/api/ollama/status', async (req, res) => {

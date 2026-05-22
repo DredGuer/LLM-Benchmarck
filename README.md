@@ -1,10 +1,10 @@
 # LLM Benchmarker Local 🚀
 
-> **Version 0.05** - Benchmark de modèles LLM locaux et externes directement depuis le navigateur
+> **Version 0.06** - Benchmark de modèles LLM locaux et externes directement depuis le navigateur
 >
 > **Développé par** [NVNC](https://nvnc.fr) ✨
 >
-> **Nouveautés** : Support Gemini ✨ | Monitoring RAM Ollama 💾 | Backend optionnel | Fix timeout modèles lourds (>30B) ⏱️ | **Détection GPU intelligente** 🎮 | **Modes Auto/Manuel** ⚙️ | **Config par type de prompt** 📝
+> **Nouveautés** : Support Gemini ✨ | Monitoring RAM Ollama 💾 | Backend optionnel | Fix timeout modèles lourds (>30B) ⏱️ | **Détection GPU intelligente** 🎮 | **Modes Auto/Manuel** ⚙️ | **Config par type de prompt** 📝 | **Fix bug RAM 0MB** 🐛 | **Détection backend améliorée** 🔄
 
 > **✅ Toutes les fonctionnalités validées** - Sélection des prompts, benchmark, export, historique, monitoring RAM
 
@@ -572,6 +572,10 @@ Les contributions sont les bienvenues !
 - [ ] Migration vers ES6 modules
 - [ ] Intégration avec Prometheus/Grafana pour le monitoring
 
+### 📖 Documentation technique
+Pour les améliorations futures et la roadmap détaillée, consultez :
+- **[innovation.md](innovation.md)** - Roadmap des fonctionnalités multi-GPU et cluster
+
 ---
 
 ## ⚠️ Limitations connues
@@ -594,7 +598,8 @@ Les contributions sont les bienvenues !
 | Erreur CORS | Servez le fichier via un serveur web local |
 | Timeout sur modèles >30B (ex: gemma4:31b) | **Fixé en v0.05** - Timeout augmenté à 3 min pour Ollama |
 | Clé API invalide | Vérifiez votre clé dans les paramètres |
-| RAM non affichée | Lancez `node server.js` ou utilisez Chrome avec `--enable-precision-memory-info` |
+| RAM affichée comme N/A | **Fixé en v0.06** - Bug corrigé : `peakMemory = 0` bloquait l'affichage |
+| Backend non détecté (faux négatif) | **Fixé en v0.06** - Détection améliorée avec `/api/ping` + timeout augmenté à 5s |
 | Backend non détecté | Vérifiez que le backend tourne sur `localhost:3001` |
 
 ### Dépannage du monitoring RAM
