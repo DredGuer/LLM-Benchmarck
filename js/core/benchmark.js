@@ -87,7 +87,7 @@ async function runBenchmark() {
 
 async function executeTest(model, promptType, promptText, rep, signal) {
   var temperature = parseFloat(document.getElementById('temperature').value) || 0.7;
-  var maxTokens = parseInt(document.getElementById('maxTokens').value) || 512;
+  var maxTokens = parseInt(document.getElementById('maxTokens').value) || 4096;
   var t0 = performance.now();
   var firstTokenTime = null, fullText = '', tokensGenerated = 0;
   var memoryStats = null;

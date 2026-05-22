@@ -22,7 +22,7 @@ currentTestState = {
   model: null,
   promptType: null,
   promptText: null,
-  maxTokens: 512,
+  maxTokens: 4096,
   tokensReceived: 0,
   isStreaming: false,
   startTime: null,

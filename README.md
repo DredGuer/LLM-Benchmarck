@@ -347,7 +347,7 @@ Pour utiliser un runner personnalisé :
 | Option | Description | Valeur par défaut |
 |--------|-------------|------------------|
 | Température | Contrôle la créativité (0 = déterministe, 2 = très créatif) | 0.7 |
-| Tokens max | Nombre maximum de tokens à générer | 512 |
+| Tokens max | Nombre maximum de tokens à générer | **4096** |
 | Répétitions | Nombre de fois à exécuter chaque test | 1 |
 
 ### Configuration du backend RAM

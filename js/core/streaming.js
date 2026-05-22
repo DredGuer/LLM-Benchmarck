@@ -61,7 +61,7 @@ function resetLiveOutput() {
   var bar = document.getElementById('tokenProgressBar');
   if (bar) bar.style.width = '0%';
   clearDebugLogs();
-  currentTestState = { model: null, promptType: null, promptText: null, maxTokens: 512, tokensReceived: 0, isStreaming: false, startTime: null, logs: [] };
+  currentTestState = { model: null, promptType: null, promptText: null, maxTokens: 4096, tokensReceived: 0, isStreaming: false, startTime: null, logs: [] };
 }
 
 function setControlButtons(enabled, stopOnly) {
