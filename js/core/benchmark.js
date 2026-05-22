@@ -16,7 +16,7 @@ async function runBenchmark() {
   progressSection.style.display = 'block';
   
   var selectedTypes = PROMPT_TYPES.filter(function(pt) { return state.selectedPrompts.has(pt.id); });
-  var repetitions = parseInt(document.getElementById('repetitions').value) || 1;
+  var repetitions = getRepetitions();
   var totalTests = selectedTypes.length * repetitions;
   var completedTests = 0;
   var sessionResults = [];
@@ -86,8 +86,9 @@ async function runBenchmark() {
 }
 
 async function executeTest(model, promptType, promptText, rep, signal) {
-  var temperature = parseFloat(document.getElementById('temperature').value) || 0.7;
-  var maxTokens = parseInt(document.getElementById('maxTokens').value) || 4096;
+  // Use advanced config functions to get settings based on mode
+  var temperature = getTemperatureForPromptType(promptType.id);
+  var maxTokens = getMaxTokens();
   var t0 = performance.now();
   var firstTokenTime = null, fullText = '', tokensGenerated = 0;
   var memoryStats = null;

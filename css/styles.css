@@ -225,6 +225,7 @@ textarea { resize: vertical; min-height: 80px; }
 }
 
 .btn-sm { padding: 5px 12px; font-size: 0.8rem; }
+.btn-xs { padding: 2px 8px; font-size: 0.75rem; }
 .btn-lg { padding: 13px 28px; font-size: 1rem; width: 100%; justify-content: center; }
 
 .badge {

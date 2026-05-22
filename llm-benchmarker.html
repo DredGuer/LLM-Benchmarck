@@ -125,17 +125,42 @@
     <!-- OPTIONS AVANCÉES -->
     <div class="card">
       <div class="card-title"><span class="icon">⚙️</span> Options avancées</div>
-      <div class="form-group">
-        <label>Température</label>
-        <input type="number" id="temperature" value="0.7" min="0" max="2" step="0.1">
+      <div class="form-group" style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+        <label style="margin: 0; cursor: pointer;">
+          <input type="checkbox" id="manualModeToggle" onclick="toggleManualMode()" checked>
+          <span>Mode <strong id="modeLabel">Manuel</strong></span>
+        </label>
+        <span class="tooltip-icon" title="Auto: Paramètres optimisés par type. Manuel: Contrôle total.">ⓘ</span>
       </div>
-      <div class="form-group">
-        <label>Tokens max</label>
-        <input type="number" id="maxTokens" value="4096" min="1" max="8192" step="64">
+      <div id="autoModeSettings" style="display: none; padding: 12px; background: var(--bg2); border-radius: 8px; margin-bottom: 12px;">
+        <p style="margin: 0 0 8px 0; font-size: 0.85rem; color: var(--text2);">
+          <strong>Mode Auto activé</strong> : Paramètres optimisés automatiquement
+        </p>
+        <ul style="margin: 0; padding-left: 20px; font-size: 0.8rem; color: var(--text3);">
+          <li>Température adaptée au type de prompt</li>
+          <li>Tokens max: <strong>32768</strong></li>
+          <li>Répétitions: <strong>1</strong></li>
+        </ul>
+        <button class="btn btn-ghost btn-sm" onclick="openAdvancedConfigModal()" style="margin-top: 8px;">
+          Voir les températures par type
+        </button>
       </div>
-      <div class="form-group">
-        <label>Répétitions par test</label>
-        <input type="number" id="repetitions" value="1" min="1" max="5" step="1">
+      <div id="manualModeSettings">
+        <div class="form-group">
+          <label>Température <span class="tooltip-icon" title="Contrôle la créativité. 0 = déterministe, 2 = très créatif.">ⓘ</span></label>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <input type="number" id="temperature" value="0.7" min="0" max="2" step="0.1">
+            <button class="btn btn-ghost btn-xs" onclick="openAdvancedConfigModal()">Configurer par type</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Tokens max <span class="tooltip-icon" title="Nombre maximum de tokens à générer. 32768 recommandé pour les grands modèles.">ⓘ</span></label>
+          <input type="number" id="maxTokens" value="4096" min="1" max="32768" step="64">
+        </div>
+        <div class="form-group">
+          <label>Répétitions par test <span class="tooltip-icon" title="Nombre de fois à exécuter chaque test pour une moyenne.">ⓘ</span></label>
+          <input type="number" id="repetitions" value="1" min="1" max="5" step="1">
+        </div>
       </div>
     </div>
 
@@ -453,6 +478,25 @@
   </div>
 </div>
 
+<!-- MODAL : CONFIGURATION AVANCÉE PAR TYPE -->
+<div class="modal-overlay" id="advancedConfigModal">
+  <div class="modal" style="max-width: 600px;">
+    <h3>⚙️ Configuration par type de prompt</h3>
+    <p style="margin-bottom: 16px; color: var(--text2);">
+      Configurez la température spécifique pour chaque type de test.<br>
+      <strong>Mode Auto</strong> : Ces valeurs seront utilisées automatiquement.<br>
+      <strong>Mode Manuel</strong> : Ces valeurs servent de référence (optionnel).
+    </p>
+    <div id="promptTypeConfigs" style="max-height: 400px; overflow-y: auto;">
+      <!-- Généré dynamiquement par JS -->
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('advancedConfigModal')">Fermer</button>
+      <button class="btn btn-primary" onclick="saveAdvancedConfig()">💾 Sauvegarder</button>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST CONTAINER -->
 <div class="toast-container" id="toastContainer"></div>
 
@@ -550,6 +594,7 @@ window.PROMPT_TYPES = [
 <script src="js/ui/tabs.js"></script>
 <script src="js/core/storage.js"></script>
 <script src="js/core/environment.js"></script>
+<script src="js/core/advancedConfig.js"></script>
 <script src="js/core/memory.js"></script>
 <script src="js/core/runners.js"></script>
 <script src="js/core/prompts.js"></script>
