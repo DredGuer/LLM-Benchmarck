@@ -18,7 +18,7 @@ const fs = require('fs');
 
 const app = express();
 const PORT = process.argv.includes('--port') ? 
-  parseInt(process.argv[process.argv.indexOf('--port') + 1]) || 3001 : 3001;
+  parseInt(process.argv[process.argv.indexOf('--port') + 1]) || 4000 : 4000;
 
 // Middleware
 app.use(cors());
@@ -235,97 +235,49 @@ function getGPUInfo() {
       };
     } 
     else if (platform === 'linux') {
-      // Get all GPUs from lspci
-      const result = execSync('lspci -v | grep -i vga -A 12', { encoding: 'utf-8' });
-      const gpuMatches = result.match(/VGA\s+compatible\s+controller:\s*(.+?)(?=\n\s+Subsystem|\n\s+Flags|\n\s*$)/g) || [];
+      const result = execSync('lspci -v | grep -i vga -A 10', { encoding: 'utf-8' });
+      // Cherche TOUS les GPUs, priorité à NVIDIA
+      const gpuMatches = result.match(/VGA\s+compatible\s+controller:\s*(.+)/g) || [];
+      let selectedGPU = 'Unknown';
       
-      const gpus = [];
-      
+      // Préfère NVIDIA, sinon premier disponible
       for (const match of gpuMatches) {
-        const model = match.split(':')[1].trim();
-        const type = model.includes('Intel') ? 'integrated' : 'dedicated';
-        gpus.push({ model, type, vram: 'Unknown', vramMB: null, busId: null });
+        if (match.includes('NVIDIA')) {
+          selectedGPU = match.split(':')[1].trim();
+          break;
+        }
+      }
+      if (selectedGPU === 'Unknown' && gpuMatches[0]) {
+        selectedGPU = gpuMatches[0].split(':')[1].trim();
       }
       
-      // Get bus IDs for each GPU
+      // VRAM - essaie nvidia-smi en premier, puis lshw
+      let vram = 'Unknown';
+      let vramMB = null;
       try {
-        const lspciResult = execSync('lspci -v | grep -B 1 -i vga', { encoding: 'utf-8' });
-        const busMatches = lspciResult.match(/(\d{4}:\d{2}:\d{2}\.\d)/g) || [];
-        for (let i = 0; i < gpus.length && i < busMatches.length; i++) {
-          gpus[i].busId = busMatches[i];
+        // Essaye nvidia-smi pour la VRAM (plus précis)
+        const nvidiaResult = execSync('nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null', { encoding: 'utf-8' });
+        if (nvidiaResult.trim()) {
+          vramMB = parseInt(nvidiaResult.trim().split('\n')[0]);
+          vram = vramMB + ' MB';
         }
-      } catch (e) {}
-      
-      // Sort by priority: NVIDIA > AMD > Intel
-      gpus.sort((a, b) => {
-        const priorityA = getGPUPriority(a.model);
-        const priorityB = getGPUPriority(b.model);
-        return priorityB - priorityA; // Higher priority first
-      });
-      
-      // Try to get VRAM for each GPU
-      for (const gpu of gpus) {
-        if (gpu.model.includes('NVIDIA')) {
-          try {
-            // Utiliser nounits pour éviter le parsing de l'unité
-            const vramResult = execSync('nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null', { encoding: 'utf-8' });
-            if (vramResult.trim()) {
-              // nounits retourne la valeur en Mo directement
-              const vramMB = parseInt(vramResult.trim().split('\n')[0]);
-              gpu.vram = vramMB + ' MB';
-              gpu.vramMB = vramMB;
-            }
-          } catch (e) {}
-          
-          // Fallback: try nvidia-settings
-          if (!gpu.vramMB) {
-            try {
-              const vramResult = execSync('nvidia-settings -q [gpu:0]/GPUMemoryTotal 2>/dev/null | grep -oP "\d+"', { encoding: 'utf-8' });
-              if (vramResult.trim()) {
-                gpu.vram = parseInt(vramResult.trim()) + ' MB';
-                gpu.vramMB = parseInt(vramResult.trim());
-              }
-            } catch (e) {}
+      } catch (e) {
+        // Fallback à lshw
+        try {
+          const vramResult = execSync('lshw -C display | grep -i "configuration" -A 5', { encoding: 'utf-8' });
+          const vramMatch = vramResult.match(/memory=(\d+)MiB/);
+          if (vramMatch) {
+            vram = vramMatch[1] + ' MiB';
+            vramMB = parseInt(vramMatch[1]);
           }
-        } else if (gpu.model.includes('AMD') || gpu.model.includes('Radeon')) {
-          // Try to get VRAM from sysfs for AMD
-          try {
-            const files = fs.readdirSync('/sys/class/drm/');
-            for (const file of files) {
-              if (file.startsWith('card')) {
-                try {
-                  const path = `/sys/class/drm/${file}/device/`;
-                  if (fs.existsSync(path)) {
-                    const memTotal = fs.readFileSync(`${path}/mem_info_vram_total`, 'utf-8').trim();
-                    if (memTotal) {
-                      gpu.vram = (parseInt(memTotal) / 1024 / 1024).toFixed(0) + ' MB';
-                      gpu.vramMB = Math.round(parseInt(memTotal) / 1024 / 1024);
-                      break;
-                    }
-                  }
-                } catch (e) {}
-              }
-            }
-          } catch (e) {}
-        }
-        
-        // Generic fallback for any GPU
-        if (!gpu.vramMB) {
-          try {
-            const vramResult = execSync('lshw -C display | grep -i "configuration" -A 5', { encoding: 'utf-8' });
-            const vramMatch = vramResult.match(/memory=(\d+)MiB/);
-            if (vramMatch) {
-              gpu.vram = vramMatch[1] + ' MiB';
-              gpu.vramMB = parseInt(vramMatch[1]);
-            }
-          } catch (e) {}
-        }
+        } catch (e2) {}
       }
       
-      const primary = gpus.length > 0 ? gpus[0] : { model: 'Unknown', type: 'unknown', vram: 'Unknown', vramMB: null, busId: null };
+      const type = selectedGPU.includes('Intel') ? 'integrated' : 'dedicated';
+      const primary = { model: selectedGPU, type: type, vram: vram, vramMB: vramMB, busId: null };
       
       return {
-        all: gpus,
+        all: [primary],
         primary: primary
       };
     }

@@ -300,10 +300,20 @@ http://localhost:8888/llm-benchmarker.html
 #### Avec Node.js (npx)
 
 ```bash
-cd /Applications/MAMP/htdocs/platforme-bench-LLM
+cd /chemin/vers/LLM-Benchmarck-Local
 npx serve
 # Ouvrez : http://localhost:3000/llm-benchmarker.html
 ```
+
+⚠️ **Si vous avez lancé le backend sur un port personnalisé** (ex: `node server.js --port 4000`) :
+1. Modifiez `js/core/memory.js` :
+   ```javascript
+   backendUrl: 'http://localhost:4000'  // Doit correspondre au port du backend
+   ```
+2. Ou lancez le serveur frontal sur un autre port :
+   ```bash
+   npx serve --port 5000
+   ```
 
 ### 4️⃣ Utilisation
 
