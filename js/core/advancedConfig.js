@@ -25,11 +25,12 @@ const ADVANCED_CONFIG_KEY = 'llm_bench_advanced_config';
 
 // Current mode state
 let isManualMode = true; // Default to Manual
+let selectedGPU = 'auto'; // Default to auto selection
 
 /**
  * Initialize advanced configuration
  */
-function initAdvancedConfig() {
+async function initAdvancedConfig() {
   // Load saved config
   loadAdvancedConfig();
   
@@ -37,11 +38,18 @@ function initAdvancedConfig() {
   const savedMode = localStorage.getItem('llm_bench_mode');
   isManualMode = savedMode !== 'auto';
   
+  // Initialize GPU selection
+  const savedGPU = localStorage.getItem('llm_bench_selected_gpu');
+  if (savedGPU) selectedGPU = savedGPU;
+  
   // Update UI based on mode
   updateModeUI();
   
   // Render prompt type configs in modal
   renderPromptTypeConfigs();
+  
+  // Initialize GPU selector
+  await initGPUSelector();
 }
 
 /**
@@ -244,6 +252,113 @@ function resetAdvancedConfig() {
   } catch (e) {
     showToast('Erreur lors de la réinitialisation', 'error');
   }
+}
+
+/**
+ * Initialize GPU selector with detected GPUs
+ */
+async function initGPUSelector() {
+  try {
+    // Fetch GPU info from backend
+    const backendEnv = await fetchBackendEnvironment();
+    let gpus = [];
+    
+    if (backendEnv && backendEnv.gpu && backendEnv.gpu.all) {
+      gpus = backendEnv.gpu.all;
+    }
+    
+    // If no backend or only 1 GPU, check if we should show selector
+    const selector = document.getElementById('selectedGPU');
+    const selectorGroup = document.getElementById('gpuSelectorGroup');
+    
+    if (!selector || !selectorGroup) return;
+    
+    if (gpus.length <= 1) {
+      // Hide selector if only 1 GPU
+      selectorGroup.style.display = 'none';
+      return;
+    }
+    
+    // Show selector if multiple GPUs
+    selectorGroup.style.display = 'block';
+    
+    // Clear existing options (except "Auto")
+    selector.innerHTML = '<option value="auto">Auto (Détection intelligente)</option>';
+    
+    // Add each GPU as an option
+    gpus.forEach((gpu, index) => {
+      const option = document.createElement('option');
+      option.value = index.toString();
+      option.textContent = `${gpu.model} ${gpu.vram ? `(${gpu.vram})` : ''} ${gpu.type === 'integrated' ? '(iGPU)' : '(dGPU)'}`;
+      
+      // Select if this matches the saved selection
+      if (selectedGPU === index.toString()) {
+        option.selected = true;
+      }
+      
+      selector.appendChild(option);
+    });
+    
+    // If no selection or selection is invalid, select "auto"
+    if (!gpus[parseInt(selectedGPU)] && selectedGPU !== 'auto') {
+      selector.value = 'auto';
+      selectedGPU = 'auto';
+      saveSelectedGPU();
+    }
+    
+  } catch (err) {
+    console.error('Failed to initialize GPU selector:', err);
+    // Hide selector on error
+    const selectorGroup = document.getElementById('gpuSelectorGroup');
+    if (selectorGroup) selectorGroup.style.display = 'none';
+  }
+}
+
+/**
+ * Save selected GPU to localStorage
+ */
+function saveSelectedGPU() {
+  const selector = document.getElementById('selectedGPU');
+  if (selector) {
+    selectedGPU = selector.value;
+    try {
+      localStorage.setItem('llm_bench_selected_gpu', selectedGPU);
+      
+      // Show instruction for Ollama restart
+      if (selectedGPU !== 'auto') {
+        const gpuIndex = parseInt(selectedGPU);
+        const gpuSelector = document.getElementById('selectedGPU');
+        const selectedOption = gpuSelector?.options[gpuSelector.selectedIndex];
+        const gpuName = selectedOption?.textContent.replace('Auto (Détection intelligente)', '').trim() || '';
+        
+        showToast(`GPU sélectionné: ${gpuName}. Redémarrez Ollama avec CUDA_VISIBLE_DEVICES=${selectedGPU} ollama serve`, 'info', 8000);
+      }
+    } catch (e) {
+      console.error('Failed to save selected GPU:', e);
+    }
+  }
+}
+
+/**
+ * Get selected GPU index or 'auto'
+ */
+function getSelectedGPU() {
+  return selectedGPU;
+}
+
+/**
+ * Get CUDA_VISIBLE_DEVICES value for selected GPU
+ * Returns empty string for 'auto' mode
+ */
+function getCUDAVisibleDevices() {
+  if (selectedGPU === 'auto') {
+    return '';
+  }
+  const index = parseInt(selectedGPU);
+  if (!isNaN(index) && index >= 0) {
+    return index.toString();
+  }
+  return '';
 }
 
 // Initialize on page load

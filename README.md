@@ -572,6 +572,10 @@ Les contributions sont les bienvenues !
 - [ ] Migration vers ES6 modules
 - [ ] Intégration avec Prometheus/Grafana pour le monitoring
 
+### 📖 Documentation technique
+Pour les améliorations futures et la roadmap détaillée, consultez :
+- **[innovation.md](innovation.md)** - Roadmap des fonctionnalités multi-GPU et cluster
+
 ---
 
 ## ⚠️ Limitations connues
