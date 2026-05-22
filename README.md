@@ -1,10 +1,10 @@
 # LLM Benchmarker Local 🚀
 
-> **Version 0.04** - Benchmark de modèles LLM locaux et externes directement depuis le navigateur
+> **Version 0.05** - Benchmark de modèles LLM locaux et externes directement depuis le navigateur
 >
 > **Développé par** [NVNC Tech](https://nvnc.tech) ✨
 >
-> **Nouveautés** : Support Gemini ✨ | Monitoring RAM Ollama 💾 | Backend optionnel | Fix timeout modèles lourds (>30B) ⏱️ | **Détection GPU intelligente** 🎮
+> **Nouveautés** : Support Gemini ✨ | Monitoring RAM Ollama 💾 | Backend optionnel | Fix timeout modèles lourds (>30B) ⏱️ | **Détection GPU intelligente** 🎮 | **Modes Auto/Manuel** ⚙️ | **Config par type de prompt** 📝
 
 > **✅ Toutes les fonctionnalités validées** - Sélection des prompts, benchmark, export, historique, monitoring RAM
 
@@ -439,7 +439,7 @@ Exemple de structure :
 ```markdown
 # 📊 Rapport de Benchmark LLM
 
-> Généré le 15 janvier 2025 à 14:30 par **LLM Benchmarker v0.04**
+> Généré le 15 janvier 2025 à 14:30 par **LLM Benchmarker v0.05**
 
 ---
 
@@ -484,7 +484,7 @@ Je suis un modèle de langage...
 
 ---
 
-*Rapport généré automatiquement par LLM Benchmarker v0.04*
+*Rapport généré automatiquement par LLM Benchmarker v0.05*
 ```
 
 ---
@@ -576,7 +576,7 @@ Les contributions sont les bienvenues !
 
 ## ⚠️ Limitations connues
 
-### Version v0.04
+### Version v0.05
 
 - **CORS** : Nécessite un serveur web local pour fonctionner (pas de `file://`)
 - **Streaming** : Seule Ollama supporte le streaming pour la mesure du TTFT
@@ -592,7 +592,7 @@ Les contributions sont les bienvenues !
 |----------|----------|
 | Liste des modèles vide | Vérifiez que le runner est lancé et accessible |
 | Erreur CORS | Servez le fichier via un serveur web local |
-| Timeout sur modèles >30B (ex: gemma4:31b) | **Fixé en v0.04** - Timeout augmenté à 3 min pour Ollama |
+| Timeout sur modèles >30B (ex: gemma4:31b) | **Fixé en v0.05** - Timeout augmenté à 3 min pour Ollama |
 | Clé API invalide | Vérifiez votre clé dans les paramètres |
 | RAM non affichée | Lancez `node server.js` ou utilisez Chrome avec `--enable-precision-memory-info` |
 | Backend non détecté | Vérifiez que le backend tourne sur `localhost:3001` |
@@ -641,6 +641,6 @@ Pour toute question ou problème :
 
 <div align="center">
   <p>
-    <strong>LLM Benchmarker v0.04</strong> - Développé avec ❤️ par [NVNC Tech](https://nvnc.tech) pour la communauté LLM
+    <strong>LLM Benchmarker v0.05</strong> - Développé avec ❤️ par [NVNC Tech](https://nvnc.tech) pour la communauté LLM
   </p>
 </div>

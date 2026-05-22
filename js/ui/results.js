@@ -68,7 +68,7 @@ function exportMarkdown() {
   var env = state.results[0]?.env || {};
   
   var md = '# 📊 Rapport de Benchmark LLM\n\n';
-  md += '> Généré le ' + dateStr + ' à ' + timeStr + ' par **LLM Benchmarker v0.01**\n\n';
+  md += '> Généré le ' + dateStr + ' à ' + timeStr + ' par **LLM Benchmarker v0.05**\n\n';
   md += '---\n\n';
   md += '## 💻 Environnement de test\n\n';
   md += '| Paramètre | Valeur |\n';
@@ -129,7 +129,7 @@ function exportMarkdown() {
     md += '---\n\n';
   }
   
-  md += '*Rapport généré automatiquement par LLM Benchmarker v0.01*\n';
+  md += '*Rapport généré automatiquement par LLM Benchmarker v0.05*\n';
   
   var blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
   var url = URL.createObjectURL(blob);
