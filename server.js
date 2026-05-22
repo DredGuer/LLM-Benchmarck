@@ -267,9 +267,11 @@ function getGPUInfo() {
       for (const gpu of gpus) {
         if (gpu.model.includes('NVIDIA')) {
           try {
-            const vramResult = execSync('nvidia-smi --query-gpu=memory.total --format=csv,noheader 2>/dev/null', { encoding: 'utf-8' });
+            // Utiliser nounits pour éviter le parsing de l'unité
+            const vramResult = execSync('nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null', { encoding: 'utf-8' });
             if (vramResult.trim()) {
-              const vramMB = Math.round(parseInt(vramResult.trim().split('\n')[0]) / 1024);
+              // nounits retourne la valeur en Mo directement
+              const vramMB = parseInt(vramResult.trim().split('\n')[0]);
               gpu.vram = vramMB + ' MB';
               gpu.vramMB = vramMB;
             }

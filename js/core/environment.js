@@ -9,6 +9,9 @@ window.BACKEND_ENV_CONFIG = {
   timeout: 2000
 };
 
+const HARDWARE_CONFIG_KEY = 'llm_bench_hardware_config';
+let manualHardwareConfig = null;
+
 /**
  * Fetch environment from backend server
  * Returns promise with backend env data or null
