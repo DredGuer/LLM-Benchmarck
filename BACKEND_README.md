@@ -183,6 +183,8 @@ Le backend **sélectionnera automatiquement la RTX 3070** comme GPU principal gr
 ## ⚙️ Configuration
 
 ### Changer le port
+Par défaut, le backend écoute sur **`localhost:3001`**.
+
 ```bash
 # Dans le fichier server.js
 const PORT = 4000; // ou via la ligne de commande
@@ -191,12 +193,21 @@ const PORT = 4000; // ou via la ligne de commande
 node server.js --port 4000
 ```
 
+> **⚠️ Important** : Si vous changez le port du backend, vous devez aussi mettre à jour la configuration dans `js/core/memory.js` et `js/core/environment.js` pour que le frontend puisse le trouver.
+
 ### Changer l'URL du backend dans le frontend
-Modifiez `js/core/memory.js` :
+Modifiez `js/core/memory.js` ou `js/core/environment.js` :
 ```javascript
+// Dans memory.js
 window.MEMORY_MONITOR_CONFIG = {
-  backendUrl: 'http://localhost:4000', //Changez le port ici
+  backendUrl: 'http://localhost:4000', // Changez le port ici
   pollInterval: 500,
+  timeout: 2000
+};
+
+// Dans environment.js
+window.BACKEND_ENV_CONFIG = {
+  url: 'http://localhost:4000', // Changez le port ici
   timeout: 2000
 };
 ```
