@@ -4,7 +4,7 @@
 >
 > **Développé par** [NVNC Tech](https://nvnc.tech) ✨
 >
-> **Nouveautés** : Support Gemini ✨ | Monitoring RAM Ollama 💾 | Backend optionnel | Fix timeout modèles lourds (>30B) ⏱️
+> **Nouveautés** : Support Gemini ✨ | Monitoring RAM Ollama 💾 | Backend optionnel | Fix timeout modèles lourds (>30B) ⏱️ | **Détection GPU intelligente** 🎮
 
 > **✅ Toutes les fonctionnalités validées** - Sélection des prompts, benchmark, export, historique, monitoring RAM
 
@@ -384,7 +384,25 @@ L'outil détecte automatiquement :
 - Navigateur (Chrome, Firefox, Safari, Edge)
 - Nombre de cœurs CPU
 - Mémoire RAM disponible
-- GPU (via WebGL)
+- **GPU(s) avec priorisation intelligente** (via backend Node.js)
+
+#### 🎮 Détection GPU avancée (Nouveau!)
+
+Le backend détecte **tous** les GPUs disponibles et priorise automatiquement :
+
+| Priorité | Constructeur | Méthode de détection | VRAM détectée |
+|----------|--------------|---------------------|---------------|
+| ⭐⭐⭐ | **NVIDIA** | `lspci` / `wmic` | ✅ `nvidia-smi`, `nvidia-settings` |
+| ⭐⭐ | **AMD/Radeon** | `lspci` / `wmic` | ✅ `/sys/class/drm/` (Linux) |
+| ⭐ | **Intel** | `lspci` / `wmic` | ⚠️ Limitée |
+
+**Fonctionnalités** :
+- Liste **tous les GPUs** détectés (iGPU + dGPU)
+- Sélection **automatique du GPU dédié** (NVIDIA/AMD) si disponible
+- Récupération de la **VRAM** pour NVIDIA et AMD
+- Classification par **type** (`dedicated` / `integrated`)
+
+> **Exemple Linux avec dual-GPU** : Si vous avez Intel iGPU + NVIDIA dGPU, le backend sélectionnera automatiquement la **NVIDIA** comme GPU principal.
 
 ### Processus de benchmark
 
@@ -566,6 +584,7 @@ Les contributions sont les bienvenues !
 - **APIs externes** : Nécessite une clé API valide
 - **Browser support** : Testé sur Chrome, Firefox, Safari (Edge partiel)
 - **Monitoring RAM** : Uniquement disponible pour Ollama avec le backend Node.js
+- **Détection GPU** : La détection multi-GPU (NVIDIA/AMD/Intel) nécessite le backend Node.js
 
 ### Problèmes connus
 
