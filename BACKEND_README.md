@@ -278,3 +278,10 @@ Le backend utilise déjà le middleware CORS. Si vous avez toujours des problèm
 ## 📄 Licence
 
 Apache 2.0 - Voir le fichier LICENSE pour plus de détails.
+
+
+## Mémoire du modèle chargé (Ollama/MLX)
+
+`GET /api/ollama/models` relaie `/api/ps` depuis Ollama sur `127.0.0.1:11434`, avec un délai maximal de 2 secondes. Le frontend sélectionne uniquement le modèle exact du test. Sa taille déclarée en octets est conservée séparément et affichée en GiB, sans être additionnée à la RSS. `size_vram` est conservé dans l'export détaillé ; sur mémoire unifiée, il ne faut pas l'ajouter à `size`.
+
+Le résultat conserve la dernière observation valide pendant le test. Une valeur absente reste inconnue. Cette taille déclarée ne constitue pas un pic d'allocation MLX ni une mesure de la mémoire du Moniteur d'activité. Les pics/moyennes RSS et le tas JS du navigateur portent des libellés distincts. Les anciens résultats n'ayant pas de source sont indiqués comme source inconnue.
