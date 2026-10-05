@@ -743,6 +743,40 @@
             "string",
             "null"
           ]
+        },
+        "architecture": {
+          "enum": [
+            "dense",
+            "moe",
+            "unknown"
+          ]
+        },
+        "architectureName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "expertCount": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "activeExpertsPerToken": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "contextMaxTokens": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
         }
       },
       "required": [
@@ -1014,6 +1048,12 @@
           "required": [
             "enabled"
           ]
+        },
+        "contextSource": {
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "required": [
@@ -1213,6 +1253,9 @@
             "per-node",
             "none"
           ]
+        },
+        "total": {
+          "$ref": "#/$defs/measurement"
         }
       },
       "required": [
