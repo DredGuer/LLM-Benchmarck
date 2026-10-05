@@ -6,7 +6,7 @@
 // Backend environment config
 window.BACKEND_ENV_CONFIG = {
   url: 'http://localhost:3001',
-  timeout: 2000
+  timeout: 30000
 };
 
 const HARDWARE_CONFIG_KEY = 'llm_bench_hardware_config';
@@ -183,7 +183,7 @@ async function detectEnvironment() {
     osVersion: manual.osVersion || (backendEnv ? backendEnv.os.version : hw.osVersion) || '',
     browser: hw.browser || 'Inconnu',
     cores: manual.cores || (backendEnv ? backendEnv.cpu.cores : hw.cores) || '?',
-    chip: manual.chip || (backendEnv ? backendEnv.machine.model : hw.chip) || '',
+    chip: manual.chip || (backendEnv ? backendEnv.cpu.model : hw.chip) || '',
     ram: manual.ram || (backendEnv ? backendEnv.memory.totalStr : hw.ram) || '?',
     gpu: manual.gpu || (backendEnv ? backendEnv.gpu.model : hw.gpu) || 'Non disponible',
     gpuRam: manual.gpuRam || (backendEnv ? backendEnv.gpu.vramStr : (hw.isApple ? 'Unifiée' : hw.gpuRam)) || '?'
@@ -195,6 +195,10 @@ async function detectEnvironment() {
   }
   
   updateEnvDisplayWithIndicators();
+  if (typeof backendEnv !== 'undefined' && backendEnv?.hardwareInventory) {
+    state.env.hardwareInventory = backendEnv.hardwareInventory;
+    renderHardwareInventory(backendEnv.hardwareInventory);
+  }
 }
 
 // Load saved hardware configuration from localStorage
@@ -211,25 +215,25 @@ async function loadAndApplyHardwareConfig() {
   var hw = detectFullHardware();
   var config = manualHardwareConfig || {};
   
-  // Try backend if manual config not set
+  // Manual display overrides do not suppress the observed hardware inventory.
   var backendEnv = null;
-  if (!config.os && !config.chip && !config.ram) {
-    try {
-      backendEnv = await fetchBackendEnvironment();
-    } catch (e) {}
-  }
+  try { backendEnv = await fetchBackendEnvironment(); } catch (e) {}
   
   state.env = {
     os: config.os || (backendEnv ? backendEnv.os.name + (backendEnv.os.version ? ' ' + backendEnv.os.version : '') : hw.os) || 'Inconnu',
     osVersion: config.osVersion || (backendEnv ? backendEnv.os.version : hw.osVersion) || '',
     browser: hw.browser || 'Inconnu',
     cores: config.cores || (backendEnv ? backendEnv.cpu.cores : hw.cores) || '?',
-    chip: config.chip || (backendEnv ? backendEnv.machine.model : hw.chip) || '',
+    chip: config.chip || (backendEnv ? backendEnv.cpu.model : hw.chip) || '',
     ram: config.ram || (backendEnv ? backendEnv.memory.totalStr : hw.ram) || '?',
     gpu: config.gpu || (backendEnv ? backendEnv.gpu.model : hw.gpu) || 'Non disponible',
     gpuRam: config.gpuRam || (backendEnv ? backendEnv.gpu.vramStr : (hw.isApple ? 'Unifiée' : hw.gpuRam)) || '?'
   };
   updateEnvDisplayWithIndicators();
+  if (typeof backendEnv !== 'undefined' && backendEnv?.hardwareInventory) {
+    state.env.hardwareInventory = backendEnv.hardwareInventory;
+    renderHardwareInventory(backendEnv.hardwareInventory);
+  }
 }
 
 // Update environment display with manual/auto indicators
@@ -318,4 +322,29 @@ function resetHardwareConfig() {
     console.error('Environment detection failed:', err);
   });
   closeModal('hardwareModal');
+}
+
+function renderHardwareInventory(inventory) {
+  var panel = document.getElementById('hardwareInventory');
+  if (!panel) return;
+  panel.textContent = '';
+  var n = inventory.machine, cpu = n.cpus[0];
+  function row(label, value, source) {
+    var line = document.createElement('div');
+    line.style.marginBottom = '8px';
+    line.textContent = label + ' : ' + value;
+    if (source) { var detail = document.createElement('small'); detail.style.display = 'block'; detail.style.opacity = '0.7'; detail.textContent = 'Source : ' + source; line.appendChild(detail); }
+    panel.appendChild(line);
+  }
+  function available(value) { return value == null ? 'Non disponible' : value; }
+  row('CPU', available(cpu.model), inventory.provenance.cpuModel);
+  row('Cœurs physiques / logiques', available(cpu.physicalCores) + ' / ' + available(cpu.logicalCores), inventory.provenance.physicalCores + ' ; ' + inventory.provenance.logicalCores);
+  row('Cœurs performance / efficacité', available(cpu.performanceCores) + ' / ' + available(cpu.efficiencyCores), inventory.provenance.coreClasses);
+  row('Fréquence CPU déclarée', cpu.frequency.value ? (cpu.frequency.value / 1e9).toFixed(2) + ' GHz' : 'Non disponible (pas une mesure en direct)', cpu.frequency.source);
+  row('RAM', (n.memory.physicalCapacity.value / Math.pow(1024, 3)).toFixed(1) + ' GiB · ' + (n.memory.architecture === 'unified' ? 'unifiée CPU/GPU' : 'séparée'), n.memory.physicalCapacity.source);
+  n.gpus.forEach(function(gpu) { row('GPU', available(gpu.model) + ' · ' + available(gpu.computeUnits) + ' cœurs GPU', inventory.provenance.gpus); });
+  if (!n.storage.length) row('Stockage', 'Non disponible', inventory.provenance.storage);
+  n.storage.forEach(function(disk) { row('Stockage', available(disk.model) + ' · ' + disk.kind.toUpperCase() + ' / ' + disk.transport.toUpperCase() + ' · ' + (disk.capacity.value == null ? 'Capacité inconnue' : (disk.capacity.value / 1e9).toFixed(0) + ' GB'), disk.capacity.source); });
+  row('Débit SSD', 'Non mesuré — aucun test disque effectué', inventory.storageSpeed.source);
+  row('Collecte', inventory.observedAt);
 }
