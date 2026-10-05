@@ -52,8 +52,10 @@
     </div>
 
     <div class="card">
-      <div class="card-title">Inventaire matériel</div>
+      <details>
+      <summary class="card-title" style="cursor:pointer">Inventaire matériel · déplier / replier</summary>
       <div id="hardwareInventory" style="font-size:0.8rem;">Collecte Apple via le backend ; les valeurs indisponibles restent inconnues.</div>
+      </details>
     </div>
 
     <!-- RUNNER -->
@@ -106,6 +108,13 @@
         <label for="modelCustom">Nom personnalisé (override)</label>
         <input type="text" id="modelCustom" placeholder="ex: llama3.2:3b, gpt-4o-mini…">
       </div>
+      <div id="modelMetadata" style="white-space:pre-line;font-size:0.8rem;margin-top:8px;"></div>
+      <div class="form-group" style="margin-top:12px;">
+        <label for="contextTokens">Contexte demandé à Ollama (tokens)</label>
+        <input type="number" id="contextTokens" min="1" step="1" placeholder="Vide : réglage du runner">
+        <small>Prompt et génération partagent la fenêtre de contexte. Ce réglage s'applique à Ollama dans les modes Auto et Manuel ; il n'est pas une mesure du contexte réellement alloué.</small>
+      </div>
+      <p style="font-size:0.8rem;color:var(--text3)">Dense : calcul dense à chaque token. MoE : une partie des experts est activée par token. Le nombre de paramètres actifs, la quantification, le contexte et la bande passante influencent le débit ; MoE ne garantit pas une vitesse supérieure.</p>
       <div id="modelStatus" style="font-size:0.8rem;color:var(--text3);margin-top:4px;"></div>
     </div>
 
@@ -608,17 +617,17 @@ window.PROMPT_TYPES = [
 <script src="js/ui/modals.js"></script>
 <script src="js/ui/tabs.js"></script>
 <script src="js/core/storage.js"></script>
-<script src="js/core/environment.js?v=0.06-apple-inventory1"></script>
+<script src="js/core/environment.js?v=0.06-model-context1"></script>
 <script src="js/core/advancedConfig.js"></script>
 <script src="js/core/memory.js?v=0.06-memory2"></script>
-<script src="js/core/runners.js"></script>
+<script src="js/core/runners.js?v=0.06-model-context1"></script>
 <script src="js/core/prompts.js"></script>
 <script src="js/core/streaming.js"></script>
-<script src="js/ui/results.js?v=0.06-apple-export1"></script>
-<script src="js/core/benchmark.js?v=0.06-memory2"></script>
+<script src="js/ui/results.js?v=0.06-model-context1"></script>
+<script src="js/core/benchmark.js?v=0.06-model-context1"></script>
 <script src="js/core/apiKeys.js"></script>
 <script src="js/core/connectivity.js"></script>
 <script src="js/core/history.js"></script>
-<script src="js/main.js"></script>
+<script src="js/main.js?v=0.06-model-context1"></script>
 </body>
 </html>
