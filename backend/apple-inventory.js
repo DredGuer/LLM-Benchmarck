@@ -64,9 +64,10 @@ async function collectAppleInventory(execute = run, system = os) {
     capacity: reading(null, 'bytes', 'gpu', 'system_profiler:SPDisplaysDataType', 'gpu-' + i),
     sharedMemoryPoolId: appleSilicon ? 'system-memory' : null,
     computeBackend: appleSilicon ? 'metal' : null,
-    computeUnits: count(gpu.spdisplays_cores)
+    computeUnits: count(gpu.sppci_cores) ?? count(gpu.spdisplays_cores)
   }));
   provenance.gpus = 'system_profiler:SPDisplaysDataType';
+  provenance.gpuComputeUnits = 'system_profiler:SPDisplaysDataType.sppci_cores (fallback spdisplays_cores)';
   const storage = [];
   try {
     const list = await plist(['list', '-plist', 'physical'], execute);
@@ -77,7 +78,7 @@ async function collectAppleInventory(execute = run, system = os) {
     }));
     infos.filter(Boolean).forEach((disk, i) => {
       const protocol = String(disk.BusProtocol || '').toLowerCase();
-      const transport = protocol.includes('pci') || protocol.includes('nvme') ? 'nvme' :
+      const transport = protocol === 'apple fabric' ? 'apple-fabric' : protocol.includes('pci') || protocol.includes('nvme') ? 'nvme' :
         protocol.includes('sata') ? 'sata' : protocol.includes('usb') ? 'usb' :
         protocol.includes('thunderbolt') ? 'thunderbolt' : 'unknown';
       storage.push({
