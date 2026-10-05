@@ -4,7 +4,7 @@
  */
 
 function switchTab(name) {
-  var tabNames = ['results', 'history', 'about'];
+  var tabNames = ['results', 'history', 'statistics', 'about'];
   
   // Update tab buttons
   var buttons = document.querySelectorAll('.tab-btn');
@@ -17,6 +17,8 @@ function switchTab(name) {
   for (var j = 0; j < contents.length; j++) {
     contents[j].classList.toggle('active', contents[j].id === 'tab-' + name);
   }
+
+  if (name === 'statistics') renderStatistics();
 
   // Load history data when switching to history tab
   if (name === 'history') {
