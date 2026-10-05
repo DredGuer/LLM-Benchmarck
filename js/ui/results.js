@@ -107,6 +107,7 @@ function renderResultCard(result) {
   var html = '<div class="result-card-header">';
   html += '<span class="prompt-type-emoji" style="font-size:1.4rem">' + result.promptEmoji + '</span>';
   html += '<span class="model-name">' + escapeHtml(result.model) + '</span>';
+  if (result.phase === 'warmup') html += '<span class="badge badge-orange">🔥 Chauffe · hors moyennes</span>';
   html += '<span class="badge badge-blue">' + escapeHtml(result.runner) + '</span>';
   html += '<span class="badge ' + (isError ? 'badge-red' : 'badge-green') + '">' + (isError ? '❌ Erreur' : '✅ OK') + '</span>';
   html += '<span class="badge badge-purple">' + escapeHtml(result.promptTypeName) + '</span>';
@@ -143,6 +144,7 @@ function renderResultCard(result) {
     });
     html += '</div>';
     if (result.memory?.resources) html += '<p style="font-size:0.8rem;padding:0 16px">Swap et E/S : système entier. Pic MLX des logs serveur Ollama, attribution au modèle non vérifiée. Activité disque observée, pas vitesse maximale SSD.</p>';
+    if (result.protocol) html += '<p style="padding:0 16px;font-size:0.8rem">Chargement : ' + escapeHtml(result.protocol.loadState) + ' · Cache : ' + escapeHtml(result.protocol.cacheState) + ' · Chauffes préalables : ' + result.protocol.warmupRuns + '</p>';
     html += '<div class="prompt-echo"><strong>Prompt :</strong> ' + escapeHtml(result.promptText.substring(0, 180)) + (result.promptText.length > 180 ? '…' : '') + '</div>';
     html += '<div class="response-block">' + escapeHtml(result.response) + '</div>';
   }
@@ -237,6 +239,10 @@ function exportMarkdown() {
       md += '| Temps 1er token (TTFT) | ' + (m.ttft !== null ? m.ttft + ' ms' : 'N/A') + ' |\n';
       md += '| Temps total | ' + (m.totalTime/1000).toFixed(2) + ' s |\n';
       md += '| Température | ' + m.temperature + ' |\n';
+      md += '| Phase | ' + (r.phase || 'Historique non standardisé') + ' |\n';
+      md += '| Chargement / cache | ' + (r.protocol?.loadState || 'unknown') + ' / ' + (r.protocol?.cacheState || 'unknown') + ' |\n';
+      md += '| Temps chargement (ms) | ' + (m.loadTimeMs ?? 'N/A') + ' |\n';
+      md += '| Débit génération seule (tok/s) | ' + (m.generationTokensPerSec ?? 'N/A') + ' |\n';
       md += '| Tokens max | ' + m.maxTokens + ' |\n';
       md += '| Contexte Auto · runner chargé (tokens, Ollama) | ' + (m.contextObservedTokens ?? 'Inconnu / non applicable') + ' |\n';
       md += '| Architecture Dense / MoE | ' + markdownCell(modelArchitectureText(r.modelMetadata)) + ' |\n';
