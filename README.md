@@ -65,7 +65,7 @@ Conservez tous les fichiers du dépôt. Ouvrez l'application via le serveur HTTP
 
 ### 3. Lancer un premier test
 
-1. Sélectionnez **Ollama**, puis **llama3.2:1b** ; utilisez 🔄 si la liste est vide.
+1. Les modèles Ollama sont récupérés automatiquement à l’ouverture. Sélectionnez **llama3.2:1b** ; utilisez 🔄 pour réessayer si Ollama était arrêté.
 2. Sélectionnez uniquement **Conversation**.
 3. Gardez le **mode Manuel**, choisissez **256 tokens max** et **1 répétition** pour un essai court.
 4. Cliquez sur **⚡ Lancer le benchmark**.
@@ -84,6 +84,7 @@ Depuis votre copie du dépôt (pas depuis le dossier personnel), arrêtez le bac
 git pull origin main
 npm install
 node backend/apple-inventory.test.cjs
+node backend/model-metadata.test.cjs
 node schemas/test.cjs
 npm start
 ```
@@ -260,6 +261,40 @@ Pour utiliser un runner personnalisé :
 2. Entrez l'URL de base de votre API (ex: `http://localhost:8080`)
 3. Entrez le nom du modèle
 4. Lancez le benchmark
+
+### Architecture du modèle et contexte
+
+Pour Ollama, l'interface interroge `/api/show` à la sélection du modèle et avant le benchmark :
+architecture, paramètres totaux, experts totaux/actifs, quantification et contexte maximal déclaré.
+La classification Dense/MoE est fondée sur le nombre d'experts déclaré ; si ce champ manque,
+elle reste inconnue, même si le nom semble indiquer MoE.
+
+Le champ **Contexte demandé à Ollama** transmet `num_ctx` dans les modes Auto et Manuel.
+Laissez-le vide pour conserver le réglage du runner. Cette valeur demandée et le maximum du
+modèle ne sont pas une mesure de la fenêtre réellement allouée. Le réglage ne s'applique
+pas aux autres fournisseurs à cette étape. Les valeurs sont conservées dans les résultats et l'export.
+
+Dense et MoE ne se comparent pas sur le seul nombre de paramètres totaux :
+les experts actifs, le contexte, la quantification et les ressources matérielles influencent le débit.
+L'outil ne déduit pas un nombre de paramètres actifs à partir du ratio d'experts.
+
+L'inventaire matériel est repliable. Le débit SSD reste inconnu dans les données et sa ligne
+est masquée dans l'interface et le Markdown tant qu'aucune mesure n'est disponible.
+
+### État du plan progressif
+
+| Étape | État |
+|---|---|
+| Schéma commun v2, topologies multi-GPU/machines et tâches agentiques | Contrat et exemples testés ; export actif encore v1 |
+| Inventaire Apple Silicon : CPU/cœurs, RAM unifiée, GPU/cœurs, SSD et provenance | Collecté ; vérifié sur un M3 Pro |
+| Ergonomie, récupération automatique des modèles, contexte demandé, métadonnées Dense/MoE | Implémenté ; validation sur Mac à poursuivre |
+| Pic réel MLX, mémoire compressée/swap, consommation par GPU | À implémenter ; RSS et taille déclarée ne remplacent pas ces mesures |
+| Débit/activité SSD et bande passante mémoire | À implémenter |
+| Inventaires et télémétrie Windows/Linux, multi-GPU | À fiabiliser et tester sur les machines concernées |
+| Export runtime v2 complet et protocole reproductible | À implémenter |
+| Exo et collecte par nœud multi-machine | Prévu par le schéma ; intégration non implémentée |
+| Exécution des tests agentiques en espace isolé | Prévue par le schéma ; exécuteur non implémenté |
+| Site communautaire et envoi sécurisé | À concevoir et implémenter |
 
 ### Options avancées
 
