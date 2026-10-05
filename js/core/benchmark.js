@@ -3,7 +3,7 @@
  */
 
 async function runBenchmark() {
-  if (state.isRunning) return;
+  if (state.isRunning || state.analysisRunning) return;
   if (!state.selectedPrompts.size) { showToast('Sélectionnez un type de prompt', 'error'); return; }
   var model = getSelectedModel();
   if (!model || model === 'unknown-model') { showToast('Veuillez sélectionner un modèle', 'error'); return; }
@@ -35,6 +35,12 @@ async function runBenchmark() {
   }
   try {
     await refreshModelMetadata();
+    state.runnerVersion = null;
+    if (runner === "ollama") {
+      try { var v = await fetchWithTimeout(RUNNERS.ollama.base + "/api/version", {}, 5000);
+        if (v.ok) { var data = await v.json(); state.runnerVersion = typeof data.version === "string" ? data.version : null; }
+      } catch (_) {}
+    }
     if (RUNNERS[runner].type === 'local') await warmup();
     for (var i = 0; i < selectedTypes.length; i++) {
       for (var rep = 1; rep <= repetitions; rep++) {
@@ -93,6 +99,7 @@ async function executeTest(model, promptType, promptText, rep, signal, protocol)
   var fingerprint = await promptFingerprint(promptText);
   var contextTokens = getRequestedContextTokens();
   var modelMetadata = state.modelMetadata && state.modelMetadata.model === model ? Object.assign({}, state.modelMetadata) : null;
+  var loadedBefore = await loadedModelSnapshot(model);
   if (state.runner === 'ollama') await ollamaMemoryMonitor.startResources();
   try {
   var testStartedAt = new Date().toISOString();
@@ -100,7 +107,7 @@ async function executeTest(model, promptType, promptText, rep, signal, protocol)
   var firstTokenTime = null, fullText = '', tokensGenerated = 0;
   var memoryStats = null;
   var tokenCountSource = 'stream-chunk-count', tokenCountKind = 'estimated';
-  var ollamaTiming = {}, cachedTokens = null;
+  var ollamaTiming = {}, cachedTokens = null, inputTokens = null, finishReason = null, thinkingObserved = false, firstAnswerTime = null;
   currentTestState = { model: model, promptType: promptType, promptText: promptText, maxTokens: maxTokens, tokensReceived: 0, isStreaming: false, startTime: Date.now(), logs: [] };
   resetLiveOutput(); 
   showLiveSections(true); 
@@ -127,8 +134,11 @@ async function executeTest(model, promptType, promptText, rep, signal, protocol)
       }, 180000); // 3 minutes pour les modèles lourds (>30B)
       await consumeOllamaStream(res, signal, function(json) {
         var segment = json.response || json.thinking;
+        if (json.thinking) thinkingObserved = true;
         if (segment) {
-          if (firstTokenTime === null) firstTokenTime = performance.now() - t0;
+          var arrival = firstTokenTime === null || (json.response && firstAnswerTime === null) ? performance.now() - t0 : null;
+          if (json.response && firstAnswerTime === null) firstAnswerTime = arrival;
+          if (firstTokenTime === null) firstTokenTime = arrival;
           if (json.response) fullText += json.response;
           updateThinkingOutput(segment); tokensGenerated++;
           currentTestState.tokensReceived = tokensGenerated; updateTokenProgress(tokensGenerated, maxTokens);
@@ -137,6 +147,8 @@ async function executeTest(model, promptType, promptText, rep, signal, protocol)
           if (Number.isInteger(json.eval_count) && json.eval_count >= 0) {
             tokensGenerated = json.eval_count; tokenCountSource = 'ollama-api-generate:eval_count'; tokenCountKind = 'declared';
           }
+          finishReason = typeof json.done_reason === "string" ? json.done_reason : null;
+          inputTokens = Number.isInteger(json.prompt_eval_count) && json.prompt_eval_count >= 0 ? json.prompt_eval_count : null;
           cachedTokens = Number.isInteger(json.prompt_eval_cached_count) && json.prompt_eval_cached_count >= 0 ? json.prompt_eval_cached_count : null;
           ['load_duration', 'prompt_eval_duration', 'eval_duration'].forEach(function(key) {
             ollamaTiming[key] = Number.isFinite(json[key]) && json[key] >= 0 ? json[key] / 1e6 : null;
@@ -223,6 +235,8 @@ async function executeTest(model, promptType, promptText, rep, signal, protocol)
         fullText = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content ? data.choices[0].message.content : '';
         tokensGenerated = data.usage && data.usage.completion_tokens ? data.usage.completion_tokens : estimateTokens(fullText);
       }
+      finishReason = state.runner === "claude" ? data.stop_reason : state.runner === "gemini" ? data.candidates?.[0]?.finishReason : data.choices?.[0]?.finish_reason;
+      finishReason = typeof finishReason === "string" ? finishReason : null;
       var hasUsage = state.runner === 'claude' ? data.usage?.output_tokens != null :
         state.runner === 'gemini' ? data.usageMetadata?.outputTokenCount != null : data.usage?.completion_tokens != null;
       tokenCountSource = hasUsage ? 'provider:output-token-usage' : 'text-token-estimate';
@@ -268,9 +282,11 @@ async function executeTest(model, promptType, promptText, rep, signal, protocol)
     startedAt: testStartedAt,
     finishedAt: testFinishedAt,
     phase: protocol.warmup ? 'warmup' : 'measurement',
-    protocol: { version: '0.07', phase: protocol.warmup ? 'warmup' : 'measurement', promptDigest: fingerprint,
+    protocol: { version: '0.08', phase: protocol.warmup ? 'warmup' : 'measurement', promptDigest: fingerprint,
       warmupRuns: protocol.warmupRuns || 0, loadState: protocol.loadState || 'unknown',
-      cacheState: cachedTokens === null ? 'unknown' : cachedTokens > 0 ? 'warm' : 'cold' },
+      cacheState: cachedTokens === null ? 'unknown' : cachedTokens > 0 ? 'present-coverage-unknown' : 'cold', cachePolicy: 'runner-managed; persistent model; no forced cache reset' },
+    completion: classifyCompletion(finishReason, tokensGenerated, maxTokens, tokenCountKind),
+    runnerVersion: state.runnerVersion || null,
     model: model,
     modelMetadata: modelMetadata,
     runner: RUNNERS[state.runner].name,
@@ -284,6 +300,9 @@ async function executeTest(model, promptType, promptText, rep, signal, protocol)
       prefillTimeMs: ollamaTiming.prompt_eval_duration ?? null,
       generationTimeMs: ollamaTiming.eval_duration ?? null,
       cachedInputTokens: cachedTokens,
+      inputTokens: inputTokens,
+      firstAnswerTimeMs: firstAnswerTime,
+      thinkingObserved: thinkingObserved,
       generationTokensPerSec: ollamaTiming.eval_duration > 0 ? tokensGenerated / (ollamaTiming.eval_duration / 1000) : null,
       totalTokens: tokensGenerated,
       tokenCountSource: tokenCountSource,
@@ -313,6 +332,7 @@ async function executeTest(model, promptType, promptText, rep, signal, protocol)
       sampleCount: memoryStats.readings.length,
       readings: memoryStats.readings.map(r => ({ timestamp: r.timestamp, memory: r.memory })),
       intervalMs: window.MEMORY_MONITOR_CONFIG.pollInterval,
+      loadedModelBefore: loadedBefore,
       loadedModel: memoryStats.loadedModel,
       resources: memoryStats.resources
     };
