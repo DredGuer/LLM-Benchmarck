@@ -1,8 +1,13 @@
 # Schéma commun v2 — contrat pour les prochaines étapes
 
-Statut : **contrat initial, pas encore produit par les collecteurs ni par l'export actuel**.
-L'application continue d'exporter le schéma communautaire 1.0.0. Ce changement ne lance
-aucune tâche agentique, n'accède à aucun nouveau fichier utilisateur et ne connecte aucun cluster.
+Statut : **export v2 actif pour les tests de génération**, dans le Markdown et via le bouton JSON v2.
+L'inventaire Apple, les métadonnées modèle, le contexte Auto observé, les métriques et la télémétrie disponible
+alimentent le rapport. Les champs non collectés restent inconnus ; aucun exécuteur agentique ni cluster n'est lancé.
+
+Un seul runner/inventaire donne un objet `llm-benchmarker.community` 2.0.0.
+Des résultats hétérogènes donnent un objet `llm-benchmarker.community.bundle` 1.0.0 avec `reports[]`.
+Chaque élément suit le schéma v2, et l'enveloppe suit [community-bundle.schema.json](community-bundle.schema.json).
+Le futur importeur doit identifier le champ `schema`, puis valider chaque rapport séparément.
 
 Le fichier [community-v2.schema.json](community-v2.schema.json) définit un JSON Schema
 Draft 2020-12. Le schéma 2.0.0 prépare la collecte progressive, en priorité sur Apple Silicon.
@@ -93,7 +98,7 @@ Ce profil exclut prompts/réponses bruts, arguments d'outils, logs, clés, noms 
 numéros de série, IP et chemins locaux absolus. Les identifiants sont propres au rapport,
 sans identification publique persistante du matériel.
 Un validateur structurel ne peut pas détecter un secret copié dans un champ libre :
-le futur exporteur doit utiliser une liste de champs autorisés et une prévisualisation.
+l’exporteur utilise une liste de champs autorisés ; une prévisualisation avant envoi reste à implémenter.
 
 Les propriétés inconnues sont refusées. Évolution incompatible : nouvelle version majeure.
 L'importeur doit router explicitement v1/v2, sans conversion silencieuse. Les anciennes
@@ -124,3 +129,23 @@ Exemples : Apple génération, Apple agentique, cluster Exo Apple et Linux multi
 6. Adaptateur Exo et collecte par nœud, puis autres plateformes.
 
 Chaque étape doit passer ses propres tests avant la suivante.
+
+## Export runtime et télémétrie
+
+- `model.architecture`, `expertCount`, `activeExpertsPerToken` décrivent Dense/MoE sans estimer les paramètres actifs.
+- `model.contextMaxTokens` est distinct de `parameters.contextTokens`, observé sur le runner chargé.
+- `parameters.contextSource` explicite cette observation ; en Auto aucun `num_ctx` n'est imposé.
+- `resourceSummaries.total` porte les deltas cumulés disque/swap et la taille déclarée du modèle,
+  sans les faire passer pour des pics.
+- `resourceSamples` contient les lectures RSS et les séries système disponibles ; unités en octets et temps relatif en ms.
+- La métrique `mlx-allocator-peak-server-unattributed` conserve la portée serveur et l'attribution non vérifiée dans `method`.
+- Les GPU/placements réels, versions runner, paramètres actifs, thinking/answer séparés et mesures absentes restent inconnus.
+- L'inventaire local est celui du client pour une API distante ; le nœud d'inférence reste `inference-unknown`.
+- Les historiques anciens sont exportables sans inventer les informations qui n'ont pas été collectées.
+- Les données brutes de prompts/réponses, clés API, numéros de série, logs et messages d'erreur sont exclus du JSON.
+  Le rapport Markdown complet inclut toujours les prompts et réponses.
+
+```bash
+node backend/community-export.test.cjs
+node schemas/test.cjs
+```
