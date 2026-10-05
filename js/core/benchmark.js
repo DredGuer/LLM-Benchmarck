@@ -4,93 +4,93 @@
 
 async function runBenchmark() {
   if (state.isRunning) return;
-  if (state.selectedPrompts.size === 0) { showToast('Sélectionnez au moins un type de prompt', 'error'); return; }
+  if (!state.selectedPrompts.size) { showToast('Sélectionnez un type de prompt', 'error'); return; }
   var model = getSelectedModel();
   if (!model || model === 'unknown-model') { showToast('Veuillez sélectionner un modèle', 'error'); return; }
-
-  try { getRequestedContextTokens(); } catch (error) { showToast(error.message, 'error'); return; }
-  state.isRunning = true;
-  await refreshModelMetadata();
-  var runBtn = document.getElementById('runBtn');
-  runBtn.disabled = true;
-  runBtn.innerHTML = '<div class="spinner"></div> Benchmark en cours…';
-  var progressSection = document.getElementById('progressSection');
-  progressSection.style.display = 'block';
-  
-  var selectedTypes = PROMPT_TYPES.filter(function(pt) { return state.selectedPrompts.has(pt.id); });
   var repetitions = getRepetitions();
+  if (!Number.isInteger(repetitions) || repetitions < 1 || repetitions > 20) { showToast('Choisissez de 1 à 20 répétitions.', 'error'); return; }
+  if (state.unsavedSession && saveSessionToHistory(state.unsavedSession) === false) return;
+  state.unsavedSession = null;
+  var runner = state.runner, sessionResults = [], warmupRuns = 0, completedTests = 0;
+  var runBtn = document.getElementById('runBtn'), progressSection = document.getElementById('progressSection');
+  var selectedTypes = PROMPT_TYPES.filter(pt => state.selectedPrompts.has(pt.id));
   var totalTests = selectedTypes.length * repetitions;
-  var completedTests = 0;
-  var sessionResults = [];
-  skipToNextFlag = false;
-  retryCurrentFlag = false;
-  
-  showResultsArea(true);
-  showLiveSections(false);
-  setControlButtons(false);
-
-  for (var i = 0; i < selectedTypes.length; i++) {
-    var pt = selectedTypes[i];
-    skipToNextFlag = false;
-    for (var rep = 0; rep < repetitions; rep++) {
-      retryCurrentFlag = false;
-      var progress = (completedTests / totalTests) * 100;
-      setProgress(progress, 'Test : ' + pt.name + (repetitions > 1 ? ' (' + (rep+1) + '/' + repetitions + ')' : ''));
-      var promptText = pt.id === 'custom' ? (document.getElementById('customPromptText').value.trim() || 'Dis bonjour.') : pt.prompt;
-      var abortController = new AbortController();
-      currentAbortController = abortController;
-      try {
-        showLiveSections(true); 
-        setControlButtons(true);
-        var result = await executeTest(model, pt, promptText, rep + 1, abortController.signal);
-        if (skipToNextFlag) { addDebugLog('Test ' + pt.name + ' interrompu - Passage au suivant', 'warn'); skipToNextFlag = false; break; }
-        if (retryCurrentFlag) { addDebugLog('Test ' + pt.name + ' - Relance demandée', 'info'); retryCurrentFlag = false; rep--; continue; }
-        sessionResults.push(result); 
-        state.results.unshift(result); 
-        renderResultCard(result); 
-        completedTests++;
-      } catch (err) {
-        showLiveSections(false); 
-        setControlButtons(false);
-        var errResult = buildErrorResult(model, pt, err.message, rep + 1);
-        errResult.debugLogs = currentTestState.logs.slice(0);
-        errResult.tokensReceived = currentTestState.tokensReceived;
-        sessionResults.push(errResult); 
-        state.results.unshift(errResult); 
-        renderResultCard(errResult); 
-        completedTests++;
-        currentAbortController = null;
-        if (skipToNextFlag) { skipToNextFlag = false; break; }
-        if (retryCurrentFlag) { retryCurrentFlag = false; rep--; continue; }
-        return;
-      }
-      showLiveSections(false); 
-      setControlButtons(false); 
-      currentAbortController = null;
-    }
+  var activeType = selectedTypes[0], activePrompt = '', activeRep = 1, activePhase = 'measurement';
+  state.isRunning = true; resetCampaignResults(); switchTab('results'); lockCampaignControls(true);
+  runBtn.disabled = true; runBtn.innerHTML = '<div class="spinner"></div> Chargement / chauffe…';
+  progressSection.style.display = 'block'; skipToNextFlag = false; retryCurrentFlag = false;
+  function remember(result) { sessionResults.push(result); state.results.unshift(result); renderResultCard(result); }
+  async function warmup() {
+    activeType = { id: 'warmup', name: 'Chargement / chauffe', emoji: '🔥' };
+    activePrompt = 'Réponds uniquement par OK.'; activeRep = 1; activePhase = 'warmup';
+    setProgress(0, 'Vérification du modèle et chauffe mesurée…');
+    currentAbortController = new AbortController(); showLiveSections(true); setControlButtons(true, true);
+    var loadState = await observeLoadedModel(model, currentAbortController.signal);
+    var result = await executeTest(model, activeType, activePrompt, 1, currentAbortController.signal,
+      { warmup: true, loadState: loadState, warmupRuns: warmupRuns });
+    if (!result.metrics.totalTokens && !result.response) throw new Error('Le modèle n’a généré aucun token pendant la chauffe.');
+    remember(result); warmupRuns++;
+    if (runner === 'ollama' && await observeLoadedModel(model, currentAbortController.signal) === 'cold')
+      throw new Error('Le modèle ne reste pas chargé après la chauffe.');
   }
-  setProgress(100, 'Terminé !');
-  document.getElementById('statusDot').className = 'status-dot done';
-  showLiveSections(false); 
-  setControlButtons(false); 
-  currentAbortController = null;
-  saveSessionToHistory({ model: model, runner: state.runner, results: sessionResults, env: state.env });
-  document.getElementById('exportBtn').disabled = false;
-  setTimeout(function() { 
-    progressSection.style.display = 'none'; 
-    runBtn.disabled = false; 
-    runBtn.innerHTML = '⚡ Lancer le benchmark'; 
-    state.isRunning = false; 
-    skipToNextFlag = false; 
-    retryCurrentFlag = false; 
-  }, 1500);
-  showToast('Benchmark terminé : ' + completedTests + ' test(s)', 'success');
+  try {
+    await refreshModelMetadata();
+    if (RUNNERS[runner].type === 'local') await warmup();
+    for (var i = 0; i < selectedTypes.length; i++) {
+      for (var rep = 1; rep <= repetitions; rep++) {
+        activeType = selectedTypes[i]; activeRep = rep; activePhase = 'measurement';
+        activePrompt = activeType.id === 'custom' ? (document.getElementById('customPromptText').value.trim() || 'Dis bonjour.') : activeType.prompt;
+        skipToNextFlag = false; retryCurrentFlag = false;
+        currentAbortController = new AbortController();
+        var loadState = await observeLoadedModel(model, currentAbortController.signal);
+        if (runner === 'ollama' && loadState === 'cold') {
+          await warmup();
+          activeType = selectedTypes[i]; activeRep = rep; activePhase = 'measurement';
+          activePrompt = activeType.id === 'custom' ? (document.getElementById('customPromptText').value.trim() || 'Dis bonjour.') : activeType.prompt;
+          loadState = await observeLoadedModel(model, currentAbortController.signal);
+        }
+        setProgress(completedTests / totalTests * 100, activeType.name + ' · ' + rep + '/' + repetitions);
+        runBtn.innerHTML = '<div class="spinner"></div> Mesures après chauffe…';
+        showLiveSections(true); setControlButtons(true);
+        try {
+          var result = await executeTest(model, activeType, activePrompt, rep, currentAbortController.signal,
+            { loadState: loadState, warmupRuns: warmupRuns });
+          if (retryCurrentFlag) { rep--; continue; }
+          remember(result); completedTests++;
+          if (skipToNextFlag) break;
+        } catch (error) {
+          if (retryCurrentFlag) { rep--; continue; }
+          if (skipToNextFlag) break;
+          throw error;
+        }
+      }
+    }
+    setProgress(100, 'Terminé : chauffe séparée et ' + completedTests + ' mesure(s)');
+    showToast('Campagne terminée : ' + completedTests + ' mesure(s)', 'success');
+  } catch (error) {
+    var failed = buildErrorResult(model, activeType, error.message, activeRep);
+    failed.phase = activePhase; failed.promptText = activePrompt;
+    remember(failed); showToast(error.message, 'error');
+  } finally {
+    if (sessionResults.length) {
+      var session = { model: model, runner: runner, results: sessionResults,
+        env: JSON.parse(JSON.stringify(state.env)), repetitions: repetitions, warmupRuns: warmupRuns };
+      if (saveSessionToHistory(session) === false) state.unsavedSession = session;
+    }
+    document.getElementById('exportBtn').disabled = !state.results.length;
+    currentAbortController = null; showLiveSections(false); setControlButtons(false);
+    progressSection.style.display = 'none'; runBtn.disabled = false; runBtn.innerHTML = '⚡ Lancer le benchmark';
+    state.isRunning = false; skipToNextFlag = false; retryCurrentFlag = false; lockCampaignControls(false);
+    if (typeof renderStatistics === 'function') renderStatistics();
+  }
 }
 
-async function executeTest(model, promptType, promptText, rep, signal) {
+async function executeTest(model, promptType, promptText, rep, signal, protocol) {
   // Use advanced config functions to get settings based on mode
-  var temperature = getTemperatureForPromptType(promptType.id);
-  var maxTokens = getMaxTokens();
+  protocol = protocol || {};
+  var temperature = protocol.warmup ? 0 : getTemperatureForPromptType(promptType.id);
+  var maxTokens = protocol.warmup ? 32 : getMaxTokens();
+  var fingerprint = await promptFingerprint(promptText);
   var contextTokens = getRequestedContextTokens();
   var modelMetadata = state.modelMetadata && state.modelMetadata.model === model ? Object.assign({}, state.modelMetadata) : null;
   if (state.runner === 'ollama') await ollamaMemoryMonitor.startResources();
@@ -100,6 +100,7 @@ async function executeTest(model, promptType, promptText, rep, signal) {
   var firstTokenTime = null, fullText = '', tokensGenerated = 0;
   var memoryStats = null;
   var tokenCountSource = 'stream-chunk-count', tokenCountKind = 'estimated';
+  var ollamaTiming = {}, cachedTokens = null;
   currentTestState = { model: model, promptType: promptType, promptText: promptText, maxTokens: maxTokens, tokensReceived: 0, isStreaming: false, startTime: Date.now(), logs: [] };
   resetLiveOutput(); 
   showLiveSections(true); 
@@ -121,43 +122,28 @@ async function executeTest(model, promptType, promptText, rep, signal) {
       var res = await fetchWithTimeout(RUNNERS.ollama.base + '/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: model, prompt: promptText, stream: true, options: buildOllamaOptions(temperature, maxTokens, contextTokens) }),
+        body: JSON.stringify({ model: model, prompt: promptText, stream: true, keep_alive: '10m', ...(protocol.warmup ? { think: false } : {}), options: buildOllamaOptions(temperature, maxTokens, contextTokens) }),
         signal: signal
       }, 180000); // 3 minutes pour les modèles lourds (>30B)
-      var reader = res.body.getReader();
-      var decoder = new TextDecoder();
-      while (true) {
-        if (signal && signal.aborted) { addDebugLog('Test annulé par l utilisateur', 'warn'); throw new Error('Test annulé'); }
-        var result = await reader.read();
-        if (result.done) break;
-        var chunk = decoder.decode(result.value);
-        var lines = chunk.split('\n').filter(function(l) { return l.trim() !== ''; });
-        for (var j = 0; j < lines.length; j++) {
-          try {
-            var json = JSON.parse(lines[j]);
-            if (json.response) {
-              if (firstTokenTime === null) { 
-                firstTokenTime = performance.now() - t0; 
-                addDebugLog('Premier token reçu (TTFT: ' + Math.round(firstTokenTime) + 'ms)', 'success'); 
-              }
-              fullText += json.response; 
-              updateThinkingOutput(json.response);
-              tokensGenerated++; 
-              currentTestState.tokensReceived = tokensGenerated; 
-              updateTokenProgress(tokensGenerated, maxTokens);
-            }
-            if (json.done && json.eval_count) { 
-              tokensGenerated = json.eval_count;
-              tokenCountSource = 'ollama-api-generate:eval_count'; tokenCountKind = 'declared'; 
-              currentTestState.tokensReceived = tokensGenerated; 
-              updateTokenProgress(tokensGenerated, maxTokens); 
-            }
-            if (json.done && tokensGenerated >= maxTokens) {
-              addDebugLog('Limite de tokens atteinte: ' + tokensGenerated + '/' + maxTokens, 'warn');
-            }
-          } catch(e) { addDebugLog('Erreur parsing JSON: ' + e.message, 'error'); }
+      await consumeOllamaStream(res, signal, function(json) {
+        var segment = json.response || json.thinking;
+        if (segment) {
+          if (firstTokenTime === null) firstTokenTime = performance.now() - t0;
+          if (json.response) fullText += json.response;
+          updateThinkingOutput(segment); tokensGenerated++;
+          currentTestState.tokensReceived = tokensGenerated; updateTokenProgress(tokensGenerated, maxTokens);
         }
-      }
+        if (json.done) {
+          if (Number.isInteger(json.eval_count) && json.eval_count >= 0) {
+            tokensGenerated = json.eval_count; tokenCountSource = 'ollama-api-generate:eval_count'; tokenCountKind = 'declared';
+          }
+          cachedTokens = Number.isInteger(json.prompt_eval_cached_count) && json.prompt_eval_cached_count >= 0 ? json.prompt_eval_cached_count : null;
+          ['load_duration', 'prompt_eval_duration', 'eval_duration'].forEach(function(key) {
+            ollamaTiming[key] = Number.isFinite(json[key]) && json[key] >= 0 ? json[key] / 1e6 : null;
+          });
+          currentTestState.tokensReceived = tokensGenerated; updateTokenProgress(tokensGenerated, maxTokens);
+        }
+      });
       addDebugLog('Stream terminé - Tokens totaux: ' + tokensGenerated, 'info');
     } catch (err) {
       if (err.name === 'AbortError') { 
@@ -281,6 +267,10 @@ async function executeTest(model, promptType, promptText, rep, signal) {
     timestamp: testFinishedAt,
     startedAt: testStartedAt,
     finishedAt: testFinishedAt,
+    phase: protocol.warmup ? 'warmup' : 'measurement',
+    protocol: { version: '0.07', phase: protocol.warmup ? 'warmup' : 'measurement', promptDigest: fingerprint,
+      warmupRuns: protocol.warmupRuns || 0, loadState: protocol.loadState || 'unknown',
+      cacheState: cachedTokens === null ? 'unknown' : cachedTokens > 0 ? 'warm' : 'cold' },
     model: model,
     modelMetadata: modelMetadata,
     runner: RUNNERS[state.runner].name,
@@ -290,9 +280,15 @@ async function executeTest(model, promptType, promptText, rep, signal) {
     promptText: promptText,
     response: fullText,
     metrics: {
+      loadTimeMs: ollamaTiming.load_duration ?? null,
+      prefillTimeMs: ollamaTiming.prompt_eval_duration ?? null,
+      generationTimeMs: ollamaTiming.eval_duration ?? null,
+      cachedInputTokens: cachedTokens,
+      generationTokensPerSec: ollamaTiming.eval_duration > 0 ? tokensGenerated / (ollamaTiming.eval_duration / 1000) : null,
       totalTokens: tokensGenerated,
       tokenCountSource: tokenCountSource,
       tokenCountKind: tokenCountKind,
+      thinkingEnabled: protocol.warmup ? false : null,
       tokensPerSec: Math.round(tokensPerSec * 10) / 10,
       ttft: ttft !== null ? Math.round(ttft) : null,
       totalTime: Math.round(totalTime),
