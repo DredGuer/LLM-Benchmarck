@@ -1,0 +1,272 @@
+{
+  "schema": "llm-benchmarker.community",
+  "schemaVersion": "2.0.0",
+  "reportId": "synthetic-exo-cluster",
+  "generatedAt": "2026-10-05T15:00:00Z",
+  "producer": {
+    "name": "schema-fixture",
+    "version": "1.0.0"
+  },
+  "synthetic": true,
+  "privacy": {
+    "profile": "community-redacted",
+    "rawPromptsIncluded": false,
+    "rawResponsesIncluded": false,
+    "rawToolArgumentsIncluded": false
+  },
+  "machines": [
+    {
+      "id": "node-a",
+      "os": {
+        "name": "macOS",
+        "architecture": "arm64"
+      },
+      "platform": "apple-silicon",
+      "inventorySource": "synthetic-fixture",
+      "cpus": [
+        {
+          "id": "cpu-0",
+          "model": "Apple M3 Pro",
+          "physicalCores": 12,
+          "logicalCores": 12
+        }
+      ],
+      "memory": {
+        "architecture": "unified",
+        "physicalCapacity": {
+          "value": 38654705664,
+          "unit": "bytes",
+          "status": "available",
+          "source": "synthetic-fixture",
+          "kind": "declared",
+          "observedAt": "2026-10-05T15:00:00Z",
+          "scope": "machine",
+          "nodeId": "node-a",
+          "deviceId": null
+        }
+      },
+      "gpus": [
+        {
+          "id": "gpu-0",
+          "model": "Apple M3 Pro GPU",
+          "kind": "unified",
+          "memoryArchitecture": "unified",
+          "capacity": {
+            "value": null,
+            "unit": "bytes",
+            "status": "unavailable",
+            "source": "synthetic-fixture",
+            "kind": "declared",
+            "observedAt": "2026-10-05T15:00:00Z",
+            "scope": "gpu",
+            "nodeId": "node-a",
+            "deviceId": "gpu-0"
+          },
+          "sharedMemoryPoolId": "system-memory"
+        }
+      ],
+      "storage": [
+        {
+          "id": "disk-0",
+          "kind": "ssd",
+          "transport": "unknown",
+          "roles": [
+            "model-files",
+            "artifacts"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "node-b",
+      "os": {
+        "name": "macOS",
+        "architecture": "arm64"
+      },
+      "platform": "apple-silicon",
+      "inventorySource": "synthetic-fixture",
+      "cpus": [
+        {
+          "id": "cpu-0",
+          "model": "Apple M3 Pro",
+          "physicalCores": 12,
+          "logicalCores": 12
+        }
+      ],
+      "memory": {
+        "architecture": "unified",
+        "physicalCapacity": {
+          "value": 38654705664,
+          "unit": "bytes",
+          "status": "available",
+          "source": "synthetic-fixture",
+          "kind": "declared",
+          "observedAt": "2026-10-05T15:00:00Z",
+          "scope": "machine",
+          "nodeId": "node-b",
+          "deviceId": null
+        }
+      },
+      "gpus": [
+        {
+          "id": "gpu-0",
+          "model": "Apple M3 Pro GPU",
+          "kind": "unified",
+          "memoryArchitecture": "unified",
+          "capacity": {
+            "value": null,
+            "unit": "bytes",
+            "status": "unavailable",
+            "source": "synthetic-fixture",
+            "kind": "declared",
+            "observedAt": "2026-10-05T15:00:00Z",
+            "scope": "gpu",
+            "nodeId": "node-b",
+            "deviceId": "gpu-0"
+          },
+          "sharedMemoryPoolId": "system-memory"
+        }
+      ],
+      "storage": [
+        {
+          "id": "disk-0",
+          "kind": "ssd",
+          "transport": "unknown",
+          "roles": [
+            "model-files",
+            "artifacts"
+          ]
+        }
+      ]
+    }
+  ],
+  "execution": {
+    "mode": "distributed-inference",
+    "runner": {
+      "name": "exo",
+      "version": null,
+      "engine": "mlx",
+      "backend": "metal"
+    },
+    "parallelism": "tensor",
+    "requestedPlacements": [],
+    "observedPlacements": [
+      {
+        "nodeId": "node-a",
+        "gpuIds": [
+          "gpu-0"
+        ],
+        "cpuIds": [
+          "cpu-0"
+        ],
+        "storageIds": [
+          "disk-0"
+        ],
+        "source": "synthetic-fixture",
+        "tensorShard": "example-partition"
+      },
+      {
+        "nodeId": "node-b",
+        "gpuIds": [
+          "gpu-0"
+        ],
+        "cpuIds": [
+          "cpu-0"
+        ],
+        "storageIds": [
+          "disk-0"
+        ],
+        "source": "synthetic-fixture",
+        "tensorShard": "example-partition"
+      }
+    ],
+    "links": [
+      {
+        "id": "link-1",
+        "fromNodeId": "node-a",
+        "toNodeId": "node-b",
+        "transport": "thunderbolt",
+        "rdma": null
+      }
+    ]
+  },
+  "tests": [
+    {
+      "id": "test-1",
+      "kind": "generation",
+      "status": "success",
+      "startedAt": "2026-10-05T15:00:00Z",
+      "model": {
+        "id": "example-model",
+        "digest": null,
+        "quantization": "example-4bit"
+      },
+      "parameters": {
+        "temperature": 0.7,
+        "maxOutputTokens": 4096,
+        "contextTokens": null
+      },
+      "protocol": {
+        "id": "conversation",
+        "version": "1.0.0",
+        "promptDigest": null,
+        "warmupRuns": 0,
+        "loadState": "unknown",
+        "cacheState": "unknown",
+        "repetition": 1
+      },
+      "participatingNodeIds": [
+        "node-a",
+        "node-b"
+      ],
+      "metrics": {
+        "totalTime": {
+          "value": 29610,
+          "unit": "ms",
+          "status": "available",
+          "source": "synthetic-fixture",
+          "kind": "declared",
+          "observedAt": "2026-10-05T15:00:00Z",
+          "scope": "test",
+          "nodeId": null,
+          "deviceId": null
+        },
+        "totalOutputTokens": {
+          "value": 478,
+          "unit": "tokens",
+          "status": "available",
+          "source": "synthetic-fixture",
+          "kind": "declared",
+          "observedAt": "2026-10-05T15:00:00Z",
+          "scope": "test",
+          "nodeId": null,
+          "deviceId": null
+        },
+        "thinkingTokens": {
+          "value": null,
+          "unit": "tokens",
+          "status": "unavailable",
+          "source": "synthetic-fixture",
+          "kind": "declared",
+          "observedAt": "2026-10-05T15:00:00Z",
+          "scope": "test",
+          "nodeId": null,
+          "deviceId": null
+        },
+        "answerTokens": {
+          "value": null,
+          "unit": "tokens",
+          "status": "unavailable",
+          "source": "synthetic-fixture",
+          "kind": "declared",
+          "observedAt": "2026-10-05T15:00:00Z",
+          "scope": "test",
+          "nodeId": null,
+          "deviceId": null
+        }
+      },
+      "resourceSamples": [],
+      "resourceSummaries": []
+    }
+  ]
+}
