@@ -41,7 +41,7 @@ function buildCommunityV2(results, generatedAt) {
   results.forEach(function(r) {
     // Keep materially different inventories and runners in separate schema-valid reports.
     var machine = communityMachine(r.env, generatedAt, 'local');
-    var key = JSON.stringify([r.runner, machine]);
+    var key = JSON.stringify([r.runner, r.runnerVersion || null, machine]);
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(r);
   });
@@ -58,7 +58,7 @@ function buildCommunityV2(results, generatedAt) {
       producer: { name: 'LLM Benchmarker', version: '0.06' }, synthetic: false,
       privacy: { profile: 'community-redacted', rawPromptsIncluded: false, rawResponsesIncluded: false, rawToolArgumentsIncluded: false },
       machines: machines,
-      execution: { mode: 'single-machine', runner: { name: runner, version: null, engine: null, backend: null },
+      execution: { mode: 'single-machine', runner: { name: runner, version: first.runnerVersion || null, engine: null, backend: null },
         parallelism: 'unknown', requestedPlacements: [], observedPlacements: [], links: [],
         topologySource: localRunner ? 'configured-local-runner; actual placements not collected' : 'inference hardware unknown; local inventory belongs to client' },
       tests: items.map(function(r, index) {
@@ -93,6 +93,8 @@ function buildCommunityV2(results, generatedAt) {
               'Loaded-model size; not a measured RAM peak; unified size and size_vram must not be added'),
             sampleCount: 1, intervalMs: null, aggregation: 'none' });
         }
+        if (mem.loadedModelBefore && localRunner) summaries.push({nodeId:'local',metric:'model-declared-size',
+          start:communityReading(mem.loadedModelBefore.sizeBytes,'bytes','ollama-api-ps',new Date(mem.loadedModelBefore.observedAt).toISOString(),'model','local','declared','Allocation declared before request; not model weights size'),sampleCount:1,intervalMs:null,aggregation:'none'});
         var resources = mem.resources;
         if (resources && localRunner) {
           (resources.samples || []).forEach(function(r) {
@@ -103,22 +105,23 @@ function buildCommunityV2(results, generatedAt) {
                 spec[1].startsWith('swap-') && spec[1] !== 'swap-used' ? 'estimated' : 'measured',
                 spec[1].endsWith('-bytes') ? 'System counter delta since telemetry baseline; swap bytes are page-equivalent' : 'System-wide gauge'); });
           });
-          [['swapPeak', 'swap-used', 'peak'], ['compressedPeak', 'compressed-memory', 'peak'],
+          [['swapStart', 'swap-used', 'start'], ['swapEnd', 'swap-used', 'end'],
+            ['compressedStart', 'compressed-memory', 'start'], ['compressedEnd', 'compressed-memory', 'end'], ['swapPeak', 'swap-used', 'peak'], ['compressedPeak', 'compressed-memory', 'peak'],
             ['swapReadDelta', 'swap-read-bytes', 'total'], ['swapWriteDelta', 'swap-write-bytes', 'total'],
             ['diskReadDelta', 'disk-read-bytes', 'total'], ['diskWriteDelta', 'disk-write-bytes', 'total'],
-            ['mlxPeak', 'mlx-allocator-peak-server-unattributed', 'peak']].forEach(function(spec) {
+            ['mlxHeldEnd', 'mlx-allocator-held-server-unattributed', 'end'], ['mlxPeak', 'mlx-allocator-peak-server-unattributed', 'peak']].forEach(function(spec) {
             var input = resources[spec[0]];
             if (!input) return;
             var summary = { nodeId: 'local', metric: spec[1], sampleCount: communityInteger(resources.sampleCount) || 0, intervalMs: null, aggregation: 'per-node' };
             summary[spec[2]] = communityReading(input.value, 'bytes', input.source, input.observedAt || finishedAt,
-              input.scope, 'local', input.kind, spec[0] === 'mlxPeak' ? 'Ollama server log; model attribution unverified; rounded allocator peak' :
-              input.method || (spec[2] === 'total' ? 'System-wide counter delta during telemetry session; not SSD benchmark speed' : 'System-wide sampled peak'));
+              input.scope, 'local', input.kind, spec[0].startsWith('mlx') ? 'Ollama server log; model attribution unverified; rounded allocator peak' :
+              input.method || (spec[2] === 'total' ? 'System-wide counter delta during telemetry session; not SSD benchmark speed' : (spec[2] === 'peak' ? 'System-wide sampled peak' : 'System-wide boundary gauge')));
             summaries.push(summary);
           });
         }
         var tokenKind = m.tokenCountKind || 'estimated';
         var test = {
-          id: r.id || 'test-' + index, kind: 'generation', status: r.error ? 'failure' : 'success',
+          id: r.id || 'test-' + index, kind: 'generation', status: r.error ? 'failure' : r.completion?.limitReached ? 'partial' : 'success',
           startedAt: startedAt, finishedAt: finishedAt,
           model: { id: r.model || 'unknown', digest: mem.loadedModel?.digest || null, quantization: meta.quantization || null,
             contextMaxTokens: communityInteger(meta.contextMaxTokens),
@@ -127,16 +130,18 @@ function buildCommunityV2(results, generatedAt) {
             expertCount: communityInteger(meta.expertCount), activeExpertsPerToken: communityInteger(meta.activeExperts) },
           parameters: { temperature: communityNumber(m.temperature), maxOutputTokens: communityInteger(m.maxTokens),
             contextTokens: communityInteger(m.contextObservedTokens), contextSource: m.contextObservedTokens != null ? 'ollama-api-ps:context_length (observed loaded runner)' : null, concurrency: 1,
-            thinking: { enabled: typeof m.thinkingEnabled === 'boolean' ? m.thinkingEnabled : null } },
+            thinking: { enabled: typeof m.thinkingEnabled === 'boolean' ? m.thinkingEnabled : null, observed: typeof m.thinkingObserved === 'boolean' ? m.thinkingObserved : null } },
           protocol: { id: 'llmb-generation-' + (['conversation','factual','math','code','logic','creative','warmup'].includes(r.promptType) ? r.promptType : 'custom'),
             version: r.protocol?.version || '0.06', phase: r.phase || 'unknown', promptDigest: r.protocol?.promptDigest || null,
             warmupRuns: r.protocol?.warmupRuns || 0, loadState: r.protocol?.loadState || 'unknown', cacheState: r.protocol?.cacheState || 'unknown',
-            repetition: Math.max(1, communityInteger(r.rep) || 1) },
+            cachePolicy: r.protocol?.cachePolicy || null, repetition: Math.max(1, communityInteger(r.rep) || 1) },
           participatingNodeIds: [inferenceNode],
           metrics: { loadTime: metric(m.loadTimeMs, 'ms', 'ollama-api-generate:load_duration', 'declared'),
             prefillTime: metric(m.prefillTimeMs, 'ms', 'ollama-api-generate:prompt_eval_duration', 'declared'),
             generationTime: metric(m.generationTimeMs, 'ms', 'ollama-api-generate:eval_duration', 'declared'),
             generationThroughput: metric(m.generationTokensPerSec, 'tokens/s', 'eval_count/eval_duration', 'estimated'),
+            firstAnswerTime: metric(m.firstAnswerTimeMs, 'ms', 'browser:first-visible-answer-segment', 'measured'),
+            inputTokens: metric(m.inputTokens, 'tokens', 'ollama-api-generate:prompt_eval_count', 'declared'),
             cachedInputTokens: metric(m.cachedInputTokens, 'tokens', 'ollama-api-generate:prompt_eval_cached_count', 'declared'),
             totalTime: metric(m.totalTime, 'ms', 'browser:performance.now', 'measured', 'Request duration excluding telemetry finalization'),
             totalOutputTokens: metric(m.totalTokens, 'tokens', m.tokenCountSource || 'legacy-unknown-token-count', tokenKind),
@@ -145,6 +150,7 @@ function buildCommunityV2(results, generatedAt) {
             ttft: metric(runner === 'Ollama' ? m.ttft : null, 'ms', 'browser:first-response-segment', 'measured') },
           resourceSamples: samples.sort((a,b) => a.elapsedMs - b.elapsedMs), resourceSummaries: summaries
         };
+        if (r.completion) test.completion = { reason: r.completion.reason || null, limitReached: !!r.completion.limitReached, state: r.completion.state || 'unknown' };
         if (r.error) test.failureCode = 'generation-error'; // Do not leak raw error text/URLs.
         return test;
       })
