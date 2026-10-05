@@ -1,0 +1,336 @@
+{
+  "schema": "llm-benchmarker.community",
+  "schemaVersion": "2.0.0",
+  "reportId": "synthetic-agentic-apple",
+  "generatedAt": "2026-10-05T15:00:00Z",
+  "producer": {
+    "name": "schema-fixture",
+    "version": "1.0.0"
+  },
+  "synthetic": true,
+  "privacy": {
+    "profile": "community-redacted",
+    "rawPromptsIncluded": false,
+    "rawResponsesIncluded": false,
+    "rawToolArgumentsIncluded": false
+  },
+  "machines": [
+    {
+      "id": "node-a",
+      "os": {
+        "name": "macOS",
+        "architecture": "arm64"
+      },
+      "platform": "apple-silicon",
+      "inventorySource": "synthetic-fixture",
+      "cpus": [
+        {
+          "id": "cpu-0",
+          "model": "Apple M3 Pro",
+          "physicalCores": 12,
+          "logicalCores": 12
+        }
+      ],
+      "memory": {
+        "architecture": "unified",
+        "physicalCapacity": {
+          "value": 38654705664,
+          "unit": "bytes",
+          "status": "available",
+          "source": "synthetic-fixture",
+          "kind": "declared",
+          "observedAt": "2026-10-05T15:00:00Z",
+          "scope": "machine",
+          "nodeId": "node-a",
+          "deviceId": null
+        }
+      },
+      "gpus": [
+        {
+          "id": "gpu-0",
+          "model": "Apple M3 Pro GPU",
+          "kind": "unified",
+          "memoryArchitecture": "unified",
+          "capacity": {
+            "value": null,
+            "unit": "bytes",
+            "status": "unavailable",
+            "source": "synthetic-fixture",
+            "kind": "declared",
+            "observedAt": "2026-10-05T15:00:00Z",
+            "scope": "gpu",
+            "nodeId": "node-a",
+            "deviceId": "gpu-0"
+          },
+          "sharedMemoryPoolId": "system-memory"
+        }
+      ],
+      "storage": [
+        {
+          "id": "disk-0",
+          "kind": "ssd",
+          "transport": "unknown",
+          "roles": [
+            "model-files",
+            "artifacts"
+          ]
+        }
+      ]
+    }
+  ],
+  "execution": {
+    "mode": "single-machine",
+    "runner": {
+      "name": "ollama",
+      "version": null,
+      "engine": "mlx",
+      "backend": "metal"
+    },
+    "parallelism": "none",
+    "requestedPlacements": [],
+    "observedPlacements": [
+      {
+        "nodeId": "node-a",
+        "gpuIds": [
+          "gpu-0"
+        ],
+        "cpuIds": [
+          "cpu-0"
+        ],
+        "storageIds": [
+          "disk-0"
+        ],
+        "source": "synthetic-fixture",
+        "declaredModelSize": {
+          "value": 23254265576,
+          "unit": "bytes",
+          "status": "available",
+          "source": "synthetic-fixture",
+          "kind": "declared",
+          "observedAt": "2026-10-05T15:00:00Z",
+          "scope": "model",
+          "nodeId": "node-a",
+          "deviceId": null
+        }
+      }
+    ],
+    "links": []
+  },
+  "tests": [
+    {
+      "id": "test-1",
+      "kind": "agentic",
+      "status": "success",
+      "startedAt": "2026-10-05T15:00:00Z",
+      "model": {
+        "id": "example-model",
+        "digest": null,
+        "quantization": "example-4bit"
+      },
+      "parameters": {
+        "temperature": 0.7,
+        "maxOutputTokens": 4096,
+        "contextTokens": null
+      },
+      "protocol": {
+        "id": "conversation",
+        "version": "1.0.0",
+        "promptDigest": null,
+        "warmupRuns": 0,
+        "loadState": "unknown",
+        "cacheState": "unknown",
+        "repetition": 1
+      },
+      "participatingNodeIds": [
+        "node-a"
+      ],
+      "metrics": {
+        "totalTime": {
+          "value": 29610,
+          "unit": "ms",
+          "status": "available",
+          "source": "synthetic-fixture",
+          "kind": "declared",
+          "observedAt": "2026-10-05T15:00:00Z",
+          "scope": "test",
+          "nodeId": null,
+          "deviceId": null
+        },
+        "totalOutputTokens": {
+          "value": 478,
+          "unit": "tokens",
+          "status": "available",
+          "source": "synthetic-fixture",
+          "kind": "declared",
+          "observedAt": "2026-10-05T15:00:00Z",
+          "scope": "test",
+          "nodeId": null,
+          "deviceId": null
+        },
+        "thinkingTokens": {
+          "value": null,
+          "unit": "tokens",
+          "status": "unavailable",
+          "source": "synthetic-fixture",
+          "kind": "declared",
+          "observedAt": "2026-10-05T15:00:00Z",
+          "scope": "test",
+          "nodeId": null,
+          "deviceId": null
+        },
+        "answerTokens": {
+          "value": null,
+          "unit": "tokens",
+          "status": "unavailable",
+          "source": "synthetic-fixture",
+          "kind": "declared",
+          "observedAt": "2026-10-05T15:00:00Z",
+          "scope": "test",
+          "nodeId": null,
+          "deviceId": null
+        }
+      },
+      "resourceSamples": [],
+      "resourceSummaries": [],
+      "agentic": {
+        "orchestrator": {
+          "name": "future-agent-harness",
+          "version": null,
+          "agentCount": 1
+        },
+        "workspacePolicy": {
+          "scope": "isolated-test-directory",
+          "networkAllowed": false,
+          "shellAllowed": false,
+          "outsideWorkspaceAllowed": false
+        },
+        "tools": [
+          {
+            "id": "files",
+            "name": "sandbox-files",
+            "version": "1",
+            "capabilities": [
+              "write-file",
+              "create-directory",
+              "move-file"
+            ]
+          }
+        ],
+        "budget": {
+          "maxSteps": 8,
+          "maxToolCalls": 6,
+          "timeoutMs": 60000
+        },
+        "steps": [
+          {
+            "id": "s1",
+            "order": 1,
+            "action": "answer",
+            "dependsOn": [],
+            "status": "success",
+            "toolCallCount": 0,
+            "retryCount": 0,
+            "artifactIds": [],
+            "checks": [
+              {
+                "id": "check-0",
+                "passed": true,
+                "evaluator": "fixture-check",
+                "evaluatorVersion": "1"
+              }
+            ]
+          },
+          {
+            "id": "s2",
+            "order": 2,
+            "action": "create-directory",
+            "dependsOn": [
+              "s1"
+            ],
+            "toolId": "files",
+            "status": "success",
+            "toolCallCount": 1,
+            "retryCount": 0,
+            "artifactIds": [
+              "folder"
+            ],
+            "checks": [
+              {
+                "id": "check-1",
+                "passed": true,
+                "evaluator": "fixture-check",
+                "evaluatorVersion": "1"
+              }
+            ]
+          },
+          {
+            "id": "s3",
+            "order": 3,
+            "action": "write-file",
+            "dependsOn": [
+              "s2"
+            ],
+            "toolId": "files",
+            "status": "success",
+            "toolCallCount": 1,
+            "retryCount": 0,
+            "artifactIds": [
+              "markdown"
+            ],
+            "checks": [
+              {
+                "id": "check-2",
+                "passed": true,
+                "evaluator": "fixture-check",
+                "evaluatorVersion": "1"
+              }
+            ]
+          },
+          {
+            "id": "s4",
+            "order": 4,
+            "action": "verify",
+            "dependsOn": [
+              "s3"
+            ],
+            "status": "success",
+            "toolCallCount": 0,
+            "retryCount": 0,
+            "artifactIds": [
+              "markdown"
+            ],
+            "checks": [
+              {
+                "id": "check-3",
+                "passed": true,
+                "evaluator": "fixture-check",
+                "evaluatorVersion": "1"
+              }
+            ]
+          }
+        ],
+        "artifacts": [
+          {
+            "id": "folder",
+            "relativePath": "results",
+            "kind": "directory"
+          },
+          {
+            "id": "markdown",
+            "relativePath": "results/answer.md",
+            "kind": "file",
+            "mediaType": "text/markdown",
+            "digest": null
+          }
+        ],
+        "evaluation": {
+          "taskSuccess": true,
+          "evaluator": "fixture-workflow",
+          "evaluatorVersion": "1",
+          "toolCallCount": 2,
+          "retryCount": 0
+        }
+      }
+    }
+  ]
+}
