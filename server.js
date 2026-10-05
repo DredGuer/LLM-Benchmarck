@@ -10,7 +10,7 @@
  */
 
 const express = require('express');
-const { exec, execSync } = require('child_process');
+const { exec, execSync, execFile } = require('child_process');
 const pidusage = require('pidusage');
 const cors = require('cors');
 const os = require('os');
@@ -25,88 +25,84 @@ app.use(cors());
 app.use(express.json());
 
 /**
- * Get Ollama PID by searching for the process
- * Returns the PID with the highest memory usage (the actual model runner)
+ * Snapshot the process tree. Descendants may be MLX/Python runners whose
+ * executable name does not contain "ollama".
  */
-function getOllamaPID() {
-  return new Promise((resolve) => {
-    const platform = os.platform();
-    
-    // Try different commands based on OS
-    const commands = [
-      'pgrep -f ollama',           // Linux/macOS: grep for ollama process
-      'pgrep -x ollama',           // Linux/macOS: exact match
-    ];
-
-    let tried = 0;
-    
-    function tryNext() {
-      if (tried >= commands.length) {
-        resolve(null);
-        return;
-      }
-      
-      exec(commands[tried], { encoding: 'utf-8' }, (error, stdout, stderr) => {
-        tried++;
-        if (!error && stdout && stdout.trim()) {
-          const pids = stdout.trim().split('\n').filter(p => p.trim()).map(p => parseInt(p)).filter(p => !isNaN(p) && p > 0);
-          
-          if (pids.length === 0) {
-            tryNext();
-            return;
-          }
-          
-          // Si plusieurs PIDs, trouver celui avec la plus grosse RAM
-          if (pids.length > 1) {
-            console.log('[DEBUG] Multiple Ollama PIDs found:', pids);
-            
-            // Méthode unifiée : parser ps aux pour tous les PIDs Ollama
-            // Compatible macOS (BSD) et Linux (GNU)
-            exec('ps aux | grep ollama | grep -v grep', { encoding: 'utf-8' }, (err, result) => {
-              if (err || !result) {
-                console.log('[DEBUG] Could not parse ps aux, using first PID:', pids[0]);
-                resolve(pids[0]);
-                return;
-              }
-
-              const lines = result.trim().split('\n');
-              let maxPid = pids[0];
-              let maxRss = 0;
-
-              for (const line of lines) {
-                // Format macOS/Linux: user pid %cpu %mem vsz rss tt stat started time command
-                const parts = line.trim().split(/\s+/).filter(p => p.trim());
-                // RSS est en 5ème position (index 4)
-                if (parts.length >= 5) {
-                  const pid = parseInt(parts[1]);
-                  const rssKb = parseInt(parts[4]);
-                  if (!isNaN(pid) && pid > 0 && !isNaN(rssKb) && rssKb > maxRss) {
-                    maxRss = rssKb;
-                    maxPid = pid;
-                  }
-                }
-              }
-
-              if (maxRss > 0) {
-                console.log('[DEBUG] Selected PID with highest RSS (' + (maxRss / 1024).toFixed(0) + ' MB):', maxPid);
-                resolve(maxPid);
-              } else {
-                console.log('[DEBUG] No valid RSS data, using first PID:', pids[0]);
-                resolve(pids[0]);
-              }
-            });
-          } else {
-            // Un seul PID
-            resolve(pids[0]);
-          }
-        } else {
-          tryNext();
+function getProcessTable() {
+  return new Promise((resolve, reject) => {
+    const windows = os.platform() === 'win32';
+    const command = windows ? 'powershell.exe' : 'ps';
+    const args = windows
+      ? ['-NoProfile', '-NonInteractive', '-Command',
+         'Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,Name | ConvertTo-Json -Compress']
+      : ['-axo', 'pid=,ppid=,comm='];
+    execFile(command, args, { encoding: 'utf-8', timeout: 5000, maxBuffer: 4 * 1024 * 1024 }, (err, output) => {
+      if (err) return reject(err);
+      try {
+        if (windows) {
+          const rows = JSON.parse(output || '[]');
+          return resolve([].concat(rows).map(p => ({
+            pid: Number(p.ProcessId), ppid: Number(p.ParentProcessId), command: p.Name
+          })));
         }
-      });
-    }
-    
-    tryNext();
+        resolve(output.split('\n').map(line => {
+          const match = line.trim().match(/^(\d+)\s+(\d+)\s+(.+)$/);
+          return match ? { pid: Number(match[1]), ppid: Number(match[2]), command: match[3] } : null;
+        }).filter(Boolean));
+      } catch (error) { reject(error); }
+    });
   });
+}
+
+function selectOllamaProcesses(table) {
+  const selected = new Set(table.filter(p =>
+    /^(ollama|ollama app|ollama-runner)(\.exe)?$/i.test(p.command.split(/[\\/]/).pop())
+  ).map(p => p.pid));
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const p of table) {
+      if (selected.has(p.ppid) && !selected.has(p.pid)) {
+        selected.add(p.pid);
+        changed = true;
+      }
+    }
+  }
+  return table.filter(p => selected.has(p.pid));
+}
+
+async function getOllamaPID() {
+  const processes = selectOllamaProcesses(await getProcessTable());
+  const ids = new Set(processes.map(p => p.pid));
+  const root = processes.find(p => !ids.has(p.ppid));
+  return root ? root.pid : null;
+}
+
+/**
+ * Sum sampled resident memory, counting each PID once.
+ * RSS can include shared pages; this is not the MLX allocator's peak.
+ */
+async function getOllamaMemory() {
+  const processes = selectOllamaProcesses(await getProcessTable());
+  if (!processes.length) return null;
+  const samples = await Promise.all(processes.map(async p => {
+    const sample = await getProcessMemory(p.pid);
+    return sample ? { ...sample, ppid: p.ppid } : null;
+  }));
+  const measured = samples.filter(Boolean);
+  // Never silently report only the parent if a runner could not be sampled.
+  if (measured.length !== processes.length) {
+    throw new Error('Incomplete Ollama process-tree sample; retry after runner startup/shutdown');
+  }
+  const ids = new Set(processes.map(p => p.pid));
+  const root = processes.find(p => !ids.has(p.ppid)) || processes[0];
+  const memory = measured.reduce((sum, p) => sum + p.memory, 0);
+  return {
+    pid: root.pid, memory, memoryMB: Math.round(memory / 1024 / 1024),
+    cpu: measured.reduce((sum, p) => sum + p.cpu, 0),
+    pids: measured.map(p => p.pid), processes: measured,
+    source: 'process-tree-rss', unit: 'bytes'
+  };
 }
 
 /**
@@ -548,39 +544,25 @@ function getMachineManufacturer() {
  */
 app.get('/api/memory', async (req, res) => {
   try {
-    console.log('[DEBUG] /api/memory - Fetching Ollama PID...');
-    const pid = await getOllamaPID();
-    console.log('[DEBUG] /api/memory - Ollama PID:', pid);
-    
-    if (!pid) {
-      console.log('[DEBUG] /api/memory - Ollama not running');
+    const mem = await getOllamaMemory();
+    if (!mem) {
       return res.status(404).json({
         error: 'Ollama process not found. Make sure Ollama is running.',
         system: getSystemMemory()
       });
     }
-    
-    console.log('[DEBUG] /api/memory - Getting memory for PID:', pid);
-    const mem = await getProcessMemory(pid);
-    console.log('[DEBUG] /api/memory - Raw memory data:', mem);
-    
-    if (!mem) {
-      console.log('[DEBUG] /api/memory - Could not get memory for PID:', pid);
-      return res.status(404).json({
-        error: 'Could not get memory for Ollama process',
-        pid: pid,
-        system: getSystemMemory()
-      });
-    }
-    
-    console.log('[DEBUG] /api/memory - Returning memory:', mem.memoryMB, 'MB');
+    const pid = mem.pid;
     res.json({
       success: true,
       pid: pid,
       process: {
         memory: mem.memory,
         memoryMB: mem.memoryMB,
-        cpu: mem.cpu
+        cpu: mem.cpu,
+        source: mem.source,
+        unit: mem.unit,
+        pids: mem.pids,
+        processes: mem.processes
       },
       system: getSystemMemory(),
       timestamp: Date.now()
