@@ -85,6 +85,9 @@ git pull origin main
 npm install
 node backend/apple-inventory.test.cjs
 node backend/model-metadata.test.cjs
+node backend/apple-resources.test.cjs
+node backend/monitor-integration.test.cjs
+node backend/community-export.test.cjs
 node schemas/test.cjs
 npm start
 ```
@@ -262,24 +265,43 @@ Pour utiliser un runner personnalisé :
 3. Entrez le nom du modèle
 4. Lancez le benchmark
 
-### Architecture du modèle et contexte
+### Modèle et contexte Auto
 
-Pour Ollama, l'interface interroge `/api/show` à la sélection du modèle et avant le benchmark :
-architecture, paramètres totaux, experts totaux/actifs, quantification et contexte maximal déclaré.
-La classification Dense/MoE est fondée sur le nombre d'experts déclaré ; si ce champ manque,
-elle reste inconnue, même si le nom semble indiquer MoE.
+La zone modèle présente des cartes pour l'architecture Dense/MoE, les paramètres totaux,
+la quantification et le contexte maximal déclaré. Le contexte est **Auto** :
+l'outil conserve le réglage d'Ollama, sans imposer le maximum du modèle et sans saisie manuelle.
+Le `context_length` du runner chargé est relevé via `/api/ps` pendant le test et conservé dans les exports ;
+s'il n'est pas disponible, il reste inconnu. Le maximum du modèle et le contexte du runner sont distincts.
 
-Le champ **Contexte demandé à Ollama** transmet `num_ctx` dans les modes Auto et Manuel.
-Laissez-le vide pour conserver le réglage du runner. Cette valeur demandée et le maximum du
-modèle ne sont pas une mesure de la fenêtre réellement allouée. Le réglage ne s'applique
-pas aux autres fournisseurs à cette étape. Les valeurs sont conservées dans les résultats et l'export.
+Pour Ollama, `/api/show` fournit les métadonnées du modèle.
+Si le nombre d'experts manque, Dense/MoE reste inconnu ; le nom du modèle ne suffit pas.
+Les experts actifs, la quantification, le contexte et le matériel influencent le débit.
+L'outil ne déduit pas le nombre de paramètres actifs à partir du ratio d'experts.
 
-Dense et MoE ne se comparent pas sur le seul nombre de paramètres totaux :
-les experts actifs, le contexte, la quantification et les ressources matérielles influencent le débit.
-L'outil ne déduit pas un nombre de paramètres actifs à partir du ratio d'experts.
+L'inventaire matériel reste repliable. Aucun test de vitesse maximale du SSD n'est exécuté.
 
-L'inventaire matériel est repliable. Le débit SSD reste inconnu dans les données et sa ligne
-est masquée dans l'interface et le Markdown tant qu'aucune mesure n'est disponible.
+### MLX, swap et activité disque sur macOS
+
+Le backend ouvre une session de télémétrie avant chaque génération Ollama et collecte :
+
+- le swap utilisé et son pic échantillonné, via `sysctl vm.swapusage` ;
+- la mémoire compressée et les entrées/sorties swap, via `vm_stat` et la taille réelle des pages ;
+- les octets lus/écrits des disques exposés par `IOBlockStorageDriver`, via `ioreg` ;
+- les nouveaux événements `memory peak` des logs de l'application Ollama, pour le pic d'allocation MLX.
+
+**Portée des mesures :** swap, compression et E/S couvrent le système entier, avec l'activité des autres applications.
+Les octets swap sont un équivalent pages, pas le nombre exact d'octets compressés transférés sur disque.
+L'activité disque n'est pas un benchmark de vitesse SSD et ne prouve pas que le modèle utilise un offload SSD.
+
+Le pic MLX provient des logs serveur, reste distinct de la RSS et de la taille déclarée du modèle,
+et son attribution au modèle n'est pas vérifiée en présence de requêtes concurrentes.
+Il n'existe pas pour les runners GGUF qui ne produisent pas cet événement MLX.
+Sans log accessible ou sans événement pendant la session, il reste **Non disponible**.
+Les anciens pics sont exclus ; rotation/troncature ou volume excessif de logs invalident la mesure.
+Aucun texte brut du log n'est envoyé au navigateur ou à l'export.
+
+Ces collectes utilisent des sorties macOS simulées dans les tests. La validation sur un vrai Mac
+reste nécessaire. Voir [les sources et limites de la télémétrie](backend/APPLE_RESOURCES.md).
 
 ### État du plan progressif
 
@@ -287,11 +309,11 @@ est masquée dans l'interface et le Markdown tant qu'aucune mesure n'est disponi
 |---|---|
 | Schéma commun v2, topologies multi-GPU/machines et tâches agentiques | Contrat et exemples testés ; export actif encore v1 |
 | Inventaire Apple Silicon : CPU/cœurs, RAM unifiée, GPU/cœurs, SSD et provenance | Collecté ; vérifié sur un M3 Pro |
-| Ergonomie, récupération automatique des modèles, contexte demandé, métadonnées Dense/MoE | Implémenté ; validation sur Mac à poursuivre |
-| Pic réel MLX, mémoire compressée/swap, consommation par GPU | À implémenter ; RSS et taille déclarée ne remplacent pas ces mesures |
-| Débit/activité SSD et bande passante mémoire | À implémenter |
+| Ergonomie, modèles automatiques, contexte Auto, métadonnées Dense/MoE | Implémenté ; validation sur Mac à poursuivre |
+| Pic allocateur MLX des logs, mémoire compressée/swap, activité disque système | Implémenté sur macOS ; attribution/validation à poursuivre |
+| Vitesse maximale SSD, bande passante mémoire, mesures par GPU | À implémenter |
 | Inventaires et télémétrie Windows/Linux, multi-GPU | À fiabiliser et tester sur les machines concernées |
-| Export runtime v2 complet et protocole reproductible | À implémenter |
+| Export runtime v2 (JSON, Markdown, séries et résumés) | Implémenté et validé contre le schéma ; protocole reproductible à approfondir |
 | Exo et collecte par nœud multi-machine | Prévu par le schéma ; intégration non implémentée |
 | Exécution des tests agentiques en espace isolé | Prévue par le schéma ; exécuteur non implémenté |
 | Site communautaire et envoi sécurisé | À concevoir et implémenter |
@@ -328,7 +350,7 @@ Le rapport généré contient :
 1. **En-tête** : date et version de l'outil.
 2. **Environnement** : configuration et inventaire Apple détecté avec provenance, lorsque disponible.
 3. **Résumé** : tokens, débit moyen, TTFT, durée, source mémoire, pic/moyenne en MiB et modèle chargé en GiB.
-4. **JSON communautaire v1** : paramètres, mesures et environnement, sans prompts, réponses ni clés API dans ce bloc.
+4. **JSON communautaire v2** : matériel, modèle, paramètres, protocole, mesures, séries temporelles et résumés avec unités/sources ; sans prompts, réponses ni clés API.
 5. **Détails** : métriques, prompt et réponse de chaque test.
 
 Le débit moyen correspond aux tokens générés divisés par la durée totale du test.
@@ -336,8 +358,11 @@ La RSS cumulée et la taille du modèle déclarée par Ollama restent des mesure
 Une valeur inconnue est indiquée par **N/A** ; elle n'est pas remplacée par zéro.
 
 Le rapport Markdown complet contient les prompts et réponses : vérifiez-le avant partage.
-L'export actuel utilise `llm-benchmarker.community` **1.0.0** ; le
-[schéma v2](schemas/README.md) prépare les collectes et benchmarks futurs, sans en être encore l'export actif.
+Le bouton **Exporter JSON v2** télécharge le rapport structuré sans prompts ni réponses.
+Le même contenu est inclus dans le Markdown. Chaque rapport utilise `llm-benchmarker.community` **2.0.0**.
+Si les résultats mélangent des runners ou inventaires, le fichier contient un bundle
+`llm-benchmarker.community.bundle` **1.0.0**, dont chaque élément `reports[]` est un rapport v2 autonome.
+Voir [le contrat d'import](schemas/README.md). Les anciennes données restent inconnues lorsqu'elles n'ont pas été collectées.
 L'envoi automatique vers le futur site communautaire n'est pas encore implémenté.
 
 ---
