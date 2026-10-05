@@ -93,7 +93,7 @@ npm start
 
 Le backend démarre sur `http://localhost:3001` et l'interface tente de le détecter automatiquement. Gardez aussi le serveur web du premier terminal en fonctionnement.
 
-La RAM suivie par le backend est celle du processus Ollama sélectionné. Elle ne représente ni la mémoire totale de tous les processus Ollama, ni la VRAM. La mémoire JavaScript du navigateur, lorsqu'elle est disponible, mesure autre chose et ne doit pas être interprétée comme la RAM du modèle.
+La RAM suivie par le backend est la somme des mémoires résidentes (RSS) des processus Ollama détectés et de leurs descendants, y compris les runners MLX. Les pages partagées peuvent être comptées plusieurs fois ; cette somme n'est ni la VRAM ni le pic d'allocation MLX des logs. La mémoire JavaScript du navigateur, lorsqu'elle est disponible, mesure autre chose et ne doit pas être interprétée comme la RAM du modèle.
 
 Consultez [la documentation du backend](BACKEND_README.md) pour les ports, les méthodes de mesure, la détection GPU et le dépannage.
 
@@ -198,7 +198,7 @@ Pour utiliser un runner personnalisé :
 - **Tokens et tokens/seconde** : décrivent la génération, pas la qualité de la réponse.
 - **TTFT** : disponible avec le streaming Ollama ; inclut le délai observé avant le premier token.
 - **Temps total** : durée observée de la requête, influencée par le chargement du modèle et les communications.
-- **RAM pic et moyenne** : statistiques des échantillons de mémoire du processus surveillé pendant le test, avec le backend Ollama. La RAM du navigateur est une mesure distincte.
+- **RAM pic et moyenne** : statistiques des échantillons de RSS cumulée de l'arbre de processus surveillé pendant le test, avec le backend Ollama. La RAM du navigateur est une mesure distincte.
 - **Environnement** : les informations du navigateur peuvent être approximatives ; le backend complète la détection matérielle.
 
 Pour comparer des tests, gardez les mêmes prompts et paramètres, et indiquez le matériel ainsi que le runner utilisé.
