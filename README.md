@@ -88,6 +88,7 @@ node backend/model-metadata.test.cjs
 node backend/apple-resources.test.cjs
 node backend/monitor-integration.test.cjs
 node backend/community-export.test.cjs
+node backend/protocol-statistics.test.cjs
 node schemas/test.cjs
 npm start
 ```
@@ -324,7 +325,40 @@ reste nécessaire. Voir [les sources et limites de la télémétrie](backend/APP
 |--------|-------------|------------------|
 | Température | Paramètre d'échantillonnage (0 réduit l'aléatoire sans garantir la reproductibilité) | 0.7 |
 | Tokens max | Nombre maximum de tokens à générer | **4096** |
-| Répétitions | Nombre de fois à exécuter chaque test | 1 |
+| Répétitions | Nombre de mesures par type de prompt, hors chauffe | 3 |
+
+## 🔥 Campagnes et statistiques
+
+Chaque nouvelle campagne remplace les résultats visibles ; les campagnes précédentes restent dans
+l'historique. Restaurer une session remplace également l'affichage. L'historique conserve au maximum
+50 campagnes, ou moins si le quota du navigateur impose de retirer les plus anciennes.
+Une sauvegarde impossible conserve la campagne courante et bloque son remplacement tant que
+l'historique n'a pas pu être sauvegardé.
+
+Pour les runners locaux, une **chauffe mesurée** précède les mesures : prompt court fixe, température 0,
+32 tokens maximum. Elle vérifie que la génération fonctionne et conserve séparément durée et ressources.
+Pour Ollama, le chargement est observé via `/api/ps` avant la chauffe puis avant les mesures.
+Un modèle déchargé déclenche une nouvelle chauffe. Aucun déchargement forcé n'est effectué :
+la chauffe initiale n'est pas nécessairement à froid, et son état observé est indiqué.
+Les APIs externes ne reçoivent pas de requête de chauffe supplémentaire.
+
+Les modes Auto et Manuel proposent **3 répétitions** par défaut (Manuel : 1 à 20).
+Les chauffes sont exclues des moyennes de l'historique et des statistiques.
+Le protocole d'exécution **0.07** est conservé dans les exports v2 : phase, empreinte SHA-256 du prompt,
+chauffes préalables, chargement, cache, temps de chargement/prefill/génération et débit de génération seule.
+Le cache est déclaré froid/chaud uniquement si Ollama fournit le compteur de tokens cachés.
+Il n'est ni vidé ni désactivé : son état peut changer entre répétitions et reste inconnu si non rapporté.
+
+L'onglet **Statistiques** exploite votre historique : barres comparatives, tendances chronologiques,
+nombre de mesures, moyenne, médiane, écart-type et ratio tok/s par milliard de paramètres totaux.
+Les groupes séparent modèle/digest, matériel, runner, contexte, prompt, température, tokens maximum,
+quantification, Dense/MoE, version du protocole, chargement et cache.
+Une mesure isolée n'a pas d'écart-type ; les erreurs et chauffes sont exclues, les données manquantes
+ne deviennent pas zéro. Ce ratio ne normalise pas les paramètres actifs d'un MoE et n'évalue pas la qualité.
+
+Le parseur swap accepte points/virgules décimaux et différentes unités ; les commandes utilisent
+la locale C. Les formats non reconnus restent indisponibles avec un état de diagnostic, jamais zéro.
+Si le swap reste inconnu sur votre Mac, la sortie `sysctl vm.swapusage` permettra d'identifier le format manquant.
 
 ## 📊 Comprendre les mesures
 
