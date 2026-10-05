@@ -6,6 +6,13 @@
   <title>LLM Benchmarker Local</title>
   <link rel="stylesheet" href="css/styles.css">
 
+<style>
+.benchmark-help{display:inline-block;position:relative;margin-left:6px;vertical-align:middle;text-transform:none;letter-spacing:normal;font-weight:normal}
+.benchmark-help>summary{display:inline-flex;align-items:center;justify-content:center;list-style:none;width:18px;height:18px;border:1px solid var(--accent2,#58a6ff);border-radius:50%;color:var(--accent2,#58a6ff);font-size:12px;font-weight:bold;cursor:pointer}
+.benchmark-help>summary::-webkit-details-marker{display:none}
+.benchmark-help>summary:focus-visible{outline:2px solid var(--accent2,#58a6ff);outline-offset:3px}
+.benchmark-help-text{position:absolute;right:0;top:25px;z-index:1200;width:min(270px,65vw);padding:12px;background:var(--bg2,#161b22);color:var(--text,#eee);border:1px solid var(--accent2,#58a6ff);border-radius:8px;box-shadow:0 4px 16px #0006;font-size:13px;line-height:1.5;text-align:left;white-space:normal;text-transform:none;letter-spacing:normal}
+</style>
 </head>
 <body>
 
@@ -635,8 +642,8 @@ window.PROMPT_TYPES = [
 <script src="js/core/runners.js?v=0.06-apple-resources1"></script>
 <script src="js/core/prompts.js"></script>
 <script src="js/core/streaming.js"></script>
-<script src="js/core/community-export.js?v=0.08-reliability1"></script>
-<script src="js/ui/results.js?v=0.08-reliability1"></script>
+<script src="js/core/community-export.js?v=0.08-help1"></script>
+<script src="js/ui/results.js?v=0.08-help1"></script>
 <script src="js/core/protocol.js?v=0.08-reliability1"></script>
 <script src="js/core/benchmark.js?v=0.08-reliability1"></script>
 <script src="js/core/apiKeys.js"></script>
