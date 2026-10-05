@@ -1,0 +1,26 @@
+const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
+const { validateReport } = require('./validate.cjs');
+const read = name => JSON.parse(fs.readFileSync(path.join(__dirname, 'examples', name + '.json'), 'utf8'));
+for (const file of fs.readdirSync(path.join(__dirname, 'examples'))) validateReport(JSON.parse(fs.readFileSync(path.join(__dirname, 'examples', file), 'utf8')));
+function rejects(name, mutate) { const r = read(name); mutate(r); assert.throws(() => validateReport(r)); }
+rejects('apple-generation', r => r.schemaVersion = '1.0.0');
+rejects('apple-generation', r => r.machines[0].memory.physicalCapacity.value = -1);
+rejects('apple-generation', r => r.apiKey = 'secret');
+rejects('apple-generation', r => r.machines[0].memory.physicalCapacity.value = '36 GB');
+rejects('apple-generation', r => r.machines[0].memory.physicalCapacity.status = 'unavailable');
+rejects('apple-generation', r => r.tests[0].metrics.thinkingTokens.value = 0);
+rejects('apple-generation', r => r.machines.push(r.machines[0]));
+rejects('apple-generation', r => r.execution.observedPlacements[0].gpuIds = ['nonexistent']);
+rejects('exo-apple-cluster', r => r.execution.links[0].toNodeId = 'missing');
+rejects('apple-agentic', r => r.tests[0].agentic.artifacts[0].relativePath = '../outside');
+rejects('apple-agentic', r => r.tests[0].agentic.artifacts[0].relativePath = '/Users/private');
+rejects('apple-agentic', r => r.tests[0].agentic.artifacts[0].relativePath = 'C:/private');
+rejects('apple-agentic', r => r.tests[0].agentic.workspacePolicy.outsideWorkspaceAllowed = true);
+rejects('apple-agentic', r => r.tests[0].agentic.steps[0].dependsOn = ['s4']);
+rejects('apple-agentic', r => r.tests[0].agentic.steps[1].toolId = 'missing');
+rejects('apple-agentic', r => r.tests[0].agentic.evaluation.toolCallCount = 999);
+rejects('apple-agentic', r => delete r.tests[0].agentic);
+rejects('apple-generation', r => r.tests[0].agentic = read('apple-agentic').tests[0].agentic);
+console.log('PASS: 4 valid fixtures and 18 invalid cases; topology, unknown values, agentic dependencies, privacy fields and budgets');
