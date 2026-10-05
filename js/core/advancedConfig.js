@@ -17,7 +17,7 @@ window.DEFAULT_TEMPERATURES = {
 // Auto mode settings
 window.AUTO_MODE_SETTINGS = {
   maxTokens: 32768,
-  repetitions: 3
+  repetitions: 1
 };
 
 // Storage key for advanced config
@@ -120,7 +120,7 @@ function getTemperatureForPromptType(promptTypeId) {
  */
 function getMaxTokens() {
   if (isManualMode) {
-    return parseInt(document.getElementById('maxTokens')?.value) || 4096;
+    return parseInt(document.getElementById('maxTokens')?.value) || 8192;
   } else {
     return window.AUTO_MODE_SETTINGS.maxTokens;
   }
@@ -132,7 +132,7 @@ function getMaxTokens() {
  */
 function getRepetitions() {
   if (isManualMode) {
-    return parseInt(document.getElementById('repetitions')?.value) || 3;
+    return parseInt(document.getElementById('repetitions')?.value) || 1;
   } else {
     return window.AUTO_MODE_SETTINGS.repetitions;
   }
