@@ -1,3 +1,46 @@
+// Stable, allowlisted data for a future community importer. No keys, logs or responses.
+function buildCommunityExport(results, generatedAt) {
+  function number(value) { return typeof value === 'number' && Number.isFinite(value) ? value : null; }
+  return {
+    schema: 'llm-benchmarker.community', schemaVersion: '1.0.0',
+    appVersion: '0.06', generatedAt: generatedAt,
+    tests: results.map(function(r) {
+      var m = r.metrics || {}, memory = r.memory || {}, loaded = memory.loadedModel || {}, env = r.env || {};
+      return {
+        id: r.id || null, timestamp: r.timestamp || null,
+        model: r.model || null, runner: r.runner || null,
+        promptType: r.promptType || null, repetition: number(r.rep),
+        status: r.error ? 'error' : 'ok',
+        parameters: { temperature: number(m.temperature), maxTokens: number(m.maxTokens) },
+        metrics: {
+          generatedTokens: number(m.totalTokens),
+          averageTokensPerSecond: number(m.tokensPerSec),
+          throughputMethod: 'generated-tokens/total-test-seconds',
+          ttftMs: r.runner === 'Ollama' ? number(m.ttft) : null,
+          totalTimeMs: number(m.totalTime),
+          thinkingTokens: null, answerTokens: null
+        },
+        memory: {
+          sampledSource: memory.source || null, sampledUnit: 'MiB',
+          sampledPeak: number(memory.peak), sampledAverage: number(memory.average),
+          loadedModel: loaded.source ? {
+            source: loaded.source, unit: 'bytes', sizeBytes: number(loaded.sizeBytes),
+            sizeVramBytes: number(loaded.sizeVramBytes), observedAt: number(loaded.observedAt)
+          } : null
+        },
+        environment: {
+          os: env.os || null, browser: env.browser || null,
+          cpuCores: number(env.cores), ramDescription: env.ram || null, gpu: env.gpu || null
+        }
+      };
+    })
+  };
+}
+
+function markdownCell(value) {
+  return String(value).replace(/\|/g, '&#124;').replace(/[\r\n]+/g, ' ');
+}
+
 function memoryLabel(memory) {
   return memory.source === 'process-tree-rss' ? 'RSS cumulée' :
     memory.source === 'browser-js-heap' ? 'Tas JS navigateur' : 'Mémoire (source inconnue)';
@@ -88,19 +131,28 @@ function exportMarkdown() {
   md += '| GPU | ' + (env.gpu || 'N/A') + ' |\n\n';
   md += '---\n\n';
   md += '## 📈 Résumé des tests\n\n';
-  md += '| # | Modèle | Runner | Type | Tokens | Tok/s | TTFT | Temps total | Mémoire pic (voir source) | Mémoire moyenne (voir source) | Statut |\n';
-  md += '|---|--------|--------|------|--------|-------|------|-------------|---------|---------|--------|\n';
-  
+  md += '| # | Modèle | Runner | Type | Tokens | Tok/s moyen | TTFT (ms) | Temps total (s) | Source mémoire échantillonnée | Pic (MiB) | Moyenne (MiB) | Modèle chargé (GiB) | Source modèle chargé | Statut |\n';
+  md += '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|\n';
+
   for (var i = 0; i < state.results.length; i++) {
-    var r = state.results[i];
-    var m = r.metrics;
-    var ttftStr = m.ttft !== null ? m.ttft + ' ms' : 'N/A';
-    var ramPeakStr = (r.memory && r.memory.peak > 0) ? r.memory.peak + ' MiB' : 'N/A';
-    var ramAvgStr = (r.memory && r.memory.average > 0) ? r.memory.average + ' MiB' : 'N/A';
-    var status = r.error ? '❌ Erreur' : '✅ OK';
-    md += '| ' + (i+1) + ' | `'+ r.model +'` | ' + r.runner + ' | ' + r.promptEmoji + ' ' + r.promptTypeName + ' | ' + m.totalTokens + ' | ' + m.tokensPerSec + ' | ' + ttftStr + ' | ' + (m.totalTime/1000).toFixed(2) + 's | ' + ramPeakStr + ' | ' + ramAvgStr + ' | ' + status + ' |\n';
+    var r = state.results[i], m = r.metrics || {}, memory = r.memory || {}, loaded = memory.loadedModel;
+    var cells = [
+      i + 1, r.model, r.runner, r.promptTypeName,
+      m.totalTokens, m.tokensPerSec,
+      r.runner === 'Ollama' && m.ttft != null ? m.ttft : 'N/A',
+      Number.isFinite(m.totalTime) ? (m.totalTime / 1000).toFixed(2) : 'N/A',
+      memory.source || 'unknown',
+      memory.peak != null ? memory.peak : 'N/A',
+      memory.average != null ? memory.average : 'N/A',
+      loaded && Number.isFinite(loaded.sizeBytes) ? (loaded.sizeBytes / Math.pow(1024, 3)).toFixed(2) : 'N/A',
+      loaded ? loaded.source : 'N/A', r.error ? 'Erreur' : 'OK'
+    ];
+    md += '| ' + cells.map(markdownCell).join(' | ') + ' |\n';
   }
-  
+  md += '\nLe débit moyen inclut toute la durée du test. La mémoire échantillonnée dépend de sa source (RSS cumulée ou tas JS navigateur). La taille du modèle déclarée par Ollama est distincte du pic RAM ; ne pas additionner size et size_vram sur mémoire unifiée. N/A signifie inconnu.\n';
+  md += '\n## Données structurées pour import communautaire\n\n';
+  md += 'Schéma llm-benchmarker.community, version 1.0.0. Bloc limité aux paramètres, mesures et environnement sélectionné ; sans clés API, logs, prompts ni réponses. Le reste du rapport contient les prompts et réponses : vérifier avant partage.\n\n';
+  md += '\x60\x60\x60json\n' + JSON.stringify(buildCommunityExport(state.results, now.toISOString()), null, 2).replace(/\x60/g, '\\u0060') + '\n\x60\x60\x60\n';
   md += '\n---\n\n';
   md += '## 🔍 Détail des tests\n\n';
   
