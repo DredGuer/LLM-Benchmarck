@@ -16,18 +16,96 @@
 
 ## 📖 Sommaire
 
+- [🚀 Premier benchmark avec Ollama](#-premier-benchmark-avec-ollama)
+- [⚙️ Options de lancement](#️-options-de-lancement)
 - [🎯 Fonctionnalités](#-fonctionnalités)
-- [📦 Prérequis](#-prérequis)
-- [🚀 Installation et Utilisation](#-installation-et-utilisation)
-- [💾 Monitoring RAM (Nouveau!)](#-monitoring-ram-nouveau)
-- [🏗️ Architecture](#-architecture)
+- [Documentation technique](TECHNICAL_README.md)
+- [Backend RAM et GPU](BACKEND_README.md)
 - [🔧 Configuration](#-configuration)
-- [📊 Fonctionnement](#-fonctionnement)
+- [📊 Comprendre les mesures](#-comprendre-les-mesures)
 - [📝 Export des résultats](#-export-des-résultats)
 - [💾 Stockage](#-stockage)
 - [📜 Licence](#-licence)
 - [🤝 Contribuer](#-contribuer)
 - [⚠️ Limitations connues](#️-limitations-connues)
+
+---
+
+## 🚀 Premier benchmark avec Ollama
+
+### 1. Préparer Ollama
+
+Installez [Ollama](https://ollama.com), puis assurez-vous que son serveur fonctionne sur `http://localhost:11434`. Si l'application ne l'a pas déjà démarré, lancez `ollama serve` dans un terminal séparé.
+
+Téléchargez un modèle pour votre premier test :
+
+```bash
+ollama pull llama3.2:1b
+ollama list
+```
+
+Le téléchargement du modèle nécessite une connexion internet.
+
+### 2. Télécharger et ouvrir l'application
+
+Prérequis : Git et Python 3, ainsi qu'un navigateur récent.
+
+```bash
+git clone https://github.com/DredGuer/LLM-Benchmarck.git
+cd LLM-Benchmarck
+python3 -m http.server 8000
+```
+
+Gardez ce terminal ouvert et accédez à [LLM Benchmarker](http://localhost:8000/llm-benchmarker.html).
+
+Sans Git, téléchargez [l'archive du dépôt](https://github.com/DredGuer/LLM-Benchmarck/archive/refs/heads/main.zip), décompressez-la, puis lancez `python3 -m http.server 8000` depuis le dossier extrait `LLM-Benchmarck-main`.
+
+Conservez tous les fichiers du dépôt. Ouvrez l'application via le serveur HTTP, plutôt qu'en double-cliquant sur le fichier HTML. Le runner doit également autoriser les requêtes depuis cette origine ; un serveur web local ne résout pas à lui seul toutes les erreurs CORS.
+
+### 3. Lancer un premier test
+
+1. Sélectionnez **Ollama**, puis **llama3.2:1b** ; utilisez 🔄 si la liste est vide.
+2. Sélectionnez uniquement **Conversation**.
+3. Gardez le **mode Manuel**, choisissez **256 tokens max** et **1 répétition** pour un essai court.
+4. Cliquez sur **⚡ Lancer le benchmark**.
+5. Suivez la réponse dans **Thinking en direct**, puis consultez **📊 Résultats**.
+6. Cliquez sur **📄 Exporter .md** pour télécharger le rapport.
+
+Le backend Node.js n'est pas nécessaire pour ce premier benchmark.
+
+## ⚙️ Options de lancement
+
+### Autres runners et fournisseurs
+
+- **LM Studio** : démarrez son serveur local (port 1234 par défaut), chargez un modèle, puis sélectionnez LM Studio.
+- **llama.cpp** : démarrez un serveur compatible avec l'API de chat OpenAI (port 8080 par défaut), puis sélectionnez llama.cpp.
+- **OpenAI, Mistral, Claude ou Gemini** : utilisez une clé API valide, configurez-la via **🔑 Clés API**, puis choisissez le fournisseur et un modèle disponible pour votre compte. Ces requêtes nécessitent internet et peuvent être facturées par le fournisseur.
+- **Personnalisé** : renseignez l'URL du serveur et le nom du modèle.
+
+### Monitoring RAM Ollama (optionnel)
+
+Avec Node.js et npm installés, ouvrez un autre terminal **à la racine du dépôt** :
+
+```bash
+npm install
+npm start
+```
+
+Le backend démarre sur `http://localhost:3001` et l'interface tente de le détecter automatiquement. Gardez aussi le serveur web du premier terminal en fonctionnement.
+
+La RAM suivie par le backend est celle du processus Ollama sélectionné. Elle ne représente ni la mémoire totale de tous les processus Ollama, ni la VRAM. La mémoire JavaScript du navigateur, lorsqu'elle est disponible, mesure autre chose et ne doit pas être interprétée comme la RAM du modèle.
+
+Consultez [la documentation du backend](BACKEND_README.md) pour les ports, les méthodes de mesure, la détection GPU et le dépannage.
+
+### Autres serveurs web
+
+Depuis la racine du dépôt, vous pouvez remplacer le serveur Python par :
+
+```bash
+php -S localhost:8000
+```
+
+Ouvrez alors la même URL sur le port 8000. Avec MAMP, placez **tout le dépôt** dans le répertoire web configuré et utilisez l'URL correspondant à ce dossier.
 
 ---
 
@@ -37,7 +115,7 @@
 
 | Runner | Endpoint | Protocole | Monitoring RAM |
 |--------|----------|-----------|----------------|
-| 🦙 **Ollama** | `http://localhost:11434` | OpenAI-compatible | ✅ **Oui** (via backend) |
+| 🦙 **Ollama** | `http://localhost:11434` | API native Ollama (streaming) | ✅ **Oui** (via backend) |
 | 🏠 **LM Studio** | `http://localhost:1234` | OpenAI-compatible | ❌ Non |
 | 🦔 **llama.cpp** | `http://localhost:8080` | OpenAI-compatible | ❌ Non |
 
@@ -84,241 +162,6 @@
 
 ---
 
-## 💾 Monitoring RAM (Nouveau!)
-
-> **Fonctionne uniquement avec Ollama** (runners locaux) et nécessite le backend Node.js
-
-### 🎯 Deux méthodes de monitoring
-
-#### Méthode 1 : Backend Node.js (Recommandé - Précis)
-
-Le backend surveille directement le **processus Ollama** pour obtenir la consommation RAM réelle.
-
-**Installation** :
-```bash
-cd LLM-Benchmarck
-npm install
-node server.js
-```
-
-Le backend se lance sur `http://localhost:3001` et est **auto-détecté** par le frontend.
-
-**Endpoints API** :
-- `GET /api/memory` - Mémoire du processus Ollama
-- `GET /api/ollama/status` - Ollama est-il en cours d'exécution ?
-- `GET /api/ollama/pid` - PID du processus Ollama
-
-**Pour changer de port** :
-```bash
-node server.js --port 4000
-```
-
-Voir [BACKEND_README.md](BACKEND_README.md) pour la documentation complète.
-
-#### Méthode 2 : API Navigateur (Chrome uniquement)
-
-Utilise `performance.memory` pour mesurer la mémoire du navigateur.
-
-**Requirement** : Lancer Chrome avec le flag `--enable-precision-memory-info`
-
-```bash
-# macOS
-open -a "Google Chrome" --args --enable-precision-memory-info
-
-# Windows
-chrome.exe --enable-precision-memory-info
-
-# Linux
-google-chrome --enable-precision-memory-info
-```
-
-⚠️ **Limitation** : Mesure la mémoire du **navigateur**, pas du processus Ollama (moins précis).
-
-#### Méthode 3 : Manuelle
-
-Si aucune méthode n'est disponible, vous pouvez surveiller manuellement :
-- **macOS** : Activity Monitor → cherchez `ollama`
-- **Linux** : `htop` → filtrez par `ollama`
-- **Windows** : Task Manager → onglet Details
-
-### 📊 Affichage des métriques RAM
-
-Lorsqu'actif, la RAM est affichée :
-- **Dans les cartes de résultats** : Badge 💾 avec RAM pic + métrique RAM moyenne
-- **Dans l'export Markdown** : Colonnes "RAM pic" et "RAM moy" dans le tableau
-
-Exemple :
-```
-┌─────────────────────────────────────────────┐
-│ 🦙 qwen3.6:27b │ Ollama │ 💬 Conversation │ 💾 2456 MB │
-├─────────────────────────────────────────────┤
-│ ... │ RAM pic: 2456 MB │ RAM moyenne: 1892 MB │
-└─────────────────────────────────────────────┘
-```
-
----
-
-## 🏗️ Architecture
-
-### Structure des fichiers
-
-```
-LLM-Benchmarck/
-├── llm-benchmarker.html          # Page HTML principale
-├── css/
-│   └── styles.css                # Tous les styles CSS
-├── js/
-│   ├── config/
-│   │   ├── runners.json           # Configuration des runners
-│   │   └── prompts.json           # Configuration des prompts
-│   ├── core/
-│   │   ├── state.js              # État global de l'application
-│   │   ├── storage.js            # Utilitaires localStorage
-│   │   ├── environment.js        # Détection matérielle
-│   │   ├── runners.js            # Gestion des runners
-│   │   ├── prompts.js            # Gestion des prompts
-│   │   ├── streaming.js          # Streaming et output live
-│   │   ├── benchmark.js          # Moteur de benchmarking
-│   │   ├── apiKeys.js            # Gestion des clés API
-│   │   ├── connectivity.js       # Tests de connectivité
-│   │   ├── history.js            # Gestion de l'historique
-│   │   └── memory.js             # Monitoring RAM ✨ NOUVEAU
-│   ├── ui/
-│   │   ├── toast.js              # Notifications toast
-│   │   ├── modals.js             # Gestion des modales
-│   │   ├── tabs.js               # Gestion des onglets
-│   │   └── results.js            # Affichage et export des résultats
-│   ├── utils/
-│   │   └── helpers.js            # Fonctions utilitaires
-│   └── main.js                   # Initialisation
-├── server.js                     # Backend de monitoring RAM ✨ NOUVEAU
-├── package.json                  # Dépendances Node.js ✨ NOUVEAU
-├── BACKEND_README.md             # Documentation backend ✨ NOUVEAU
-├── README.md                     # Ce fichier
-└── LICENSE                       # Licence Apache 2.0
-```
-
-### Approche modulaire
-
-Le code est organisé en modules thématiques partageant un espace de noms global :
-
-- **Core** : Logique métier (benchmark, streaming, configuration, memory)
-- **UI** : Composants d'interface (toasts, modales, onglets, résultats)
-- **Utils** : Fonctions utilitaires réutilisables
-- **Config** : Données de configuration statiques
-
-Tous les modules sont chargés de manière séquentielle dans le HTML, garantissant que les dépendances sont disponibles au bon moment.
-
----
-
-## 📦 Prérequis
-
-### Pour les runners locaux
-
-- **Ollama** : Installé et lancé avec `ollama serve`
-  ```bash
-  # Installation (macOS/Linux)
-  curl -fsSL https://ollama.com/install.sh | sh
-  
-  # Lancer le serveur
-  ollama serve
-  
-  # Vérifier l'installation
-  ollama list
-  ```
-
-- **LM Studio** : Application lancée (port 1234 par défaut)
-- **llama.cpp** : Serveur lancé avec `--server` (port 8080 par défaut)
-
-### Pour les APIs externes
-
-- Compte et clé API pour chaque fournisseur (OpenAI, Mistral, Claude, **Gemini**)
-- Connexion internet
-
-### Pour le monitoring RAM (optionnel)
-
-- **Node.js v14+** (recommandé: v18+)
-- **npm** ou **yarn**
-
----
-
-## 🚀 Installation et Utilisation
-
-### 1️⃣ Téléchargement
-
-Clônez ce dépôt ou téléchargez les fichiers nécessaires :
-
-```bash
-# Clone du dépôt complet
-git clone <url-du-depot>
-cd llm-benchmarker
-
-# Ou téléchargez l'archive complète
-wget https://github.com/<user>/<repo>/archive/refs/heads/main.zip
-unzip main.zip
-```
-
-**⚠️ Important** : Tous les fichiers sont nécessaires (HTML, CSS, JS, JSON). Ne téléchargez pas seulement `llm-benchmarker.html` seul.
-
-### 2️⃣ Installation du backend RAM (optionnel mais recommandé)
-
-```bash
-cd /Applications/MAMP/htdocs/platforme-bench-LLM
-npm install
-node server.js
-```
-
-Le backend se lance sur `http://localhost:3001`. Le frontend le détecte automatiquement.
-
-### 3️⃣ Lancer un serveur web local
-
-⚠️ **Important** : Pour contourner les restrictions CORS du navigateur, vous **devez** servir le fichier via un serveur web local.
-
-#### Avec Python 3 (recommandé)
-
-```bash
-cd /Applications/MAMP/htdocs/platforme-bench-LLM
-python3 -m http.server 8000
-# Ouvrez : http://localhost:8000/llm-benchmarker.html
-```
-
-#### Avec PHP
-
-```bash
-cd /Applications/MAMP/htdocs/platforme-bench-LLM
-php -S localhost:8000
-# Ouvrez : http://localhost:8000/llm-benchmarker.html
-```
-
-#### Avec MAMP
-
-Placez le fichier dans `/Applications/MAMP/htdocs/` et accédez à :
-```
-http://localhost:8888/llm-benchmarker.html
-```
-
-#### Avec Node.js (npx)
-
-```bash
-cd /Applications/MAMP/htdocs/platforme-bench-LLM
-npx serve
-# Ouvrez : http://localhost:3000/llm-benchmarker.html
-```
-
-### 4️⃣ Utilisation
-
-1. **Sélectionnez un runner** (Ollama, LM Studio, **Gemini**, etc.)
-2. **Choisissez un modèle** (la liste se remplit automatiquement pour les runners locaux)
-3. **Sélectionnez un ou plusieurs types de prompts** à tester (cliquez pour cocher/décocher)
-   - 💬 Conversation, 🏛️ Datation/Factuel, 🔢 Mathématiques, 💻 Code, 🧠 Logique, 🎨 Créatif, ✏️ Personnalisé
-4. **Configurez les options** (température, tokens max, répétitions)
-5. **Cliquez sur "⚡ Lancer le benchmark"**
-6. **Suivez le streaming** en temps réel dans l'onglet "Thinking en direct"
-7. **Consultez les résultats** dans l'onglet 📊 Résultats (avec **RAM pic et RAM moyenne** pour Ollama)
-8. **Exportez en Markdown** avec le bouton 📄 Exporter .md
-
----
-
 ## 🔧 Configuration
 
 ### Configuration des clés API
@@ -327,7 +170,7 @@ npx serve
 2. Saisissez vos clés API pour chaque fournisseur (**Gemini** inclus)
 3. Sauvegardez
 
-Les clés sont stockées localement dans votre navigateur (`localStorage`) et **ne sont jamais transmises à des tiers**.
+Les clés sont conservées dans le `localStorage` du navigateur. Lors d'un appel à une API externe, la clé nécessaire à l'authentification et le prompt sont transmis au fournisseur sélectionné.
 
 **Nouveau : Clé API Gemini**
 - Format : `AIzaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
@@ -346,80 +189,21 @@ Pour utiliser un runner personnalisé :
 
 | Option | Description | Valeur par défaut |
 |--------|-------------|------------------|
-| Température | Contrôle la créativité (0 = déterministe, 2 = très créatif) | 0.7 |
+| Température | Paramètre d'échantillonnage (0 réduit l'aléatoire sans garantir la reproductibilité) | 0.7 |
 | Tokens max | Nombre maximum de tokens à générer | **4096** |
 | Répétitions | Nombre de fois à exécuter chaque test | 1 |
 
-### Configuration du backend RAM
+## 📊 Comprendre les mesures
 
-Pour changer le port du backend :
+- **Tokens et tokens/seconde** : décrivent la génération, pas la qualité de la réponse.
+- **TTFT** : disponible avec le streaming Ollama ; inclut le délai observé avant le premier token.
+- **Temps total** : durée observée de la requête, influencée par le chargement du modèle et les communications.
+- **RAM pic et moyenne** : statistiques des échantillons de mémoire du processus surveillé pendant le test, avec le backend Ollama. La RAM du navigateur est une mesure distincte.
+- **Environnement** : les informations du navigateur peuvent être approximatives ; le backend complète la détection matérielle.
 
-**Dans server.js** :
-```javascript
-const PORT = 4000; // Changez ici
-```
+Pour comparer des tests, gardez les mêmes prompts et paramètres, et indiquez le matériel ainsi que le runner utilisé.
 
-**Ou en ligne de commande** :
-```bash
-node server.js --port 4000
-```
-
-**Dans le frontend** (`js/core/memory.js`) :
-```javascript
-window.MEMORY_MONITOR_CONFIG = {
-  backendUrl: 'http://localhost:4000', // Changez le port
-  pollInterval: 500,
-  timeout: 2000
-};
-```
-
----
-
-## 📊 Fonctionnement
-
-### Détection automatique de l'environnement
-
-L'outil détecte automatiquement :
-- Système d'exploitation (Windows, macOS, Linux)
-- Navigateur (Chrome, Firefox, Safari, Edge)
-- Nombre de cœurs CPU
-- Mémoire RAM disponible
-- **GPU(s) avec priorisation intelligente** (via backend Node.js)
-
-#### 🎮 Détection GPU avancée (Nouveau!)
-
-Le backend détecte **tous** les GPUs disponibles et priorise automatiquement :
-
-| Priorité | Constructeur | Méthode de détection | VRAM détectée |
-|----------|--------------|---------------------|---------------|
-| ⭐⭐⭐ | **NVIDIA** | `lspci` / `wmic` | ✅ `nvidia-smi`, `nvidia-settings` |
-| ⭐⭐ | **AMD/Radeon** | `lspci` / `wmic` | ✅ `/sys/class/drm/` (Linux) |
-| ⭐ | **Intel** | `lspci` / `wmic` | ⚠️ Limitée |
-
-**Fonctionnalités** :
-- Liste **tous les GPUs** détectés (iGPU + dGPU)
-- Sélection **automatique du GPU dédié** (NVIDIA/AMD) si disponible
-- Récupération de la **VRAM** pour NVIDIA et AMD
-- Classification par **type** (`dedicated` / `integrated`)
-
-> **Exemple Linux avec dual-GPU** : Si vous avez Intel iGPU + NVIDIA dGPU, le backend sélectionnera automatiquement la **NVIDIA** comme GPU principal.
-
-### Processus de benchmark
-
-1. **Initialisation** : Connexion au runner sélectionné
-2. **Exécution** : Envoi du prompt et réception de la réponse
-3. **Mesure** : Calcul des métriques (tokens, vitesse, temps, **RAM**)
-4. **Affichage** : Résultats présentés sous forme de cartes
-5. **Stockage** : Sauvegarde dans l'historique
-
-### Streaming
-
-Pour **Ollama**, le benchmark utilise le streaming pour mesurer précisément :
-- Le temps jusqu'au premier token (TTFT)
-- La vitesse de génération en temps réel
-- **La consommation RAM en temps réel** (si backend activé)
-
-Pour les autres runners (LM Studio, llama.cpp, APIs externes), une requête non-streaming est utilisée.
+[Architecture de l'application](TECHNICAL_README.md) · [Détails RAM et GPU](BACKEND_README.md)
 
 ---
 
@@ -439,7 +223,7 @@ Exemple de structure :
 ```markdown
 # 📊 Rapport de Benchmark LLM
 
-> Généré le 15 janvier 2025 à 14:30 par **LLM Benchmarker v0.05**
+> Généré le 15 janvier 2025 à 14:30 par **LLM Benchmarker v0.06**
 
 ---
 
@@ -484,7 +268,7 @@ Je suis un modèle de langage...
 
 ---
 
-*Rapport généré automatiquement par LLM Benchmarker v0.05*
+*Rapport généré automatiquement par LLM Benchmarker v0.06*
 ```
 
 ---
@@ -500,13 +284,13 @@ Toutes les données sont stockées localement dans le navigateur :
 - **Clés API** : Stockées dans `localStorage` sous la clé `llm_bench_keys`
 - **Configuration RAM** : Backend non stocké (exécuté localement)
 
-### Sécurité
+### Confidentialité
 
-✅ **Aucune donnée ne quitte votre machine**
-- Les clés API ne sont jamais envoyées à des serveurs tiers
-- Les résultats restent dans votre navigateur
-- Aucune connexion internet requise pour les runners locaux
-- **Le backend RAM tourne localement** et ne transmet aucune donnée
+- **Runner local sur votre machine** : les prompts sont envoyés au serveur local sélectionné. Après installation et téléchargement du modèle, les tests locaux peuvent fonctionner sans internet.
+- **API externe ou serveur distant personnalisé** : les prompts et les informations nécessaires à l'authentification sont envoyés à ce serveur. Leur traitement dépend du fournisseur.
+- **Résultats et historique** : conservés dans le navigateur ; un export crée un fichier sur votre machine.
+- **Clés API** : conservées dans `localStorage`, sans chiffrement applicatif. Utilisez un profil de navigateur de confiance.
+- **Backend RAM** : fournit à l'interface des informations sur les processus et le matériel de la machine qui l'exécute.
 
 ---
 
@@ -580,7 +364,7 @@ Pour les améliorations futures et la roadmap détaillée, consultez :
 
 ## ⚠️ Limitations connues
 
-### Version v0.05
+### Version v0.06
 
 - **CORS** : Nécessite un serveur web local pour fonctionner (pas de `file://`)
 - **Streaming** : Seule Ollama supporte le streaming pour la mesure du TTFT
@@ -596,7 +380,7 @@ Pour les améliorations futures et la roadmap détaillée, consultez :
 |----------|----------|
 | Liste des modèles vide | Vérifiez que le runner est lancé et accessible |
 | Erreur CORS | Servez le fichier via un serveur web local |
-| Timeout sur modèles >30B (ex: gemma4:31b) | **Fixé en v0.05** - Timeout augmenté à 3 min pour Ollama |
+| Timeout sur modèles >30B (ex: gemma4:31b) | **Fixé en v0.06** - Timeout augmenté à 3 min pour Ollama |
 | Clé API invalide | Vérifiez votre clé dans les paramètres |
 | RAM affichée comme N/A | **Fixé en v0.06** - Bug corrigé : `peakMemory = 0` bloquait l'affichage |
 | Backend non détecté (faux négatif) | **Fixé en v0.06** - Détection améliorée avec `/api/ping` + timeout augmenté à 5s |
@@ -646,6 +430,6 @@ Pour toute question ou problème :
 
 <div align="center">
   <p>
-    <strong>LLM Benchmarker v0.05</strong> - Développé avec ❤️ par [NVNC](https://nvnc.fr) pour la communauté LLM
+    <strong>LLM Benchmarker v0.06</strong> - Développé avec ❤️ par [NVNC](https://nvnc.fr) pour la communauté LLM
   </p>
 </div>
