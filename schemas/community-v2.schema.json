@@ -425,6 +425,7 @@
         "transport": {
           "enum": [
             "nvme",
+            "apple-fabric",
             "sata",
             "usb",
             "thunderbolt",
