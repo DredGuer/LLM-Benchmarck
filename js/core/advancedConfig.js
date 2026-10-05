@@ -17,7 +17,7 @@ window.DEFAULT_TEMPERATURES = {
 // Auto mode settings
 window.AUTO_MODE_SETTINGS = {
   maxTokens: 32768,
-  repetitions: 1
+  repetitions: 3
 };
 
 // Storage key for advanced config
@@ -98,7 +98,8 @@ function updateModeUI() {
  * In Auto mode, uses predefined temperatures; in Manual mode, uses global setting
  */
 function getTemperatureForPromptType(promptTypeId) {
-  const manualTemp = parseFloat(document.getElementById('temperature')?.value) || 0.7;
+  const parsedTemp = parseFloat(document.getElementById('temperature')?.value);
+  const manualTemp = Number.isFinite(parsedTemp) ? parsedTemp : 0.7;
   
   if (isManualMode) {
     // In Manual mode, check if we have per-type config
@@ -131,7 +132,7 @@ function getMaxTokens() {
  */
 function getRepetitions() {
   if (isManualMode) {
-    return parseInt(document.getElementById('repetitions')?.value) || 1;
+    return parseInt(document.getElementById('repetitions')?.value) || 3;
   } else {
     return window.AUTO_MODE_SETTINGS.repetitions;
   }
