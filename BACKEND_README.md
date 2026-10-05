@@ -2,7 +2,7 @@
 
 Documentation de **LLM Benchmarker v0.06**. [Retour au guide de démarrage](README.md).
 
-Ce backend optionnel échantillonne la consommation RAM du processus **Ollama** sélectionné pendant les benchmarks. Les valeurs ne représentent pas la mémoire totale de tous les processus Ollama ni la VRAM ; le pic est le maximum des échantillons recueillis.
+Ce backend optionnel échantillonne la somme des mémoires résidentes (RSS) des processus Ollama détectés et de leurs descendants, y compris les runners MLX/Python. Chaque PID est compté une fois. Les pages partagées peuvent néanmoins être comptées plusieurs fois. Cette mesure n'est ni la VRAM ni le pic d'allocation MLX des logs ; le pic est le maximum des échantillons recueillis.
 
 ## 🚀 Installation
 
@@ -142,17 +142,16 @@ curl http://localhost:3001/api/ollama/status
 
 ## 🎯 Comment ça marche
 
-1. **Détection du PID Ollama** : Le backend cherche le processus `ollama` en utilisant plusieurs commandes système
-2. **Surveillance de la mémoire** : Utilise le package `pidusage` pour récupérer la consommation mémoire du processus
+1. **Détection de l'arbre Ollama** : utilise `ps` sur macOS/Linux ou `Get-CimInstance Win32_Process` sur Windows, puis suit récursivement les liens parent/enfant, même si le nom du runner ne contient pas Ollama.
+2. **Surveillance de la mémoire** : utilise `pidusage` pour chaque PID et additionne les valeurs en octets. Un échantillon incomplet est refusé pour éviter de publier seulement la mémoire du parent.
 3. **Requêtes périodiques** : Le frontend interroge le backend toutes les 500ms pendant un test
 4. **Calcul des statistiques** : Pic et moyenne de consommation RAM
 
 ## 💡 Support multi-OS
 
-Le backend tente plusieurs commandes pour trouver le PID d'Ollama :
-- `pgrep -f ollama` (Linux/macOS)
-- `pgrep -x ollama` (Linux/macOS)
-- `ps aux | grep ollama | grep -v grep | awk '{print $2}'` (fallback)
+Le backend lit PID, PPID et nom de l'exécutable avec `ps -axo pid=,ppid=,comm=` (macOS/Linux) ou PowerShell/CIM (Windows). L'API conserve `process.memory` et `process.memoryMB` pour le frontend ; `process.source`, `process.unit`, `process.pids` et `process.processes` précisent la provenance et le détail de la mesure. La valeur historique `memoryMB` est calculée en MiB (1024² octets).
+
+`/api/ps` d'Ollama expose les modèles chargés et leurs tailles, pas le pic d'allocation MLX des logs. Ces valeurs ne sont pas utilisées comme substitut à la RSS mesurée.
 
 ## 🎮 Détection GPU avancée (Nouveau!)
 
