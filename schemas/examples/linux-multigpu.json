@@ -1,0 +1,217 @@
+{
+  "schema": "llm-benchmarker.community",
+  "schemaVersion": "2.0.0",
+  "reportId": "synthetic-linux-multigpu",
+  "generatedAt": "2026-10-05T15:00:00Z",
+  "producer": {
+    "name": "schema-fixture",
+    "version": "1.0.0"
+  },
+  "synthetic": true,
+  "privacy": {
+    "profile": "community-redacted",
+    "rawPromptsIncluded": false,
+    "rawResponsesIncluded": false,
+    "rawToolArgumentsIncluded": false
+  },
+  "machines": [
+    {
+      "id": "node-a",
+      "os": {
+        "name": "Linux",
+        "architecture": "x86_64"
+      },
+      "platform": "pc",
+      "inventorySource": "synthetic-fixture",
+      "cpus": [
+        {
+          "id": "cpu-0",
+          "model": "Example CPU",
+          "socketCount": 2,
+          "physicalCores": 32,
+          "logicalCores": 64,
+          "numaNodes": 2
+        }
+      ],
+      "memory": {
+        "architecture": "separate",
+        "physicalCapacity": {
+          "value": 38654705664,
+          "unit": "bytes",
+          "status": "available",
+          "source": "synthetic-fixture",
+          "kind": "declared",
+          "observedAt": "2026-10-05T15:00:00Z",
+          "scope": "machine",
+          "nodeId": "node-a",
+          "deviceId": null
+        }
+      },
+      "gpus": [
+        {
+          "id": "gpu-0",
+          "model": "Example GPU 0",
+          "vendor": "NVIDIA",
+          "kind": "dedicated",
+          "memoryArchitecture": "dedicated",
+          "capacity": {
+            "value": 25769803776,
+            "unit": "bytes",
+            "status": "available",
+            "source": "synthetic-fixture",
+            "kind": "declared",
+            "observedAt": "2026-10-05T15:00:00Z",
+            "scope": "gpu",
+            "nodeId": "node-a",
+            "deviceId": "gpu-0"
+          }
+        },
+        {
+          "id": "gpu-1",
+          "model": "Example GPU 1",
+          "vendor": "NVIDIA",
+          "kind": "dedicated",
+          "memoryArchitecture": "dedicated",
+          "capacity": {
+            "value": 8589934592,
+            "unit": "bytes",
+            "status": "available",
+            "source": "synthetic-fixture",
+            "kind": "declared",
+            "observedAt": "2026-10-05T15:00:00Z",
+            "scope": "gpu",
+            "nodeId": "node-a",
+            "deviceId": "gpu-1"
+          }
+        }
+      ],
+      "storage": [
+        {
+          "id": "disk-0",
+          "kind": "ssd",
+          "transport": "unknown",
+          "roles": [
+            "model-files",
+            "artifacts"
+          ]
+        }
+      ]
+    }
+  ],
+  "execution": {
+    "mode": "single-machine",
+    "runner": {
+      "name": "example-runner",
+      "version": null,
+      "backend": "cuda"
+    },
+    "parallelism": "tensor",
+    "requestedPlacements": [],
+    "observedPlacements": [
+      {
+        "nodeId": "node-a",
+        "gpuIds": [
+          "gpu-0",
+          "gpu-1"
+        ],
+        "cpuIds": [
+          "cpu-0"
+        ],
+        "storageIds": [
+          "disk-0"
+        ],
+        "source": "synthetic-fixture",
+        "declaredModelSize": {
+          "value": 23254265576,
+          "unit": "bytes",
+          "status": "available",
+          "source": "synthetic-fixture",
+          "kind": "declared",
+          "observedAt": "2026-10-05T15:00:00Z",
+          "scope": "model",
+          "nodeId": "node-a",
+          "deviceId": null
+        }
+      }
+    ],
+    "links": []
+  },
+  "tests": [
+    {
+      "id": "test-1",
+      "kind": "generation",
+      "status": "success",
+      "startedAt": "2026-10-05T15:00:00Z",
+      "model": {
+        "id": "example-model",
+        "digest": null,
+        "quantization": "example-4bit"
+      },
+      "parameters": {
+        "temperature": 0.7,
+        "maxOutputTokens": 4096,
+        "contextTokens": null
+      },
+      "protocol": {
+        "id": "conversation",
+        "version": "1.0.0",
+        "promptDigest": null,
+        "warmupRuns": 0,
+        "loadState": "unknown",
+        "cacheState": "unknown",
+        "repetition": 1
+      },
+      "participatingNodeIds": [
+        "node-a"
+      ],
+      "metrics": {
+        "totalTime": {
+          "value": 29610,
+          "unit": "ms",
+          "status": "available",
+          "source": "synthetic-fixture",
+          "kind": "declared",
+          "observedAt": "2026-10-05T15:00:00Z",
+          "scope": "test",
+          "nodeId": null,
+          "deviceId": null
+        },
+        "totalOutputTokens": {
+          "value": 478,
+          "unit": "tokens",
+          "status": "available",
+          "source": "synthetic-fixture",
+          "kind": "declared",
+          "observedAt": "2026-10-05T15:00:00Z",
+          "scope": "test",
+          "nodeId": null,
+          "deviceId": null
+        },
+        "thinkingTokens": {
+          "value": null,
+          "unit": "tokens",
+          "status": "unavailable",
+          "source": "synthetic-fixture",
+          "kind": "declared",
+          "observedAt": "2026-10-05T15:00:00Z",
+          "scope": "test",
+          "nodeId": null,
+          "deviceId": null
+        },
+        "answerTokens": {
+          "value": null,
+          "unit": "tokens",
+          "status": "unavailable",
+          "source": "synthetic-fixture",
+          "kind": "declared",
+          "observedAt": "2026-10-05T15:00:00Z",
+          "scope": "test",
+          "nodeId": null,
+          "deviceId": null
+        }
+      },
+      "resourceSamples": [],
+      "resourceSummaries": []
+    }
+  ]
+}
