@@ -20,7 +20,7 @@ async function test(fail) {
     getTemperatureForPromptType: () => 0.7, getMaxTokens: () => 256, getRequestedContextTokens: () => null,
     modelArchitectureText: () => 'unknown', buildOllamaOptions: (temperature, max) => ({ temperature, num_predict: max }),
     ollamaMemoryMonitor: monitor, performance: { now: () => { const value = time; time += 10; return value; } },
-    RUNNERS: { ollama: { base: 'http://local', name: 'Ollama' } }, TextDecoder, crypto,
+    TextEncoder, RUNNERS: { ollama: { base: 'http://local', name: 'Ollama' } }, TextDecoder, crypto,
     setTimeout: fn => { fn(); return 0; }, resetLiveOutput() {}, showLiveSections() {}, setControlButtons() {},
     addDebugLog() {}, updateThinkingOutput() {}, updateTokenProgress() {},
     fetchWithTimeout: async (url, options) => {
@@ -34,6 +34,7 @@ async function test(fail) {
     }
   };
   vm.createContext(scope);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '../js/core/protocol.js'), 'utf8'), scope);
   vm.runInContext(fs.readFileSync(path.join(__dirname, '../js/core/benchmark.js'), 'utf8'), scope);
   if (fail) await assert.rejects(() => scope.executeTest('test', { id: 'conversation', name: 'test' }, 'hello', 1));
   else {
