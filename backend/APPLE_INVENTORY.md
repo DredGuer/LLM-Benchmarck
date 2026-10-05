@@ -1,4 +1,4 @@
-# Inventaire Apple — première collecte matérielle
+# Inventaire matériel Apple
 
 Le backend expose `GET /api/hardware` et inclut `hardwareInventory` dans
 `GET /api/environment` sur macOS. Les autres plateformes conservent leur détection actuelle ;
@@ -46,7 +46,11 @@ node schemas/test.cjs
 ```
 
 Les tests utilisent des sorties macOS simulées et vérifient aussi la compatibilité de la
-machine collectée avec le schéma v2. Le test sur un vrai Mac reste nécessaire.
+machine collectée avec le schéma v2. La collecte a été observée sur un M3 Pro : CPU 12 cœurs, GPU 18 cœurs, 36 GiB de RAM unifiée, SSD interne Apple Fabric et SSD USB externe. Cela ne valide pas toutes les versions macOS ni tous les appareils.
 
 Après mise à jour : redémarrer le backend, recharger l'interface et examiner
 `http://localhost:3001/api/hardware`. Comparer CPU/cœurs/RAM/SSD au Rapport système de macOS.
+
+L’inventaire se déplie dans la sidebar ; les données sont conservées dans chaque résultat et les exports. Dans les statistiques, le matériel participe aux groupes de conditions. Le modèle déclaré, la RSS et les événements MLX restent des mesures distinctes de cet inventaire.
+
+[Guide utilisateur](../README.md) · [Architecture](../TECHNICAL_README.md) · [Règles de contribution](../CONTRIBUTING.md)

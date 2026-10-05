@@ -1,603 +1,207 @@
-# LLM Benchmarker Local 🚀
+# LLM Benchmarker
 
-> **Version 0.06** - Benchmark de modèles LLM locaux et externes directement depuis le navigateur
->
-> **Développé par** [NVNC](https://nvnc.fr) ✨
->
-> **Nouveautés** : Support Gemini ✨ | Monitoring RAM Ollama 💾 | Backend optionnel | Fix timeout modèles lourds (>30B) ⏱️ | **Détection GPU intelligente** 🎮 | **Modes Auto/Manuel** ⚙️ | **Config par type de prompt** 📝 | **Fix bug RAM 0MB** 🐛 | **Détection backend améliorée** 🔄
+Benchmarkez vos modèles locaux ou vos API, conservez les campagnes dans votre navigateur et comparez leurs performances sur votre machine.
 
-> **Projet en version alpha** — Les fonctionnalités et mesures peuvent comporter des erreurs ; leur validation dépend du matériel et de l'environnement.
+**Interface v0.06 · protocole de mesure 0.08 · export communautaire v2.** Documentation vérifiée le 5 octobre 2026. Ces versions désignent des éléments différents ; la version 1.0.0 de `package.json` concerne le backend.
 
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
-[![Status: Alpha](https://img.shields.io/badge/Status-Alpha-orange.svg)]
-[![Browser: Chrome/Firefox/Safari](https://img.shields.io/badge/Browser-Chrome%20%7C%20Firefox%20%7C%20Safari-blue.svg)]
+Fonctions actuelles : chauffe séparée, contexte Auto, identification Dense/MoE lorsqu’elle est disponible, inventaire Apple Silicon, suivi RSS/swap/MLX, exports Markdown/JSON, statistiques interactives et assistant d’analyse au choix. Les bulles **!** expliquent les réglages et mesures au clic, au clavier ou sur mobile.
 
----
+## Premier lancement avec Ollama
 
-## 📖 Sommaire
+Prérequis : Git, Python 3, un navigateur récent et Ollama. Pour le backend matériel, utilisez Node.js et npm ; Node.js 22 est utilisé dans le parcours testé sur Mac.
 
-- [🚀 Premier benchmark avec Ollama](#-premier-benchmark-avec-ollama)
-- [⚙️ Options de lancement](#️-options-de-lancement)
-- [🎯 Fonctionnalités](#-fonctionnalités)
-- [Documentation technique](TECHNICAL_README.md)
-- [Backend RAM et GPU](BACKEND_README.md)
-- [🔧 Configuration](#-configuration)
-- [📊 Comprendre les mesures](#-comprendre-les-mesures)
-- [📝 Export des résultats](#-export-des-résultats)
-- [💾 Stockage](#-stockage)
-- [📜 Licence](#-licence)
-- [🤝 Contribuer](#-contribuer)
-- [⚠️ Limitations connues](#️-limitations-connues)
-- [Précautions d'utilisation](#précautions-dutilisation)
+### 1. Préparer le modèle
 
----
-
-## 🚀 Premier benchmark avec Ollama
-
-### 1. Préparer Ollama
-
-Installez [Ollama](https://ollama.com), puis assurez-vous que son serveur fonctionne sur `http://localhost:11434`. Si l'application ne l'a pas déjà démarré, lancez `ollama serve` dans un terminal séparé.
-
-Téléchargez un modèle pour votre premier test :
+Lancez l’application Ollama, puis vérifiez son API :
 
 ```bash
-ollama pull llama3.2:1b
 ollama list
+curl -fsS http://localhost:11434/api/version
 ```
 
-Le téléchargement du modèle nécessite une connexion internet.
+Si aucun modèle n’est installé, téléchargez celui que vous souhaitez tester avec `ollama pull NOM_DU_MODELE`. Si vous utilisez `ollama serve`, gardez ce terminal ouvert ; ne lancez pas un second serveur si l’application Ollama fournit déjà l’API.
 
-### 2. Télécharger et ouvrir l'application
-
-Prérequis : Git et Python 3, ainsi qu'un navigateur récent.
+### 2. Télécharger le projet et lancer le backend
 
 ```bash
 git clone https://github.com/DredGuer/LLM-Benchmarck.git
 cd LLM-Benchmarck
-python3 -m http.server 8001
+npm install
+npm start
 ```
 
-Gardez ce terminal ouvert et accédez à [LLM Benchmarker](http://localhost:8001/llm-benchmarker.html).
+Gardez ce terminal ouvert. Le backend écoute sur **http://localhost:3001**. Il est optionnel pour générer du texte, mais nécessaire pour l’inventaire et les mesures système décrites ici.
 
-Sans Git, téléchargez [l'archive du dépôt](https://github.com/DredGuer/LLM-Benchmarck/archive/refs/heads/main.zip), décompressez-la, puis lancez `python3 -m http.server 8001` depuis le dossier extrait `LLM-Benchmarck-main`.
+### 3. Servir l’interface dans un autre terminal
 
-Conservez tous les fichiers du dépôt. Ouvrez l'application via le serveur HTTP, plutôt qu'en double-cliquant sur le fichier HTML. Le runner doit également autoriser les requêtes depuis cette origine ; un serveur web local ne résout pas à lui seul toutes les erreurs CORS.
+Depuis la racine du même dépôt :
 
-### 3. Lancer un premier test
+```bash
+python3 -m http.server 8001 --bind 127.0.0.1
+```
 
-1. Les modèles Ollama sont récupérés automatiquement à l’ouverture. Sélectionnez **llama3.2:1b** ; utilisez 🔄 pour réessayer si Ollama était arrêté.
-2. Sélectionnez uniquement **Conversation**.
-3. Gardez le **mode Manuel**, choisissez **256 tokens max** et **1 répétition** pour un essai court.
-4. Cliquez sur **⚡ Lancer le benchmark**.
-5. Suivez la réponse dans **Thinking en direct**, puis consultez **📊 Résultats**.
-6. Cliquez sur **📄 Exporter .md** pour télécharger le rapport.
+Ouvrez **http://localhost:8001/llm-benchmarker.html**. Gardez aussi ce terminal ouvert. Le serveur Python fournit les fichiers de l’interface ; le backend Node fournit les mesures ; Ollama exécute le modèle. Aucun build frontend n’est nécessaire.
 
-Le backend Node.js n'est pas nécessaire pour ce premier benchmark.
+### 4. Lancer une campagne
 
-## ⚙️ Options de lancement
+1. Choisissez le runner **Ollama**. La liste des modèles est récupérée à l’initialisation et au changement de runner ; le bouton de rafraîchissement reste disponible.
+2. Choisissez le modèle, ou saisissez son nom exact dans le champ personnalisé qui remplace la sélection.
+3. Choisissez les catégories de prompts ou votre prompt personnalisé.
+4. Vérifiez le récapitulatif du nombre de mesures, puis lancez le benchmark.
 
-### Relancer après une mise à jour
+Pour un runner local, une chauffe courte précède les mesures. Ses résultats restent visibles, mais sont exclus des statistiques. Une campagne avec les six catégories et une répétition produit normalement **1 chauffe + 6 mesures**.
 
-Depuis votre copie du dépôt (pas depuis le dossier personnel), arrêtez le backend avec **Ctrl+C**, puis :
+## Relancer et mettre à jour
+
+Arrêtez le backend avec `Ctrl+C`, puis, depuis le dépôt :
 
 ```bash
 git pull origin main
 npm install
-node backend/apple-inventory.test.cjs
-node backend/model-metadata.test.cjs
-node backend/apple-resources.test.cjs
-node backend/monitor-integration.test.cjs
-node backend/community-export.test.cjs
-node backend/protocol-statistics.test.cjs
-node schemas/test.cjs
 npm start
 ```
 
-Gardez ce terminal ouvert. Dans un **deuxième terminal**, placez-vous dans le même dossier du dépôt et lancez :
+Relancez le serveur Python si nécessaire et rechargez l’interface avec **⌘⇧R** sur Mac ou **Ctrl⇧R** sous Windows/Linux. Il n’est pas nécessaire d’effacer toutes les données du navigateur pour recharger les scripts : cela pourrait supprimer votre historique.
+
+Pour vérifier les trois services :
 
 ```bash
-python3 -m http.server 8001
-```
-
-Ouvrez **http://localhost:8001/llm-benchmarker.html**. Ollama doit également fonctionner sur le port 11434 :
-ouvrez son application, ou lancez `ollama serve` dans un troisième terminal si son serveur n'est pas déjà actif.
-
-Le backend Node.js (3001), l'interface Python (8001) et Ollama (11434) sont trois services distincts.
-Arrêtez chaque serveur avec **Ctrl+C** dans son terminal.
-
-Sur Windows, remplacez `python3` par `py -3` si nécessaire.
-
-### Vérifier les services
-
-Dans un terminal libre :
-
-```bash
+curl -fsS http://localhost:8001/llm-benchmarker.html
 curl -fsS http://localhost:3001/api/ping
-curl -fsS http://localhost:3001/api/memory
-curl -fsS http://localhost:3001/api/ollama/models
-curl -fsS http://localhost:11434/api/ps
-```
-
-Pour l'inventaire Apple sur macOS :
-
-```bash
+curl -fsS http://localhost:11434/api/version
 curl -fsS http://localhost:3001/api/hardware
+curl -fsS http://localhost:3001/api/memory
 ```
 
-Il fournit CPU/cœurs, RAM unifiée, GPU/cœurs, disques physiques et provenance.
-La fréquence CPU peut être inconnue ; le débit SSD n'est pas encore mesuré.
-Voir [les sources et limites de l'inventaire Apple](backend/APPLE_INVENTORY.md).
+`/api/hardware` est actuellement réservé à macOS. Les collecteurs Apple ne sont pas exécutés sur Windows/Linux.
 
-### Interface ancienne, cache ou port occupé
+## Réglages et protocole
 
-Après une mise à jour, rechargez l'interface avec **⌘⇧R sur Mac** ou **Ctrl+Shift+R sur Windows/Linux**.
-Si elle reste ancienne, videz uniquement le cache des fichiers du site : effacer les données du site
-supprime aussi l'historique, les clés et réglages locaux. Vérifiez l'adresse et le dossier depuis lequel
-le serveur Python a été lancé. Les exports actuels indiquent **v0.06**, les sources mémoire et un bloc JSON.
+| Réglage | Mode Manuel, par défaut | Mode Auto |
+|---|---|---|
+| Température | 0,7 ; réglages par catégorie possibles | Valeur prédéfinie par catégorie |
+| Tokens maximum | **8 192** | **32 768** |
+| Répétitions par catégorie | **1**, réglable de 1 à 20 | **1** |
+| Contexte Ollama | Réglage du runner conservé | Réglage du runner conservé |
 
-Pour vérifier le fichier réellement servi :
+La limite de tokens est un plafond, pas une longueur imposée. Une réponse atteignant le plafond peut être tronquée : elle est signalée et exclue des statistiques. La raison d’arrêt du fournisseur est conservée lorsqu’elle est disponible.
 
-```bash
-curl -fsS "http://localhost:8001/js/ui/results.js?v=0.06-apple-export1"
-```
+Plusieurs répétitions permettent d’estimer la variabilité à conditions comparables ; elles allongent le test. Avec une seule mesure, l’écart-type reste indisponible. Une température nulle réduit l’aléatoire sans garantir une exécution reproductible.
 
-Il doit contenir `Inventaire Apple détecté` et `buildCommunityExport`.
-Lancez un **nouveau test** : les résultats historiques ne récupèrent pas rétroactivement les données manquantes.
+La chauffe utilise un prompt court fixe, une température nulle et au plus 32 tokens. Pour Ollama, le thinking est désactivé pendant cette chauffe. `/api/ps` permet d’observer si le modèle était chargé ; un modèle déchargé pendant la campagne déclenche une nouvelle chauffe. Aucune chauffe supplémentaire n’est envoyée aux API externes.
 
-Si `npm start` indique `EADDRINUSE`, un service utilise déjà le port 3001.
-Sur macOS/Linux, identifiez-le avec :
+Le cache est géré par le runner et n’est pas vidé automatiquement. Des tokens réutilisés ne prouvent pas que tout le prompt est en cache. Le contexte observé du runner chargé est distinct du maximum théorique du modèle.
+
+## Lire les résultats
+
+| Mesure | Signification et limite |
+|---|---|
+| Tokens générés | Comptage déclaré par le fournisseur, sinon estimation ; peut inclure la réflexion |
+| Tokens/s moyen | Tokens générés / durée totale de la requête |
+| Tokens/s génération | Comptage / durée de génération déclarée par Ollama, lorsque disponible |
+| TTFT | Délai du premier segment reçu ; celui-ci peut appartenir au thinking |
+| Premier segment de réponse finale | Délai du premier texte de réponse, après une éventuelle réflexion |
+| Prefill | Durée de traitement du prompt déclarée par Ollama, en ms ; pas un débit |
+| RSS cumulée | Somme des mémoires résidentes des processus Ollama suivis ; les pages partagées peuvent être comptées plusieurs fois |
+| Allocation déclarée Ollama | Valeur issue de `/api/ps`, pouvant évoluer avec les caches ; pas un pic RAM ni la taille des seuls poids |
+| Pic/allocations conservées MLX | Événements nouveaux des logs serveur ; attribution au modèle non vérifiée |
+| Swap et mémoire compressée | Mesures du système entier, avec niveaux avant/après et pic échantillonné |
+| Lectures/écritures disques | Activité système durant le test ; pas un benchmark du débit maximal du SSD |
+
+Les mesures mémoire ne s’additionnent pas. Sur Apple Silicon, CPU et GPU partagent la RAM unifiée. La mémoire JavaScript du navigateur ne mesure pas celle d’Ollama. Une valeur absente reste inconnue, jamais artificiellement zéro.
+
+Pour les API sans streaming, le TTFT n’est pas mesuré ; il reste indisponible dans l’export v2. Les comptes thinking/réponse séparés et la version interne de MLX ne sont pas déduits lorsqu’ils ne sont pas rapportés.
+
+L’inventaire Apple indique CPU exact, cœurs physiques/logiques et performance/efficacité disponibles, RAM unifiée, GPU/cœurs, SSD physiques et sources. Les fréquences non exposées restent inconnues. L’inventaire et la télémétrie ont été observés sur un M3 Pro ; cela ne valide pas toutes les machines et versions.
+
+## Historique et statistiques
+
+Chaque nouvelle campagne remplace les résultats visibles. Les anciennes campagnes restent dans **Historique**, avec restauration et export. Le navigateur conserve au maximum 50 campagnes, moins si son quota impose de retirer les plus anciennes. Une sauvegarde impossible conserve la campagne courante et bloque son remplacement automatique.
+
+Dans **Statistiques** :
+
+- Choisissez les modèles, catégories et la mesure à afficher.
+- Comparez une **moyenne ou médiane par modèle et catégorie**, en **lignes ou aires**.
+- Dépliez un modèle pour sa synthèse, puis les conditions pour inclure/exclure chaque passe ou tout un groupe.
+- Dépliez les graphiques du modèle : débit moyen, génération seule et prefill sur des graphiques séparés.
+- Appliquez éventuellement une moyenne mobile sur 3, 5 ou 10 passes sélectionnées.
+- Consultez les valeurs exactes dans les tableaux repliables ; **Tout sélectionner** réinitialise les filtres sans effacer l’historique.
+
+Chaque passe sélectionnée a le même poids. Chauffes, erreurs et réponses limitées sont exclues. Les groupes de conditions distinguent notamment matériel, modèle/digest, runner/version, prompt, contexte, température, plafond de tokens, cache, quantification, thinking et protocole.
+
+La moyenne globale d’un modèle peut mélanger des conditions : elle est descriptive et ne constitue pas un classement contrôlé. Le lissage ne modifie pas les moyennes récapitulatives. Le ratio tok/s par milliard de paramètres totaux ne mesure pas la qualité et ne normalise pas les paramètres actifs des MoE.
+
+Les filtres statistiques sont conservés pendant l’utilisation de la page, sans modifier les données sauvegardées. Le résumé de la liste Historique est distinct : il exclut chauffes et erreurs, mais peut encore inclure une réponse signalée comme limitée.
+
+## Assistant d’analyse
+
+**Analyser les résultats** ouvre un panneau flottant. Choisissez le modèle testé ou un autre : Ollama local, OpenAI, Mistral ou API compatible OpenAI, dont LM Studio. Pour une API compatible, l’URL de base inclut `/v1`. Saisissez le nom exact ou récupérez la liste des modèles.
+
+L’analyse démarre uniquement avec **Envoyer** ou **Écrire une conclusion**, après les tests. Analyse et benchmark ne tournent pas simultanément depuis cette interface. Utiliser un autre modèle local peut modifier la mémoire et le cache de la campagne suivante.
+
+Le contexte comprend au plus 100 tests : mesures, réglages, matériel synthétique, votre question et les échanges récents. Les prompts, réponses et logs des tests sont exclus. Pour une API distante, cochez l’autorisation d’envoi. La clé propre à ce panneau reste dans le champ de la page, sans sauvegarde ni export ; **Effacer échanges et clé** la retire.
+
+Les conclusions restent consultatives, séparées des mesures et de l’export communautaire. Les accès directs dépendent des autorisations CORS du fournisseur ; aucun proxy de clés n’est intégré.
+
+## Exports
+
+| Export | Contenu | Usage |
+|---|---|---|
+| Markdown | Résumé, réglages, matériel, prompts/réponses des tests, bloc JSON v2 | Lecture et compte rendu ; vérifier avant partage |
+| JSON v2 | Mesures, protocole, matériel autorisé, ressources disponibles ; sans prompts/réponses/logs/clés | Préparation du futur import communautaire |
+
+Le nom du JSON inclut le modèle, par exemple `LLMB-hf.co-empero-ai-Qwen-Q4_K_M-community-v2-DATE.json`. Les caractères incompatibles sont remplacés. Pour plusieurs modèles, le nom reprend le premier et le nombre des autres ; le contenu reste la référence complète.
+
+Un rapport homogène utilise le schéma `llm-benchmarker.community` 2.0.0. Des ensembles hétérogènes de runner/version/inventaire produisent un bundle 1.0.0 contenant plusieurs rapports v2. Les anciens historiques sont exportables avec leurs données manquantes explicitement inconnues.
+
+Le futur site et l’envoi automatique ne sont pas implémentés. Voir [le contrat d’export](schemas/README.md).
+
+## Autres runners et plateformes
+
+Les benchmarks de génération proposent Ollama, LM Studio, llama.cpp, OpenAI, Mistral, Claude, Gemini et un endpoint personnalisé compatible. Les versions, noms de modèles, droits CORS et options acceptées dépendent du serveur choisi. Le backend Node suit Ollama, pas la RAM des modèles exécutés par tous ces autres runners.
+
+L’inventaire général Windows/Linux peut détecter CPU/GPU selon les commandes disponibles. L’inventaire structuré Apple et la télémétrie swap/disques/MLX décrite ci-dessus sont réservés à macOS. Une liste de GPU détectés ne prouve pas leur utilisation simultanée. Le sélecteur GPU affiche une consigne de redémarrage manuel ; il ne reconfigure pas Ollama automatiquement.
+
+Le schéma prépare multi-CPU/GPU, Exo et tâches agentiques, mais aucun orchestrateur distribué ni exécuteur de tâches fichiers n’est intégré. [État et prochaines étapes](innovation.md).
+
+## Dépannage
+
+| Symptôme | Vérification |
+|---|---|
+| `Cannot find module 'express'` | Exécuter `npm install` à la racine du dépôt |
+| `EADDRINUSE` sur 3001 | Un backend écoute déjà ; identifier et arrêter celui que vous souhaitez remplacer |
+| API backend inaccessible | Garder `npm start` ouvert et vérifier `/api/ping` |
+| Interface ancienne | Vérifier le dossier servi et recharger sans cache |
+| Modèles absents | Vérifier le runner, son URL et `ollama list`, puis rafraîchir |
+| Pic MLX indisponible | Le runner peut ne pas être MLX, le log manquer ou aucun nouvel événement n’être observé |
+| Assistant/API indisponible | Vérifier URL, modèle, clé et autorisations CORS |
+| Historique apparemment perdu | Vérifier l’origine exacte : localhost/127.0.0.1 et les ports ont des stockages distincts |
+
+Sur Mac, identifiez le service occupant un port avec :
 
 ```bash
 lsof -nP -iTCP:3001 -sTCP:LISTEN
+lsof -nP -iTCP:8001 -sTCP:LISTEN
 ```
 
-Arrêtez votre ancien backend dans son terminal, puis relancez `npm start`.
-Si le port 8001 est occupé, arrêtez votre ancien serveur web ou utilisez
-`python3 -m http.server 8002` et ouvrez alors le port 8002 dans le navigateur.
+Utilisez `Ctrl+C` dans son terminal si possible. Modifier seulement le port du backend ne reconfigure pas automatiquement l’interface. Voir [le guide backend](BACKEND_README.md).
 
-### Autres runners et fournisseurs
+## Documentation et contributions
 
-- **LM Studio** : démarrez son serveur local (port 1234 par défaut), chargez un modèle, puis sélectionnez LM Studio.
-- **llama.cpp** : démarrez un serveur compatible avec l'API de chat OpenAI (port 8080 par défaut), puis sélectionnez llama.cpp.
-- **OpenAI, Mistral, Claude ou Gemini** : utilisez une clé API valide, configurez-la via **🔑 Clés API**, puis choisissez le fournisseur et un modèle disponible pour votre compte. Ces requêtes nécessitent internet et peuvent être facturées par le fournisseur.
-- **Personnalisé** : renseignez l'URL du serveur et le nom du modèle.
+- [Architecture, modules et protocole](TECHNICAL_README.md)
+- [Backend, lancement et endpoints](BACKEND_README.md)
+- [Inventaire Apple](backend/APPLE_INVENTORY.md)
+- [Télémétrie Apple](backend/APPLE_RESOURCES.md)
+- [Schémas et validation](schemas/README.md)
+- [Roadmap](innovation.md)
+- [Contribution : code, tests et documentation à mettre à jour ensemble](CONTRIBUTING.md)
 
-### Monitoring RAM Ollama (optionnel)
+Les captures d’écran seront ajoutées ensuite ; les commandes et comportements documentés peuvent déjà être utilisés.
 
-Avec Node.js et npm installés, ouvrez un autre terminal **à la racine du dépôt** :
+## Précautions d’utilisation et licence
 
-```bash
-npm install
-npm start
-```
+En téléchargeant ou en utilisant LLM Benchmarker, vous reconnaissez avoir pris connaissance des informations du projet et de sa [charte d’utilisation](CHARTE_UTILISATION.md).
 
-Le backend démarre sur `http://localhost:3001` et l'interface tente de le détecter automatiquement. Gardez aussi le serveur web du premier terminal en fonctionnement.
+Les tests, historiques et clés API sauvegardées pour les benchmarks sont conservés dans le navigateur et peuvent être accessibles en clair. Le stockage local ne garantit pas leur sauvegarde. Vérifiez les exports avant partage ; avec une API externe, les données nécessaires aux requêtes sont transmises au fournisseur choisi.
 
-La RAM suivie par le backend est la somme des mémoires résidentes (RSS) des processus Ollama détectés et de leurs descendants, y compris les runners MLX. Les pages partagées peuvent être comptées plusieurs fois ; cette somme n'est ni la VRAM ni le pic d'allocation MLX des logs. La mémoire JavaScript du navigateur, lorsqu'elle est disponible, mesure autre chose et ne doit pas être interprétée comme la RAM du modèle.
-
-Consultez [la documentation du backend](BACKEND_README.md) pour les ports, les méthodes de mesure, la détection GPU et le dépannage.
-
-### Autres serveurs web
-
-Depuis la racine du dépôt, vous pouvez remplacer le serveur Python par :
-
-```bash
-php -S localhost:8001
-```
-
-Ouvrez alors la même URL sur le port 8001. Avec MAMP, placez **tout le dépôt** dans le répertoire web configuré et utilisez l'URL correspondant à ce dossier.
-
----
-
-## 🎯 Fonctionnalités
-
-### Runners locaux supportés
-
-| Runner | Endpoint | Protocole | Monitoring RAM |
-|--------|----------|-----------|----------------|
-| 🦙 **Ollama** | `http://localhost:11434` | API native Ollama (streaming) | ✅ **Oui** (via backend) |
-| 🏠 **LM Studio** | `http://localhost:1234` | OpenAI-compatible | ❌ Non |
-| 🦔 **llama.cpp** | `http://localhost:8080` | OpenAI-compatible | ❌ Non |
-
-### APIs externes
-
-| Fournisseur | Endpoint | Nécessite clé API | Monitoring RAM |
-|-------------|----------|------------------|----------------|
-| 🤖 **OpenAI** | `https://api.openai.com` | ✅ Oui | ❌ Non |
-| 🌊 **Mistral AI** | `https://api.mistral.ai` | ✅ Oui | ❌ Non |
-| 🔮 **Anthropic Claude** | `https://api.anthropic.com` | ✅ Oui | ❌ Non |
-| 💎 **Google Gemini** | `https://generativelanguage.googleapis.com` | ✅ Oui | ❌ Non |
-| ⚙️ **Personnalisé** | Configurable | ❌ Non | ❌ Non |
-
-### Types de prompts
-
-- 💬 **Conversation** - Dialogue libre et réponses générales
-- 🏛️ **Datation / Factuel** - Questions de culture générale datées
-- 🔢 **Mathématiques** - Résolution de problèmes mathématiques
-- 💻 **Code** - Génération ou analyse de code
-- 🧠 **Logique** - Résolution de problèmes logiques et raisonnement
-- 🎨 **Créatif** - Rédaction créative et brainstorming
-- ✏️ **Personnalisé** - Votre propre question ou instruction
-
-### Métriques collectées
-
-| Métrique | Description | Disponible |
-|----------|-------------|-----------|
-| Tokens générés | Nombre total de tokens produits | ✅ Tous |
-| Tokens/seconde | Vitesse de génération | ✅ Tous |
-| TTFT (Time To First Token) | Temps avant le premier token | ✅ Ollama (streaming) |
-| Temps total | Durée complète de la réponse | ✅ Tous |
-| Température | Paramètre de créativité utilisé | ✅ Tous |
-| **RSS cumulée pic** | Maximum des échantillons RSS, en MiB | ✅ Ollama (avec backend) |
-| **RSS cumulée moyenne** | Moyenne des échantillons RSS, en MiB | ✅ Ollama (avec backend) |
-| **Modèle chargé** | Taille déclarée par Ollama, en GiB ; pas un pic RAM | ✅ Ollama (avec backend) |
-
-### Fonctionnalités de debugging
-
-- **Streaming en temps réel** : Visualisation de la réponse token par token pour Ollama
-- **Logs de débogage** : Suivi détaillé de chaque test avec horodatage
-- **Compteur de tokens** : Suivi en direct du nombre de tokens reçus
-- **Barre de progression** : Visualisation du % de tokens reçus vs max
-- **Arrêt/Interrompre** : Contrôle manuel pendant le benchmark
-- **Monitoring RAM** : Surveillance en temps réel de la consommation mémoire
-
----
-
-## 🔧 Configuration
-
-### Configuration des clés API
-
-1. Cliquez sur le bouton **"🔑 Clés API"** dans la barre d'outils
-2. Saisissez vos clés API pour chaque fournisseur (**Gemini** inclus)
-3. Sauvegardez
-
-Les clés sont conservées dans le `localStorage` du navigateur. Lors d'un appel à une API externe, la clé nécessaire à l'authentification et le prompt sont transmis au fournisseur sélectionné.
-
-**Nouveau : Clé API Gemini**
-- Format : `AIzaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
-- Obtenez-la sur : https://aistudio.google.com/app/apikey
-
-### Runner personnalisé
-
-Pour utiliser un runner personnalisé :
-
-1. Sélectionnez **⚙️ Personnalisé**
-2. Entrez l'URL de base de votre API (ex: `http://localhost:8080`)
-3. Entrez le nom du modèle
-4. Lancez le benchmark
-
-### Modèle et contexte Auto
-
-La zone modèle présente des cartes pour l'architecture Dense/MoE, les paramètres totaux,
-la quantification et le contexte maximal déclaré. Le contexte est **Auto** :
-l'outil conserve le réglage d'Ollama, sans imposer le maximum du modèle et sans saisie manuelle.
-Le `context_length` du runner chargé est relevé via `/api/ps` pendant le test et conservé dans les exports ;
-s'il n'est pas disponible, il reste inconnu. Le maximum du modèle et le contexte du runner sont distincts.
-
-Pour Ollama, `/api/show` fournit les métadonnées du modèle.
-Si le nombre d'experts manque, Dense/MoE reste inconnu ; le nom du modèle ne suffit pas.
-Les experts actifs, la quantification, le contexte et le matériel influencent le débit.
-L'outil ne déduit pas le nombre de paramètres actifs à partir du ratio d'experts.
-
-L'inventaire matériel reste repliable. Aucun test de vitesse maximale du SSD n'est exécuté.
-
-### MLX, swap et activité disque sur macOS
-
-Le backend ouvre une session de télémétrie avant chaque génération Ollama et collecte :
-
-- le swap utilisé et son pic échantillonné, via `sysctl vm.swapusage` ;
-- la mémoire compressée et les entrées/sorties swap, via `vm_stat` et la taille réelle des pages ;
-- les octets lus/écrits des disques exposés par `IOBlockStorageDriver`, via `ioreg` ;
-- les nouveaux événements `memory peak` des logs de l'application Ollama, pour le pic d'allocation MLX.
-
-**Portée des mesures :** swap, compression et E/S couvrent le système entier, avec l'activité des autres applications.
-Les octets swap sont un équivalent pages, pas le nombre exact d'octets compressés transférés sur disque.
-L'activité disque n'est pas un benchmark de vitesse SSD et ne prouve pas que le modèle utilise un offload SSD.
-
-Le pic MLX provient des logs serveur, reste distinct de la RSS et de la taille déclarée du modèle,
-et son attribution au modèle n'est pas vérifiée en présence de requêtes concurrentes.
-Il n'existe pas pour les runners GGUF qui ne produisent pas cet événement MLX.
-Sans log accessible ou sans événement pendant la session, il reste **Non disponible**.
-Les anciens pics sont exclus ; rotation/troncature ou volume excessif de logs invalident la mesure.
-Aucun texte brut du log n'est envoyé au navigateur ou à l'export.
-
-Ces collectes utilisent des sorties macOS simulées dans les tests. La validation sur un vrai Mac
-reste nécessaire. Voir [les sources et limites de la télémétrie](backend/APPLE_RESOURCES.md).
-
-### État du plan progressif
-
-| Étape | État |
-|---|---|
-| Schéma commun v2, topologies multi-GPU/machines et tâches agentiques | Contrat et exemples testés ; export actif encore v1 |
-| Inventaire Apple Silicon : CPU/cœurs, RAM unifiée, GPU/cœurs, SSD et provenance | Collecté ; vérifié sur un M3 Pro |
-| Ergonomie, modèles automatiques, contexte Auto, métadonnées Dense/MoE | Implémenté ; validation sur Mac à poursuivre |
-| Pic allocateur MLX des logs, mémoire compressée/swap, activité disque système | Implémenté sur macOS ; attribution/validation à poursuivre |
-| Vitesse maximale SSD, bande passante mémoire, mesures par GPU | À implémenter |
-| Inventaires et télémétrie Windows/Linux, multi-GPU | À fiabiliser et tester sur les machines concernées |
-| Export runtime v2 (JSON, Markdown, séries et résumés) | Implémenté et validé contre le schéma ; protocole reproductible à approfondir |
-| Exo et collecte par nœud multi-machine | Prévu par le schéma ; intégration non implémentée |
-| Exécution des tests agentiques en espace isolé | Prévue par le schéma ; exécuteur non implémenté |
-| Site communautaire et envoi sécurisé | À concevoir et implémenter |
-
-### Options avancées
-
-| Option | Description | Valeur par défaut |
-|--------|-------------|------------------|
-| Température | Paramètre d'échantillonnage (0 réduit l'aléatoire sans garantir la reproductibilité) | 0.7 |
-| Tokens max | Nombre maximum de tokens à générer | **8192** |
-| Répétitions | Nombre de mesures par type de prompt, hors chauffe | 1 |
-
-## 🔥 Campagnes et statistiques
-
-Chaque nouvelle campagne remplace les résultats visibles ; les campagnes précédentes restent dans
-l'historique. Restaurer une session remplace également l'affichage. L'historique conserve au maximum
-50 campagnes, ou moins si le quota du navigateur impose de retirer les plus anciennes.
-Une sauvegarde impossible conserve la campagne courante et bloque son remplacement tant que
-l'historique n'a pas pu être sauvegardé.
-
-Pour les runners locaux, une **chauffe mesurée** précède les mesures : prompt court fixe, température 0,
-32 tokens maximum. Elle vérifie que la génération fonctionne et conserve séparément durée et ressources.
-Pour Ollama, le chargement est observé via `/api/ps` avant la chauffe puis avant les mesures.
-Un modèle déchargé déclenche une nouvelle chauffe. Aucun déchargement forcé n'est effectué :
-la chauffe initiale n'est pas nécessairement à froid, et son état observé est indiqué.
-Les APIs externes ne reçoivent pas de requête de chauffe supplémentaire.
-
-Les modes Auto et Manuel proposent **1 répétition** par défaut (Manuel : 1 à 20).
-Les chauffes sont exclues des moyennes de l'historique et des statistiques.
-Le protocole d'exécution **0.08** est conservé dans les exports v2 : phase, empreinte SHA-256 du prompt,
-chauffes préalables, chargement, cache, temps de chargement/prefill/génération et débit de génération seule.
-Le cache est décrit comme sans réutilisation déclarée ou présent à couverture inconnue si Ollama fournit le compteur de tokens cachés.
-Il n'est ni vidé ni désactivé : son état peut changer entre répétitions et reste inconnu si non rapporté.
-
-L'onglet **Statistiques** exploite votre historique : graphiques en lignes ou en aires, tendances chronologiques,
-nombre de mesures, moyenne, médiane, écart-type et ratio tok/s par milliard de paramètres totaux.
-Les groupes séparent modèle/digest, matériel, runner, contexte, prompt, température, tokens maximum,
-quantification, Dense/MoE, version du protocole, chargement et cache.
-Une mesure isolée n'a pas d'écart-type ; les erreurs, chauffes et réponses limitées en tokens sont exclues, les données manquantes
-ne deviennent pas zéro. Ce ratio ne normalise pas les paramètres actifs d'un MoE et n'évalue pas la qualité.
-
-Le parseur swap accepte points/virgules décimaux et différentes unités ; les commandes utilisent
-la locale C. Les formats non reconnus restent indisponibles avec un état de diagnostic, jamais zéro.
-Si le swap reste inconnu sur votre Mac, la sortie `sysctl vm.swapusage` permettra d'identifier le format manquant.
-
-## 📊 Comprendre les mesures
-
-- **Tokens et tokens/seconde** : décrivent la génération, pas la qualité de la réponse.
-- **TTFT** : disponible avec le streaming Ollama ; inclut le délai observé avant le premier token.
-- **Temps total** : durée observée de la requête, influencée par le chargement du modèle et les communications.
-- **RAM pic et moyenne** : statistiques des échantillons de RSS cumulée de l'arbre de processus surveillé pendant le test, avec le backend Ollama. La RAM du navigateur est une mesure distincte.
-- **Modèle chargé** : taille fournie par `/api/ps` d'Ollama, affichée séparément en GiB. Elle ne remplace pas une mesure du pic réel de mémoire unifiée MLX ; ne pas additionner `size` et `size_vram` sur Apple Silicon.
-- **Environnement** : les informations du navigateur peuvent être approximatives ; le backend complète la détection matérielle.
-
-Pour comparer des tests, gardez les mêmes prompts et paramètres, et indiquez le matériel ainsi que le runner utilisé.
-
-[Architecture de l'application](TECHNICAL_README.md) · [Détails RAM et GPU](BACKEND_README.md)
-
----
-
-## 📝 Export des résultats
-
-### Format du rapport Markdown
-
-Le rapport généré contient :
-
-1. **En-tête** : date et version de l'outil.
-2. **Environnement** : configuration et inventaire Apple détecté avec provenance, lorsque disponible.
-3. **Résumé** : tokens, débit moyen, TTFT, durée, source mémoire, pic/moyenne en MiB et modèle chargé en GiB.
-4. **JSON communautaire v2** : matériel, modèle, paramètres, protocole, mesures, séries temporelles et résumés avec unités/sources ; sans prompts, réponses ni clés API.
-5. **Détails** : métriques, prompt et réponse de chaque test.
-
-Le débit moyen correspond aux tokens générés divisés par la durée totale du test.
-La RSS cumulée et la taille du modèle déclarée par Ollama restent des mesures distinctes.
-Une valeur inconnue est indiquée par **N/A** ; elle n'est pas remplacée par zéro.
-
-Le rapport Markdown complet contient les prompts et réponses : vérifiez-le avant partage.
-Le bouton **Exporter JSON v2** télécharge le rapport structuré sans prompts ni réponses.
-Le même contenu est inclus dans le Markdown. Chaque rapport utilise `llm-benchmarker.community` **2.0.0**.
-Si les résultats mélangent des runners ou inventaires, le fichier contient un bundle
-`llm-benchmarker.community.bundle` **1.0.0**, dont chaque élément `reports[]` est un rapport v2 autonome.
-Voir [le contrat d'import](schemas/README.md). Les anciennes données restent inconnues lorsqu'elles n'ont pas été collectées.
-L'envoi automatique vers le futur site communautaire n'est pas encore implémenté.
-
----
-
-## 💾 Stockage
-
-### localStorage
-
-Toutes les données sont stockées localement dans le navigateur :
-
-- **Résultats actuels** : Stockés dans la variable `state.results` (session)
-- **Historique** : Stocké dans `localStorage` sous la clé `llm_bench_history` (jusqu'à 50 sessions)
-- **Clés API** : Stockées dans `localStorage` sous la clé `llm_bench_keys`
-- **Configuration RAM** : Backend non stocké (exécuté localement)
-
-### Confidentialité
-
-- **Runner local sur votre machine** : les prompts sont envoyés au serveur local sélectionné. Après installation et téléchargement du modèle, les tests locaux peuvent fonctionner sans internet.
-- **API externe ou serveur distant personnalisé** : les prompts et les informations nécessaires à l'authentification sont envoyés à ce serveur. Leur traitement dépend du fournisseur.
-- **Résultats et historique** : conservés dans le navigateur ; un export crée un fichier sur votre machine.
-- **Clés API** : conservées dans `localStorage`, sans chiffrement applicatif. Utilisez un profil de navigateur de confiance.
-- **Backend RAM** : fournit à l'interface des informations sur les processus et le matériel de la machine qui l'exécute.
-
----
-
-## 📜 Licence
-
-**Apache License 2.0**
-
-Ce projet est distribué sous la licence [Apache License, Version 2.0](LICENSE).
-
-© 2025 [NVNC](https://nvnc.fr)
-
-Voir le fichier [LICENSE](LICENSE) pour le texte complet de la licence.
-
----
-
-### Résumé de la licence Apache 2.0
-
-✅ **Autorisé** :
-- Utilisation commerciale
-- Modification
-- Distribution
-- Utilisation dans des projets fermés
-
-❌ **Interdit** :
-- Utilisation des marques commerciales sans autorisation
-- Retirer les mentions de copyright
-
-⚖️ **Obligations** :
-- Inclure une copie de la licence
-- Conserver les notices de copyright
-- Indiquer les modifications apportées
-
----
-
-## 🤝 Contribuer
-
-Les contributions sont les bienvenues !
-
-### Comment contribuer
-
-1. **Forker** le dépôt
-2. **Créer une branche** (`git checkout -b feature/amazing-feature`)
-3. **Commiter** vos changements (`git commit -m 'feat: add amazing feature'`)
-4. **Pousser** vers la branche (`git push origin feature/amazing-feature`)
-5. **Ouvrir une Pull Request**
-
-### Conventions de code
-
-- **Commits** : Utilisez des messages clairs (`feat:`, `fix:`, `refactor:`, `docs:`)
-- **Architecture** : Respectez la séparation en modules (core, ui, utils, config)
-- **Noms de fichiers** : Utilisez le kebab-case (`my-module.js`)
-- **Commentaires** : Documentez les fonctions et sections complexes
-
-### Suggestions d'améliorations
-
-- [ ] Support de plus de runners locaux (VLLM, Kobold, etc.)
-- [ ] Benchmark comparatif entre plusieurs modèles
-- [ ] Graphiques de visualisation des résultats (Chart.js, etc.)
-- [ ] Export en JSON/CSV
-- [ ] Tests automatisés (Jest, Cypress)
-- [ ] Interface en anglais
-- [ ] Thème sombre/clair
-- [ ] Migration vers ES6 modules
-- [ ] Intégration avec Prometheus/Grafana pour le monitoring
-
-### 📖 Documentation technique
-Pour les améliorations futures et la roadmap détaillée, consultez :
-- **[innovation.md](innovation.md)** - Roadmap des fonctionnalités multi-GPU et cluster
-
----
-
-## ⚠️ Limitations connues
-
-### Version v0.06
-
-- **CORS** : Nécessite un serveur web local pour fonctionner (pas de `file://`)
-- **Streaming** : Seule Ollama supporte le streaming pour la mesure du TTFT
-- **Modèles lourds** : Peut être lent avec des modèles > 30B paramètres
-- **APIs externes** : Nécessite une clé API valide
-- **Browser support** : Testé sur Chrome, Firefox, Safari (Edge partiel)
-- **Monitoring RAM** : Uniquement disponible pour Ollama avec le backend Node.js
-- **Détection GPU** : La détection multi-GPU (NVIDIA/AMD/Intel) nécessite le backend Node.js
-
-### Problèmes connus
-
-| Problème | Solution |
-|----------|----------|
-| Liste des modèles vide | Vérifiez que le runner est lancé et accessible |
-| Erreur CORS | Servez le fichier via un serveur web local |
-| Timeout sur modèles >30B (ex: gemma4:31b) | **Fixé en v0.06** - Timeout augmenté à 3 min pour Ollama |
-| Clé API invalide | Vérifiez votre clé dans les paramètres |
-| RAM affichée comme N/A | **Fixé en v0.06** - Bug corrigé : `peakMemory = 0` bloquait l'affichage |
-| Backend non détecté (faux négatif) | **Fixé en v0.06** - Détection améliorée avec `/api/ping` + timeout augmenté à 5s |
-| Backend non détecté | Vérifiez que le backend tourne sur `localhost:3001` |
-
-### Dépannage du monitoring RAM
-
-**Backend non détecté** :
-```bash
-# Vérifiez que le backend est lancé
-curl http://localhost:3001/
-
-# Vérifiez qu'Ollama est lancé
-ps aux | grep ollama
-# ou
-ollama list
-```
-
-**performance.memory non disponible** :
-- Utilisez Chrome avec le flag `--enable-precision-memory-info`
-- Pour suivre Ollama, lancez le backend Node.js ; le tas JavaScript de Chrome ne mesure pas la RAM du modèle.
-
----
-
-### Répétitions et analyse des résultats
-
-Une campagne démarre avec **1 répétition par catégorie**, après une chauffe séparée. Pour estimer la variabilité et fiabiliser les résultats, choisissez plusieurs répétitions à conditions comparables. Avec une seule mesure, aucun écart-type ne peut être calculé. La limite par défaut en mode manuel est **8 192 tokens** (au lieu de 4 096) ; le mode Auto conserve sa limite de 32 768 tokens. Une limite reste un plafond, pas une longueur de réponse imposée.
-
-Le récapitulatif avant lancement indique le nombre de catégories, répétitions et mesures prévues.
-
-Les limites de génération sont signalées et les résultats concernés exclus des statistiques. Les exports v2 incluent la raison d’arrêt lorsqu’elle est disponible, les niveaux de swap/mémoire compressée avant et après, la version d’Ollama, le cache observé et le temps du premier segment de réponse finale. Le cache reste géré par le runner ; un préfixe réutilisé ne signifie pas que tout le prompt est en cache. Les versions internes de MLX ne sont pas déduites de celle d’Ollama.
-
-Le bouton **Analyser les résultats** ouvre un assistant flottant. Choisissez Ollama local (le modèle testé ou un autre), OpenAI, Mistral ou une API compatible OpenAI, y compris LM Studio. L’URL compatible doit inclure `/v1`. Le modèle peut être saisi ou choisi après récupération de la liste. La clé de ce panneau n’est pas enregistrée dans le navigateur ni exportée. Les accès directs dépendent des autorisations CORS du fournisseur ; aucun proxy de clés n’est ajouté.
-
-L’analyse démarre uniquement sur **Envoyer** ou **Écrire une conclusion**, hors campagne de mesure. Pour une API distante, cochez l’autorisation d’envoi. Le contexte envoyé comprend au plus 100 tests : mesures, réglages et matériel synthétique, plus vos questions et les échanges récents. Il exclut les prompts/réponses des tests, logs et clés du benchmark. Les conclusions sont consultatives et restent séparées des mesures et de l’export communautaire. Utiliser un autre modèle local peut modifier l’état du cache et la pression mémoire pour la campagne suivante.
-
-Vérifications de cette étape : `node backend/reliability-analysis.test.cjs`, `node backend/protocol-statistics.test.cjs`, `node backend/apple-resources.test.cjs`, `node backend/community-export.test.cjs` et `node schemas/test.cjs`.
-
----
-
-### Sélection et graphiques des statistiques
-
-Dans **Statistiques**, choisissez les modèles, catégories et la mesure à comparer. Le graphique global affiche une moyenne ou une médiane par modèle et catégorie, en lignes ou en aires. Chaque modèle se déplie pour afficher la synthèse de toutes ses passes sélectionnées ; les sous-groupes par conditions donnent accès aux valeurs de chaque passe et à sa case d’inclusion. **Tout sélectionner** réinitialise les filtres sans modifier l’historique.
-
-Les graphiques repliables de chaque modèle affichent le débit moyen, le débit de génération et le temps de prefill sur des axes séparés. Un lissage optionnel utilise les 3, 5 ou 10 dernières passes sélectionnées. Les valeurs absentes restent inconnues. Les sélections sont conservées pendant l’utilisation de la page ; elles ne suppriment aucune mesure.
-
-Chaque passe a le même poids dans la moyenne. Une synthèse regroupant des conditions différentes est descriptive : elle ne constitue pas un classement de performance contrôlé. La durée de prefill n’est pas un débit en tokens/s. Les valeurs numériques des graphiques sont accessibles dans leurs tableaux repliables.
-
-
-## 📞 Support
-
-Pour toute question ou problème :
-
-1. Vérifiez la section [Limitations connues](#️-limitations-connues)
-2. Consultez les logs du navigateur (F12 → Console)
-3. Assurez-vous que votre runner local est bien lancé
-4. Pour le monitoring RAM, vérifiez que le backend est en cours d'exécution
-
----
-
-## 🏆 Remerciements
-
-- [Ollama](https://ollama.com) - Pour les modèles locaux
-- [LM Studio](https://lmstudio.ai) - Pour l'interface utilisateur
-- [llama.cpp](https://github.com/ggerganov/llama.cpp) - Pour l'inference efficace
-- [OpenAI](https://openai.com) - Pour les APIs de référence
-- [Mistral AI](https://mistral.ai) - Pour les modèles ouverts
-- [Anthropic](https://anthropic.com) - Pour Claude
-- [Google](https://ai.google.com) - Pour **Gemini** ✨
-
----
-
-## Précautions d'utilisation
-
-En téléchargeant ou en utilisant LLM Benchmarker, vous reconnaissez avoir pris connaissance
-des informations du projet et de sa [charte d'utilisation](CHARTE_UTILISATION.md).
-
-Les tests et leur historique sont consultables dans le navigateur ; les données conservées
-localement et les exports peuvent être accessibles en clair. Veillez à ne pas y inclure
-d'informations sensibles et à vérifier vos rapports avant de les partager. Si vous choisissez
-une API externe, les données nécessaires au test sont transmises au fournisseur sélectionné.
-
-Le logiciel est proposé gratuitement sous [licence Apache 2.0](LICENSE), avec les conditions
-de garantie et de responsabilité qu'elle prévoit.
-
----
-
-<div align="center">
-  <p>
-    <strong>LLM Benchmarker v0.06</strong> - Développé avec ❤️ par [NVNC](https://nvnc.fr) pour la communauté LLM
-  </p>
-</div>
+Le logiciel est proposé gratuitement sous [licence Apache 2.0](LICENSE), avec les conditions de garantie et de responsabilité qu’elle prévoit.

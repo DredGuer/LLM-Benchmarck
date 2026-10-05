@@ -8,12 +8,14 @@ Le temps des requêtes de finalisation n'est pas ajouté à la durée du benchma
 
 | Donnée | Source | Limite |
 |---|---|---|
-| Swap utilisé, pic échantillonné | sysctl -n vm.swapusage | Système entier |
-| Mémoire compressée | vm_stat, pages occupées par le compresseur × taille de page | Système entier |
+| Swap utilisé avant/après et pic échantillonné | sysctl -n vm.swapusage | Système entier |
+| Mémoire compressée avant/après et pic | vm_stat, pages occupées par le compresseur × taille de page | Système entier |
 | Swap lu/écrit | Différence Swapins/Swapouts × taille de page | Équivalent pages, pas taille compressée réelle des E/S |
 | Lectures/écritures disques | ioreg IOBlockStorageDriver, Statistics Bytes (Read)/(Write) | Système entier, uniquement pilotes exposant ces compteurs |
-| Pic allocateur MLX | Nouveaux événements memory peak du server.log Ollama | Valeur arrondie du log, pas toute la RAM du modèle |
+| Pic et allocation conservée MLX | Nouveaux événements memory peak/held du server.log Ollama | Valeurs arrondies du log ; attribution au modèle non vérifiée |
 | Contexte runner | Ollama /api/ps context_length, modèle exact | Contexte du runner chargé, distinct du maximum /api/show |
+
+Le swap est une jauge : il peut diminuer entre le début et la fin. `swapStart`/`swapEnd` et `compressedStart`/`compressedEnd` conservent leurs dates ; le pic est le maximum échantillonné. Une différence de niveaux ne doit pas être confondue avec les volumes échangés. Les unités converties depuis les logs et sorties arrondies ne créent pas une précision réelle à l’octet.
 
 Les compteurs disque sont des deltas depuis le début de la session. Les changements de périphériques,
 compteurs réinitialisés et données manquantes rendent le delta inconnu. Aucun fichier utilisateur n'est
@@ -48,8 +50,13 @@ et sortie bornée à 4 MiB. Aucune installation, commande sudo ou compilation na
 node backend/apple-resources.test.cjs
 node backend/monitor-integration.test.cjs
 node backend/community-export.test.cjs
+node backend/reliability-analysis.test.cjs
 ```
 
 Tests simulés : unités, pages 4/16 KiB, zéro/inconnu, compteurs, curseur de log, dates,
 lignes partielles, rotation, expiration, confidentialité, contexte Auto et nettoyage sur erreur.
-La collecte réelle doit encore être vérifiée sur les différentes versions macOS/Ollama.
+Les exports réels ont permis de vérifier la collecte sur un M3 Pro. Les autres versions macOS/Ollama et matériels restent à valider.
+
+La chauffe est une session distincte. Les analyses IA ont lieu après le benchmark et ne sont pas incluses dans ces mesures. Pour interpréter une accumulation, comparer les allocations déclarées avant/après, les événements MLX disponibles et le swap système, sans conclure automatiquement à une fuite mémoire.
+
+[Backend et lancement](../BACKEND_README.md) · [Architecture](../TECHNICAL_README.md) · [Contrat v2](../schemas/README.md)

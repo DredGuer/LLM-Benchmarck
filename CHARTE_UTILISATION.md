@@ -1,6 +1,6 @@
 # Charte d'utilisation, données et limites de garantie
 
-Version 1.0 — 5 octobre 2026
+Version 1.1 — 5 octobre 2026
 
 ## Objet et licence
 
@@ -33,12 +33,14 @@ L'utilisateur choisit les données qu'il saisit et les serveurs auxquels il se c
   distante ou un runner configuré autrement peut entraîner un transfert hors de la machine.
 - Avec une API externe, les prompts et les informations d'authentification nécessaires
   sont envoyés au fournisseur. Son traitement des données relève de ses propres conditions.
-- Les clés API et l'historique sont stockés dans le navigateur. Le stockage local ne
+- Les clés API sauvegardées pour les benchmarks et l'historique sont stockés dans le navigateur. Le stockage local ne
   constitue pas une garantie de chiffrement, de confidentialité ou de sauvegarde.
 - Le backend peut exposer des informations sur la machine et les processus. Les logs
   peuvent contenir des informations techniques identifiantes.
 - Les exports Markdown contiennent les prompts et réponses. Le bloc JSON communautaire
   est plus restreint, mais il faut vérifier le fichier entier avant de le partager.
+
+L’assistant d’analyse est un service distinct du benchmark : il est lancé à la demande avec un modèle local ou une API choisie par l’utilisateur. Il transmet des mesures/réglages et caractéristiques matérielles synthétiques, la question et les échanges récents, sans les prompts, réponses et logs des tests. Pour une API distante, une autorisation d’envoi est demandée dans le panneau. La clé propre à ce panneau reste dans la page et n’est pas sauvegardée ni exportée. Les conclusions de l’IA peuvent contenir des erreurs et doivent être vérifiées ; elles ne constituent pas une certification des résultats.
 
 Une fois partagé, un rapport peut être copié, réutilisé ou rendu public par son destinataire.
 Le projet ne garantit pas la maîtrise des copies diffusées par l'utilisateur.

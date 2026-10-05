@@ -1,4 +1,4 @@
-# Schéma commun v2 — contrat pour les prochaines étapes
+# Export communautaire v2 — contrat et collecte actuelle
 
 Statut : **export v2 actif pour les tests de génération**, dans le Markdown et via le bouton JSON v2.
 L'inventaire Apple, les métadonnées modèle, le contexte Auto observé, les métriques et la télémétrie disponible
@@ -119,16 +119,11 @@ la cohérence des valeurs, les limites de taille et les budgets pendant l'exécu
 
 Exemples : Apple génération, Apple agentique, cluster Exo Apple et Linux multi-GPU.
 
-## Intégration progressive
+## État de l’intégration
 
-1. Contrat, exemples, validation — cette livraison.
-2. Inventaire Apple Silicon : CPU exact, RAM unifiée, GPU, provenance.
-3. Export v2 et migration explicite de l'historique.
-4. Suivi de ressources et contexte d'exécution.
-5. Harness agentique minimal avec outils fichiers isolés.
-6. Adaptateur Exo et collecte par nœud, puis autres plateformes.
+Le contrat, l’inventaire Apple, l’export v2, le contexte Auto et la télémétrie disponible sont intégrés. Le protocole de génération courant est **0.08** ; les anciennes sessions ne sont pas réécrites et gardent leurs inconnues. La migration persistante d’historique n’est pas une fonctionnalité livrée.
 
-Chaque étape doit passer ses propres tests avant la suivante.
+Les tâches agentiques, placements multi-GPU réellement observés et adaptateur Exo restent prévus. Les exemples sont synthétiques. Voir [la roadmap](../innovation.md).
 
 ## Export runtime et télémétrie
 
@@ -139,7 +134,7 @@ Chaque étape doit passer ses propres tests avant la suivante.
   sans les faire passer pour des pics.
 - `resourceSamples` contient les lectures RSS et les séries système disponibles ; unités en octets et temps relatif en ms.
 - La métrique `mlx-allocator-peak-server-unattributed` conserve la portée serveur et l'attribution non vérifiée dans `method`.
-- Les GPU/placements réels, versions runner, paramètres actifs, thinking/answer séparés et mesures absentes restent inconnus.
+- La version d’Ollama est collectée via `/api/version` lorsqu’elle est accessible ; les versions des moteurs/backends internes et autres runners restent inconnues sans collecte. Les placements réels, paramètres actifs et tokens thinking/answer séparés restent inconnus.
 - L'inventaire local est celui du client pour une API distante ; le nœud d'inférence reste `inference-unknown`.
 - Les historiques anciens sont exportables sans inventer les informations qui n'ont pas été collectées.
 - Les données brutes de prompts/réponses, clés API, numéros de série, logs et messages d'erreur sont exclus du JSON.
@@ -149,3 +144,24 @@ Chaque étape doit passer ses propres tests avant la suivante.
 node backend/community-export.test.cjs
 node schemas/test.cjs
 ```
+
+## Champs du protocole 0.08
+
+- `protocol.phase` distingue `warmup`, `measurement` et les anciens cas inconnus ; la chauffe est séparée des statistiques.
+- `loadState` décrit le chargement observé. `cacheState: present-coverage-unknown` signifie que des tokens réutilisés ont été rapportés, sans connaître la couverture intégrale. `cachePolicy` indique le cache géré par le runner, sans remise à zéro forcée.
+- `metrics.inputTokens`, `cachedInputTokens`, `loadTime`, `prefillTime`, `generationTime` et `generationThroughput` portent les déclarations disponibles et leurs unités. `firstAnswerTime` est distinct du TTFT.
+- `parameters.thinking.observed` décrit un champ de réflexion observé, sans inventer de compte de tokens séparé ; `enabled` reste inconnu lorsqu’il n’a pas été explicitement configuré.
+- `completion` décrit la raison et l’état de fin ; une limite explicite ou suspectée produit `status: partial`.
+- `resourceSummaries.start`/`end` conservent les niveaux avant/après, notamment swap/compression et allocation déclarée. `mlx-allocator-held-server-unattributed` décrit l’allocation conservée rapportée par le dernier événement serveur disponible.
+
+Ces champs sont optionnels afin de conserver la validité des anciens rapports v2. Le schéma reste 2.0.0 ; la version de protocole n’est pas sa version.
+
+## Fichiers et futur import
+
+Le JSON téléchargé inclut un nom de modèle assaini et une date. Plusieurs modèles ajoutent un suffixe de dénombrement ; le contenu indique les identifiants exacts. Le nom du fichier n’est pas une preuve d’identité.
+
+Un ensemble hétérogène de runner/version/inventaire forme un bundle. Les `reportId` sont créés à l’export et peuvent différer entre deux téléchargements de la même campagne ; les ID de tests conservés sont les premiers candidats à une déduplication, complétée par des vérifications de cohérence. L’importeur communautaire et l’envoi automatique ne sont pas implémentés.
+
+L’assistant IA utilise un contexte synthétique distinct et ne stocke pas sa conclusion dans les mesures communautaires. Les sélections statistiques filtrent l’affichage sans modifier les tests exportés.
+
+[Architecture](../TECHNICAL_README.md) · [Contribution et maintien de la documentation](../CONTRIBUTING.md)
