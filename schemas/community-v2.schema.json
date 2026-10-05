@@ -1,0 +1,1689 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/DredGuer/LLM-Benchmarck/main/schemas/community-v2.schema.json",
+  "title": "LLM Benchmarker community report v2 (contract; collectors staged)",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "llm-benchmarker.community"
+    },
+    "schemaVersion": {
+      "const": "2.0.0"
+    },
+    "reportId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ]
+    },
+    "synthetic": {
+      "type": "boolean"
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "profile": {
+          "const": "community-redacted"
+        },
+        "rawPromptsIncluded": {
+          "const": false
+        },
+        "rawResponsesIncluded": {
+          "const": false
+        },
+        "rawToolArgumentsIncluded": {
+          "const": false
+        }
+      },
+      "required": [
+        "profile",
+        "rawPromptsIncluded",
+        "rawResponsesIncluded",
+        "rawToolArgumentsIncluded"
+      ]
+    },
+    "machines": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/machine"
+      },
+      "minItems": 1
+    },
+    "execution": {
+      "$ref": "#/$defs/execution"
+    },
+    "tests": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/test"
+      },
+      "minItems": 1
+    }
+  },
+  "required": [
+    "schema",
+    "schemaVersion",
+    "reportId",
+    "generatedAt",
+    "producer",
+    "synthetic",
+    "privacy",
+    "machines",
+    "execution",
+    "tests"
+  ],
+  "$defs": {
+    "measurement": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "unit": {
+          "enum": [
+            "bytes",
+            "ms",
+            "tokens",
+            "tokens/s",
+            "percent",
+            "watts",
+            "celsius",
+            "hertz",
+            "bytes/s",
+            "count",
+            "joules"
+          ]
+        },
+        "status": {
+          "enum": [
+            "available",
+            "unsupported",
+            "unavailable",
+            "permission-denied",
+            "error"
+          ]
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "enum": [
+            "measured",
+            "declared",
+            "estimated"
+          ]
+        },
+        "observedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "scope": {
+          "enum": [
+            "machine",
+            "cpu",
+            "gpu",
+            "process-tree",
+            "model",
+            "storage",
+            "link",
+            "test"
+          ]
+        },
+        "nodeId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "deviceId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "method": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "value",
+        "unit",
+        "status",
+        "source",
+        "kind",
+        "observedAt",
+        "scope"
+      ],
+      "oneOf": [
+        {
+          "properties": {
+            "status": {
+              "const": "available"
+            },
+            "value": {
+              "type": "number"
+            }
+          }
+        },
+        {
+          "properties": {
+            "status": {
+              "enum": [
+                "unsupported",
+                "unavailable",
+                "permission-denied",
+                "error"
+              ]
+            },
+            "value": {
+              "type": "null"
+            }
+          }
+        }
+      ]
+    },
+    "cpu": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "vendor": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "model": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "socketCount": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "physicalCores": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "logicalCores": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "performanceCores": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "efficiencyCores": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "numaNodes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "instructionSets": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "frequency": {
+          "$ref": "#/$defs/measurement"
+        }
+      },
+      "required": [
+        "id",
+        "model"
+      ]
+    },
+    "memory": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "architecture": {
+          "enum": [
+            "unified",
+            "separate",
+            "unknown"
+          ]
+        },
+        "physicalCapacity": {
+          "$ref": "#/$defs/measurement"
+        },
+        "availableBeforeTest": {
+          "$ref": "#/$defs/measurement"
+        },
+        "bandwidth": {
+          "$ref": "#/$defs/measurement"
+        },
+        "swapCapacity": {
+          "$ref": "#/$defs/measurement"
+        }
+      },
+      "required": [
+        "architecture",
+        "physicalCapacity"
+      ]
+    },
+    "gpu": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "vendor": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "model": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "pciBusId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "kind": {
+          "enum": [
+            "integrated",
+            "dedicated",
+            "unified",
+            "virtual",
+            "unknown"
+          ]
+        },
+        "memoryArchitecture": {
+          "enum": [
+            "dedicated",
+            "shared",
+            "unified",
+            "unknown"
+          ]
+        },
+        "capacity": {
+          "$ref": "#/$defs/measurement"
+        },
+        "sharedMemoryPoolId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "driverVersion": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "computeBackend": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "computeUnits": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        }
+      },
+      "required": [
+        "id",
+        "model",
+        "kind",
+        "memoryArchitecture",
+        "capacity"
+      ]
+    },
+    "storage": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "model": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "kind": {
+          "enum": [
+            "ssd",
+            "hdd",
+            "network",
+            "other",
+            "unknown"
+          ]
+        },
+        "transport": {
+          "enum": [
+            "nvme",
+            "sata",
+            "usb",
+            "thunderbolt",
+            "network",
+            "other",
+            "unknown"
+          ]
+        },
+        "filesystem": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "capacity": {
+          "$ref": "#/$defs/measurement"
+        },
+        "freeSpace": {
+          "$ref": "#/$defs/measurement"
+        },
+        "roles": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "model-files",
+              "offload",
+              "swap",
+              "artifacts",
+              "other"
+            ]
+          }
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "transport",
+        "roles"
+      ]
+    },
+    "machine": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "os": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "version": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "kernel": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "architecture": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "name",
+            "architecture"
+          ]
+        },
+        "platform": {
+          "enum": [
+            "apple-silicon",
+            "apple-intel",
+            "pc",
+            "other",
+            "unknown"
+          ]
+        },
+        "virtualization": {
+          "enum": [
+            "native",
+            "vm",
+            "container",
+            "unknown"
+          ]
+        },
+        "inventorySource": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cpus": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/cpu"
+          }
+        },
+        "memory": {
+          "$ref": "#/$defs/memory"
+        },
+        "gpus": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/gpu"
+          }
+        },
+        "storage": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/storage"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "os",
+        "platform",
+        "inventorySource",
+        "cpus",
+        "memory",
+        "gpus",
+        "storage"
+      ]
+    },
+    "link": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "fromNodeId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "toNodeId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "transport": {
+          "enum": [
+            "ethernet",
+            "wifi",
+            "thunderbolt",
+            "pcie",
+            "nvlink",
+            "infiniband",
+            "other",
+            "unknown"
+          ]
+        },
+        "rdma": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "bandwidth": {
+          "$ref": "#/$defs/measurement"
+        },
+        "latency": {
+          "$ref": "#/$defs/measurement"
+        },
+        "fromDeviceId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "toDeviceId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "fromNodeId",
+        "toNodeId",
+        "transport"
+      ]
+    },
+    "runner": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "engine": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "engineVersion": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "backend": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "backendVersion": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "commit": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "apiProtocol": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ]
+    },
+    "model": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "digest": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "digestAlgorithm": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "format": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "parameterCount": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "activeParameterCount": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "quantization": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "quantizationBits": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "adapters": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "draftModelId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "digest",
+        "quantization"
+      ]
+    },
+    "placement": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "nodeId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "gpuIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "cpuIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "layerStart": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "layerEnd": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "tensorShard": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "declaredModelSize": {
+          "$ref": "#/$defs/measurement"
+        },
+        "declaredDeviceSize": {
+          "$ref": "#/$defs/measurement"
+        },
+        "storageIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "offloadMode": {
+          "enum": [
+            "none",
+            "cpu",
+            "disk",
+            "hybrid",
+            "unknown"
+          ]
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "nodeId",
+        "gpuIds",
+        "cpuIds",
+        "source"
+      ]
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "enum": [
+            "single-machine",
+            "distributed-inference",
+            "independent-machines"
+          ]
+        },
+        "runner": {
+          "$ref": "#/$defs/runner"
+        },
+        "parallelism": {
+          "enum": [
+            "none",
+            "tensor",
+            "pipeline",
+            "hybrid",
+            "other",
+            "unknown"
+          ]
+        },
+        "requestedPlacements": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/placement"
+          }
+        },
+        "observedPlacements": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/placement"
+          }
+        },
+        "topologySource": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/link"
+          }
+        }
+      },
+      "required": [
+        "mode",
+        "runner",
+        "parallelism",
+        "requestedPlacements",
+        "observedPlacements",
+        "links"
+      ]
+    },
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "temperature": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "seed": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "maxOutputTokens": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "contextTokens": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "topP": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 1
+        },
+        "topK": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "minP": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 1
+        },
+        "threads": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "batchSize": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "concurrency": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "kvCacheType": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "promptCache": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "thinking": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "budgetTokens": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            }
+          },
+          "required": [
+            "enabled"
+          ]
+        },
+        "speculativeDecoding": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "draftModelId": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "enabled"
+          ]
+        }
+      },
+      "required": [
+        "temperature",
+        "maxOutputTokens",
+        "contextTokens"
+      ]
+    },
+    "protocol": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "promptDigest": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "warmupRuns": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "loadState": {
+          "enum": [
+            "cold",
+            "warm",
+            "unknown"
+          ]
+        },
+        "cacheState": {
+          "enum": [
+            "cold",
+            "warm",
+            "disabled",
+            "unknown"
+          ]
+        },
+        "repetition": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "id",
+        "version",
+        "promptDigest",
+        "warmupRuns",
+        "loadState",
+        "cacheState",
+        "repetition"
+      ]
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "inputTokens": {
+          "$ref": "#/$defs/measurement"
+        },
+        "totalOutputTokens": {
+          "$ref": "#/$defs/measurement"
+        },
+        "thinkingTokens": {
+          "$ref": "#/$defs/measurement"
+        },
+        "answerTokens": {
+          "$ref": "#/$defs/measurement"
+        },
+        "ttft": {
+          "$ref": "#/$defs/measurement"
+        },
+        "totalTime": {
+          "$ref": "#/$defs/measurement"
+        },
+        "loadTime": {
+          "$ref": "#/$defs/measurement"
+        },
+        "prefillTime": {
+          "$ref": "#/$defs/measurement"
+        },
+        "generationTime": {
+          "$ref": "#/$defs/measurement"
+        },
+        "averageThroughput": {
+          "$ref": "#/$defs/measurement"
+        },
+        "generationThroughput": {
+          "$ref": "#/$defs/measurement"
+        },
+        "energy": {
+          "$ref": "#/$defs/measurement"
+        }
+      },
+      "required": [
+        "totalTime"
+      ]
+    },
+    "resourceSample": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "elapsedMs": {
+          "type": "number",
+          "minimum": 0
+        },
+        "nodeId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "deviceId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "metric": {
+          "enum": [
+            "rss",
+            "physical-footprint",
+            "browser-js-heap",
+            "model-declared-size",
+            "gpu-used-memory",
+            "cpu-utilization",
+            "gpu-utilization",
+            "system-used-memory",
+            "compressed-memory",
+            "swap-used",
+            "swap-read-bytes",
+            "swap-write-bytes",
+            "disk-read-bytes",
+            "disk-write-bytes",
+            "network-read-bytes",
+            "network-write-bytes",
+            "temperature",
+            "power"
+          ]
+        },
+        "reading": {
+          "$ref": "#/$defs/measurement"
+        }
+      },
+      "required": [
+        "elapsedMs",
+        "nodeId",
+        "metric",
+        "reading"
+      ]
+    },
+    "resourceSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "nodeId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "deviceId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "metric": {
+          "type": "string",
+          "minLength": 1
+        },
+        "peak": {
+          "$ref": "#/$defs/measurement"
+        },
+        "average": {
+          "$ref": "#/$defs/measurement"
+        },
+        "sampleCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "intervalMs": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "aggregation": {
+          "enum": [
+            "single-source",
+            "sum-per-process-rss",
+            "per-device",
+            "per-node",
+            "none"
+          ]
+        }
+      },
+      "required": [
+        "nodeId",
+        "metric",
+        "sampleCount",
+        "aggregation"
+      ]
+    },
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "inputSchemaDigest": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "read-file",
+              "write-file",
+              "create-directory",
+              "move-file",
+              "network",
+              "shell",
+              "other"
+            ]
+          }
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "version",
+        "capabilities"
+      ]
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "relativePath": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\\\]+$"
+        },
+        "kind": {
+          "enum": [
+            "file",
+            "directory"
+          ]
+        },
+        "mediaType": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sizeBytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "digest": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "relativePath",
+        "kind"
+      ]
+    },
+    "step": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "action": {
+          "enum": [
+            "answer",
+            "tool-call",
+            "create-directory",
+            "write-file",
+            "move-file",
+            "verify",
+            "other"
+          ]
+        },
+        "dependsOn": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "toolId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "status": {
+          "enum": [
+            "success",
+            "failure",
+            "skipped",
+            "timeout",
+            "cancelled",
+            "unknown"
+          ]
+        },
+        "duration": {
+          "$ref": "#/$defs/measurement"
+        },
+        "toolCallCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "retryCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "artifactIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "passed": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "evaluator": {
+                "type": "string",
+                "minLength": 1
+              },
+              "evaluatorVersion": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "id",
+              "passed",
+              "evaluator",
+              "evaluatorVersion"
+            ]
+          }
+        }
+      },
+      "required": [
+        "id",
+        "order",
+        "action",
+        "dependsOn",
+        "status",
+        "toolCallCount",
+        "retryCount",
+        "artifactIds",
+        "checks"
+      ]
+    },
+    "agentic": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "orchestrator": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "version": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "agentCount": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "name",
+            "version",
+            "agentCount"
+          ]
+        },
+        "workspacePolicy": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "scope": {
+              "const": "isolated-test-directory"
+            },
+            "networkAllowed": {
+              "type": "boolean"
+            },
+            "shellAllowed": {
+              "type": "boolean"
+            },
+            "outsideWorkspaceAllowed": {
+              "const": false
+            }
+          },
+          "required": [
+            "scope",
+            "networkAllowed",
+            "shellAllowed",
+            "outsideWorkspaceAllowed"
+          ]
+        },
+        "tools": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/tool"
+          }
+        },
+        "budget": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "maxSteps": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "maxToolCalls": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "timeoutMs": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "maxSteps",
+            "maxToolCalls",
+            "timeoutMs"
+          ]
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/step"
+          }
+        },
+        "artifacts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/artifact"
+          }
+        },
+        "evaluation": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "taskSuccess": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "evaluator": {
+              "type": "string",
+              "minLength": 1
+            },
+            "evaluatorVersion": {
+              "type": "string",
+              "minLength": 1
+            },
+            "successRate": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 1
+            },
+            "toolCallCount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "retryCount": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "taskSuccess",
+            "evaluator",
+            "evaluatorVersion",
+            "toolCallCount",
+            "retryCount"
+          ]
+        }
+      },
+      "required": [
+        "orchestrator",
+        "workspacePolicy",
+        "tools",
+        "budget",
+        "steps",
+        "artifacts",
+        "evaluation"
+      ]
+    },
+    "test": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "enum": [
+            "generation",
+            "agentic"
+          ]
+        },
+        "status": {
+          "enum": [
+            "success",
+            "failure",
+            "timeout",
+            "cancelled",
+            "partial"
+          ]
+        },
+        "startedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "finishedAt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "model": {
+          "$ref": "#/$defs/model"
+        },
+        "parameters": {
+          "$ref": "#/$defs/parameters"
+        },
+        "protocol": {
+          "$ref": "#/$defs/protocol"
+        },
+        "participatingNodeIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "metrics": {
+          "$ref": "#/$defs/metrics"
+        },
+        "resourceSamples": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/resourceSample"
+          }
+        },
+        "resourceSummaries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/resourceSummary"
+          }
+        },
+        "agentic": {
+          "$ref": "#/$defs/agentic"
+        },
+        "failureCode": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "status",
+        "startedAt",
+        "model",
+        "parameters",
+        "protocol",
+        "participatingNodeIds",
+        "metrics",
+        "resourceSamples",
+        "resourceSummaries"
+      ],
+      "oneOf": [
+        {
+          "properties": {
+            "kind": {
+              "const": "agentic"
+            }
+          },
+          "required": [
+            "agentic"
+          ]
+        },
+        {
+          "properties": {
+            "kind": {
+              "const": "generation"
+            }
+          },
+          "not": {
+            "required": [
+              "agentic"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}
