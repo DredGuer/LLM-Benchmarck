@@ -65,7 +65,11 @@ ollamaMemoryMonitor = {
   /**
    * Start monitoring memory usage
    */
-  start: function() {
+  start: function(model) {
+    this.model = model;
+    this.loadedModel = null;
+    this.source = this.backendAvailable ? 'process-tree-rss' : 'browser-js-heap';
+    this.generation = (this.generation || 0) + 1;
     addDebugLog('[MEMORY] Starting memory monitoring. backendAvailable=' + this.backendAvailable, 'info');
     this.peakMemory = 0;
     this.currentMemory = 0;
@@ -118,6 +122,8 @@ ollamaMemoryMonitor = {
    */
   _fetchBackendMemory: function() {
     var self = this;
+    var generation = this.generation;
+    this._fetchLoadedModel(generation);
     
     addDebugLog('[MEMORY] Fetching from backend: ' + this._getBackendUrl('/api/memory'), 'info');
     
@@ -138,6 +144,7 @@ ollamaMemoryMonitor = {
         throw err;
       })
       .then(function(data) {
+        if (!self.isActive || generation !== self.generation) return;
         addDebugLog('[MEMORY] Backend data received: ' + JSON.stringify(data).substring(0, 200), 'info');
         
         // UNIQUEMENT la mémoire du PROCESSUS Ollama (pas la RAM système)
@@ -168,6 +175,29 @@ ollamaMemoryMonitor = {
   /**
    * Monitor using browser performance.memory API
    */
+  _fetchLoadedModel: async function(generation) {
+    var controller = new AbortController();
+    var timeout = setTimeout(function() { controller.abort(); }, 2500);
+    try {
+      var response = await fetch(this._getBackendUrl('/api/ollama/models'), { signal: controller.signal });
+      if (!response.ok) return;
+      var data = await response.json();
+      if (!this.isActive || generation !== this.generation || !Array.isArray(data.models)) return;
+      var model = data.models.find(function(item) {
+        return item.name === this.model || item.model === this.model;
+      }, this);
+      if (model && Number.isFinite(model.size) && model.size >= 0) {
+        this.loadedModel = {
+          model: model.name, sizeBytes: model.size,
+          sizeVramBytes: Number.isFinite(model.size_vram) ? model.size_vram : null,
+          source: 'ollama-api-ps', unit: 'bytes', observedAt: Date.now()
+        };
+      }
+    } catch (err) {
+      // Unavailable is unknown, never substitute RSS or another loaded model.
+    } finally { clearTimeout(timeout); }
+  },
+
   _startBrowserMonitoring: function() {
     var self = this;
     this.monitoringInterval = setInterval(function() {
@@ -200,7 +230,9 @@ ollamaMemoryMonitor = {
       averageMemory: this._calculateAverage(),
       currentMemory: this.currentMemory > 0 ? this.currentMemory : null,
       readings: this.memoryReadings,
-      backendAvailable: this.backendAvailable
+      backendAvailable: this.backendAvailable,
+      source: this.source,
+      loadedModel: this.loadedModel
     };
     
     addDebugLog('[MEMORY] Final stats: peak=' + result.peakMemory + ' MB, avg=' + result.averageMemory + ' MB', 'info');
