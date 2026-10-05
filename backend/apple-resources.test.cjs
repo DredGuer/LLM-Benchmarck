@@ -3,6 +3,10 @@ const { parseSwapUsage, parseVM, parseDisks, parseMLXEvents, collectAppleResourc
 const GiB = 1024 ** 3;
 assert.equal(parseSwapUsage('total = 8192.00M used = 1536.50M free = 6655.50M'), 1536.5 * 1024 ** 2);
 assert.equal(parseSwapUsage('unavailable'), null);
+assert.equal(parseSwapUsage('total = 8G used = 1,5 GiB free = 6,5G'), 1.5 * GiB);
+assert.equal(parseSwapUsage('used = 0.00M'), 0);
+assert.equal(parseSwapUsage('used = 1024 B'), 1024);
+assert.equal(parseSwapUsage('used = nonsense'), null);
 const vm = parseVM('Mach Virtual Memory Statistics: (page size of 16384 bytes)\nPages occupied by compressor: 12.\nSwapins: 3.\nSwapouts: 5.');
 assert.deepEqual(vm, { compressedBytes: 196608, swapReadBytes: 49152, swapWriteBytes: 81920 });
 assert.equal(parseVM('unavailable').swapReadBytes, null);
