@@ -6,16 +6,19 @@ const { randomUUID, createHash } = require('node:crypto');
 
 function run(file, args, input) {
   return new Promise((resolve, reject) => {
-    const child = execFile(file, args, { encoding: 'utf8', timeout: 2500, maxBuffer: 4 * 1024 * 1024 },
+    const child = execFile(file, args, { encoding: 'utf8', env: { ...process.env, LC_ALL: 'C', LANG: 'C' }, timeout: 2500, maxBuffer: 4 * 1024 * 1024 },
       (error, stdout) => error ? reject(error) : resolve(stdout));
     if (input !== undefined) { child.stdin.on('error', () => {}); child.stdin.end(input); }
   });
 }
 function nonnegative(value) { return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null; }
 function parseSwapUsage(text) {
-  const match = text.match(/\bused\s*=\s*([\d.]+)([KMGT])\b/i);
-  return match ? nonnegative(Number(match[1]) * 1024 ** ('KMGT'.indexOf(match[2].toUpperCase()) + 1)) : null;
+  const match = text.match(/\bused\s*=\s*(\d+(?:[.,]\d+)?)\s*([KMGT](?:i?B)?|B)(?=\s|$|[,;)])/i);
+  if (!match) return null;
+  const exponent = match[2].toUpperCase() === 'B' ? 0 : 'KMGT'.indexOf(match[2][0].toUpperCase()) + 1;
+  return nonnegative(Number(match[1].replace(',', '.')) * 1024 ** exponent);
 }
+
 function parseVM(text) {
   const size = text.match(/page size of (\d+) bytes/);
   const pageSize = size ? Number(size[1]) : null;
@@ -54,7 +57,8 @@ async function collectAppleResources(execute = run) {
       .then(xml => execute('/usr/bin/plutil', ['-convert', 'json', '-o', '-', '-'], xml))
       .then(JSON.parse).catch(() => [])
   ]);
-  return { observedAt: new Date().toISOString(), swapUsedBytes: parseSwapUsage(swap), ...parseVM(vm), ...parseDisks(disk) };
+  return { observedAt: new Date().toISOString(), swapUsedBytes: parseSwapUsage(swap),
+    swapStatus: parseSwapUsage(swap) !== null ? 'available' : swap ? 'unrecognized-format' : 'command-unavailable', ...parseVM(vm), ...parseDisks(disk) };
 }
 function parseMLXEvents(text, since) {
   const units = { B: 1, KiB: 1024, MiB: 1024 ** 2, GiB: 1024 ** 3, TiB: 1024 ** 4, KB: 1000, MB: 1e6, GB: 1e9 };
@@ -126,6 +130,7 @@ function createTelemetry({ collect = collectAppleResources, state = logState, ch
       const mlx = s.events.length && !s.logIssue ? Math.max(...s.events.map(e => e.value)) : null;
       return {
         sample: Object.fromEntries(Object.entries(current).filter(([key]) => key !== 'deviceSet')), sampleCount: s.samples.length, startedAt: new Date(s.startedAt).toISOString(),
+        swapStatus: current.swapStatus || 'unknown',
         scopeNote: 'Swap and disk I/O are system-wide, not attributed to the model. Disk I/O is observed activity, not SSD maximum speed.',
         swapPeak: reading(peak('swapUsedBytes'), 'sysctl:vm.swapusage'),
         compressedPeak: reading(peak('compressedBytes'), 'vm_stat:compressor-pages'),
