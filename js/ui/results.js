@@ -8,10 +8,10 @@ function buildCommunityExport(results, generatedAt) {
       var m = r.metrics || {}, memory = r.memory || {}, loaded = memory.loadedModel || {}, env = r.env || {};
       return {
         id: r.id || null, timestamp: r.timestamp || null,
-        model: r.model || null, runner: r.runner || null,
+        model: r.model || null, modelMetadata: r.modelMetadata || null, runner: r.runner || null,
         promptType: r.promptType || null, repetition: number(r.rep),
         status: r.error ? 'error' : 'ok',
-        parameters: { temperature: number(m.temperature), maxTokens: number(m.maxTokens) },
+        parameters: { temperature: number(m.temperature), maxTokens: number(m.maxTokens), contextRequestedTokens: number(m.contextRequestedTokens) },
         metrics: {
           generatedTokens: number(m.totalTokens),
           averageTokensPerSecond: number(m.tokensPerSec),
@@ -82,7 +82,12 @@ function renderResultCard(result) {
   }
   html += '<small style="color:var(--text3);font-size:0.75rem;margin-left:auto;">' + new Date(result.timestamp).toLocaleTimeString('fr-FR') + '</small>';
   html += '</div>';
-  
+  if (result.modelMetadata || m.contextRequestedTokens != null) {
+    html += '<p style="padding:0 16px;font-size:0.8rem;">' + escapeHtml(modelArchitectureText(result.modelMetadata)) +
+      ' · Contexte demandé : ' + (m.contextRequestedTokens ?? 'réglage du runner') +
+      ' · Maximum déclaré : ' + (result.modelMetadata?.contextMaxTokens ?? 'inconnu') + ' tokens</p>';
+  }
+
   if (isError) {
     html += '<div class="result-card-body">';
     html += '<div style="background:rgba(247,129,102,0.1);border:1px solid rgba(247,129,102,0.3);border-radius:6px;padding:12px;color:var(--accent3);font-size:0.875rem;">⚠️ <strong>Erreur :</strong> ' + escapeHtml(result.error) + '</div>';
@@ -145,13 +150,13 @@ function exportMarkdown() {
     hardwareRow('Architecture mémoire', node.memory.architecture, inventory.provenance.memory);
     node.gpus.forEach(function(g) { hardwareRow('GPU ' + g.id, (g.model || 'N/A') + ' ; cœurs GPU : ' + (g.computeUnits ?? 'N/A'), inventory.provenance.gpus); });
     node.storage.forEach(function(d) { hardwareRow('Stockage ' + d.id, (d.model || 'N/A') + ' ; ' + d.kind + '/' + d.transport + ' ; octets : ' + (d.capacity.value ?? 'N/A'), d.capacity.source); });
-    hardwareRow('Débit SSD', 'Non mesuré', inventory.storageSpeed.source);
+    if (inventory.storageSpeed?.status === 'available') hardwareRow('Débit SSD (bytes/s)', inventory.storageSpeed.value, inventory.storageSpeed.source);
     md += '\n';
   }
   md += '---\n\n';
   md += '## 📈 Résumé des tests\n\n';
-  md += '| # | Modèle | Runner | Type | Tokens | Tok/s moyen | TTFT (ms) | Temps total (s) | Source mémoire échantillonnée | Pic (MiB) | Moyenne (MiB) | Modèle chargé (GiB) | Source modèle chargé | Statut |\n';
-  md += '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|\n';
+  md += '| # | Modèle | Runner | Type | Tokens | Tok/s moyen | TTFT (ms) | Temps total (s) | Source mémoire échantillonnée | Pic (MiB) | Moyenne (MiB) | Modèle chargé (GiB) | Source modèle chargé | Architecture | Contexte demandé (tokens) | Contexte max déclaré (tokens) | Statut |\n';
+  md += '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|\n';
 
   for (var i = 0; i < state.results.length; i++) {
     var r = state.results[i], m = r.metrics || {}, memory = r.memory || {}, loaded = memory.loadedModel;
@@ -164,7 +169,8 @@ function exportMarkdown() {
       memory.peak != null ? memory.peak : 'N/A',
       memory.average != null ? memory.average : 'N/A',
       loaded && Number.isFinite(loaded.sizeBytes) ? (loaded.sizeBytes / Math.pow(1024, 3)).toFixed(2) : 'N/A',
-      loaded ? loaded.source : 'N/A', r.error ? 'Erreur' : 'OK'
+      loaded ? loaded.source : 'N/A', modelArchitectureText(r.modelMetadata),
+      m.contextRequestedTokens ?? 'Réglage du runner / non applicable', r.modelMetadata?.contextMaxTokens ?? 'N/A', r.error ? 'Erreur' : 'OK'
     ];
     md += '| ' + cells.map(markdownCell).join(' | ') + ' |\n';
   }
@@ -195,6 +201,10 @@ function exportMarkdown() {
       md += '| Temps total | ' + (m.totalTime/1000).toFixed(2) + ' s |\n';
       md += '| Température | ' + m.temperature + ' |\n';
       md += '| Tokens max | ' + m.maxTokens + ' |\n';
+      md += '| Contexte demandé (tokens, Ollama) | ' + (m.contextRequestedTokens ?? 'Réglage du runner / non applicable') + ' |\n';
+      md += '| Architecture Dense / MoE | ' + markdownCell(modelArchitectureText(r.modelMetadata)) + ' |\n';
+      md += '| Contexte maximal déclaré (tokens) | ' + (r.modelMetadata?.contextMaxTokens ?? 'N/A') + ' |\n';
+      md += '| Source métadonnées modèle | ' + (r.modelMetadata?.source || 'N/A') + ' |\n';
       if (r.memory && r.memory.peak > 0) {
         md += '| ' + memoryLabel(r.memory) + ' pic | ' + r.memory.peak + ' MiB |\n';
         md += '| ' + memoryLabel(r.memory) + ' moyenne | ' + r.memory.average + ' MiB |\n';
