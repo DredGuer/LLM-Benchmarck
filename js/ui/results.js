@@ -1,3 +1,80 @@
+// Native details controls: usable by mouse, touch and keyboard, without hover-only help.
+function benchmarkHelp(label) {
+  var value = label.toLowerCase();
+  var rules = [
+    ['ttft', 'Temps entre l’envoi de la requête et le premier segment reçu. Avec un modèle qui réfléchit, ce segment peut appartenir au thinking. Le chargement et le traitement du prompt peuvent augmenter ce délai.'],
+    ['premier segment de réponse finale', 'Temps avant le premier texte de réponse, après une éventuelle réflexion. Il peut être plus long que le TTFT.'],
+    ['tokens générés', 'Unités de texte comptées par le fournisseur lorsqu’il les rapporte. Elles peuvent inclure la réflexion. Un token n’est pas toujours un mot ; les tokenizers diffèrent selon les modèles.'],
+    ['tokens / sec', 'Tokens générés divisés par la durée totale de la requête. Inclut l’attente avant génération ; le débit de génération seule est une mesure distincte.'],
+    ['temps total', 'Durée de la requête de génération jusqu’à sa fin. La finalisation du monitoring est exclue.'],
+    ['rss', 'Mémoire résidente des processus Ollama suivis, additionnée. Sur Apple Silicon, elle ne représente pas à elle seule toutes les allocations Metal/MLX. Ne l’additionnez pas aux autres mesures mémoire.'],
+    ['mlx', 'Allocation rapportée par les nouveaux événements des logs serveur Ollama. Le pic est différent de l’allocation conservée. L’attribution à ce modèle n’est pas vérifiée si plusieurs générations sont actives.'],
+    ['swap', 'Mémoire du système déplacée vers le disque. Avant/après et pic concernent toute la machine. Les volumes lus/écrits estimés en pages ne sont pas un débit maximal du SSD.'],
+    ['compressée', 'RAM compressée par macOS pour réduire la pression mémoire. Mesure du système entier, pas du seul modèle.'],
+    ['disques', 'Volume lu ou écrit pendant le test sur les disques observés. Inclut les autres applications ; ce n’est pas un test de vitesse du SSD.'],
+    ['déclarée ollama', 'Allocation déclarée par Ollama pour le modèle chargé. Elle peut évoluer avec les caches ; ce n’est ni la taille des seuls poids ni un pic RAM mesuré.'],
+    ['modèle chargé', 'Allocation déclarée par Ollama pour le modèle chargé, distincte de la RSS et du pic MLX. Sur Apple Silicon, RAM et mémoire GPU partagent le même pool.'],
+    ['contexte', 'Nombre de tokens que le runner peut garder en contexte. Auto conserve son réglage. Le maximum théorique du modèle peut être supérieur au contexte réellement chargé ; davantage de contexte peut consommer plus de mémoire.'],
+    ['architecture', 'Dense utilise le réseau dense ; MoE active une partie des experts par token. Le nombre total de paramètres ne suffit pas à prédire le débit. Une information non rapportée reste inconnue.'],
+    ['quantification', 'Précision utilisée pour les poids du modèle, par exemple Q4_K_M. Elle influence mémoire, vitesse et qualité ; comparez de préférence la même quantification.'],
+    ['paramètres', 'Nombre de paramètres du modèle. Pour un MoE, le total diffère du nombre activé par token. Le ratio tok/s par milliard est descriptif et ne mesure pas la qualité.'],
+    ['température', 'Règle l’échantillonnage : une valeur basse réduit généralement la variété. Même à zéro, la reproductibilité n’est pas garantie.'],
+    ['tokens max', 'Plafond de génération, pas une longueur imposée. Atteindre ce plafond peut couper la réponse ; le logiciel le signale.'],
+    ['répétitions', 'Une mesure par défaut. Plusieurs répétitions aident à estimer la variabilité à conditions comparables, mais augmentent la durée. Une seule mesure ne permet pas de calculer un écart-type.'],
+    ['mode', 'Auto choisit les températures par catégorie et les plafonds prédéfinis. Manuel permet de régler température, tokens maximum et répétitions. Le contexte reste géré automatiquement par le runner.'],
+    ['runner', 'Logiciel local ou fournisseur API qui exécute le modèle. Avec une API distante, les données nécessaires à la requête sont envoyées au fournisseur.'],
+    ['modèle sélectionné', 'Modèle soumis au benchmark. Le modèle choisi dans l’assistant d’analyse est indépendant.'],
+    ['nom personnalisé', 'Remplace le modèle choisi dans la liste. Utilisez le nom exact reconnu par le runner ou le fournisseur.'],
+    ['ram gpu', 'Mémoire GPU déclarée lorsqu’elle est disponible. Apple Silicon partage la RAM entre CPU et GPU : il ne faut pas la compter deux fois.'],
+    ['ram', 'Capacité physique de la machine, distincte de la mémoire consommée pendant un test.'],
+    ['gpu', 'Processeur graphique utilisé pour accélérer les calculs. La présence d’un GPU ne prouve pas que toutes les couches du modèle y sont exécutées.'],
+    ['cpu', 'Processeur central. Le modèle exact et les cœurs aident à comparer des machines ; ils ne suffisent pas à prédire le débit.'],
+    ['médiane', 'Valeur centrale des mesures triées, moins sensible aux valeurs extrêmes que la moyenne.'],
+    ['écart-type', 'Dispersion des mesures autour de la moyenne. Non calculable avec une seule mesure.'],
+    ['moyenne', 'Somme des valeurs divisée par le nombre de mesures comparables. Les chauffes, erreurs et réponses limitées sont exclues des statistiques.']
+  ];
+  var rule = rules.find(r => value.includes(r[0]));return rule ? rule[1] : null;
+}
+function helpBubble(label, text) {
+  return '<details class="benchmark-help"><summary aria-label="Aide : '+escapeHtml(label)+'" title="Afficher l’explication">!</summary><span class="benchmark-help-text">'+escapeHtml(text)+'</span></details>';
+}
+function installBenchmarkHelp() {
+  function add() {
+    document.querySelectorAll('label, .metric-label, .env-label, .card-title, .tooltip-icon').forEach(function(el) {
+      if (el.tagName === 'SUMMARY' || el.querySelector('.benchmark-help') || el.closest('.benchmark-help')) return;
+      var label = el.textContent.trim(), text = benchmarkHelp(label);
+      if (el.classList.contains('tooltip-icon')) {
+        if (el.closest('label')) { el.remove(); return; }
+        text = el.title || text;label = 'Mode';
+      }
+      if (!text) return;
+      var holder = document.createElement('span');holder.innerHTML = helpBubble(label,text);
+      if (el.classList.contains('tooltip-icon')) el.replaceWith(holder.firstChild);
+      else el.appendChild(holder.firstChild);
+    });
+  }
+  document.addEventListener('toggle',function(event) {
+    var detail = event.target;
+    if (!detail.classList?.contains('benchmark-help') || !detail.open) return;
+    document.querySelectorAll('.benchmark-help[open]').forEach(other => { if (other !== detail) other.open = false; });
+    var bubble = detail.querySelector('.benchmark-help-text'), rect = detail.getBoundingClientRect();
+    bubble.style.position = 'fixed';bubble.style.right = 'auto';
+    var width = bubble.getBoundingClientRect().width;
+    bubble.style.left = Math.max(8,Math.min(rect.left,window.innerWidth-width-8))+'px';
+    var height = bubble.getBoundingClientRect().height;
+    bubble.style.top = Math.max(8,Math.min(rect.bottom+6,window.innerHeight-height-8))+'px';
+  },true);
+  document.addEventListener('keydown',function(event) {
+    if (event.key === 'Escape') document.querySelectorAll('.benchmark-help[open]').forEach(el=>{el.open=false;});
+  });
+  document.addEventListener('click',function(event) {
+    if (!event.target.closest('.benchmark-help')) document.querySelectorAll('.benchmark-help[open]').forEach(el=>{el.open=false;});
+  });
+  add();
+  if (typeof MutationObserver === 'function') new MutationObserver(add).observe(document.body,{childList:true,subtree:true});
+}
+if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('DOMContentLoaded',installBenchmarkHelp);
+
 function exportResourceSummary(resources) {
   if (!resources) return null;
   var result = { sampleCount: resources.sampleCount, startedAt: resources.startedAt,
