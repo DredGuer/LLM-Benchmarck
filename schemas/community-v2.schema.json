@@ -1102,6 +1102,13 @@
         "repetition": {
           "type": "integer",
           "minimum": 1
+        },
+        "phase": {
+          "enum": [
+            "warmup",
+            "measurement",
+            "unknown"
+          ]
         }
       },
       "required": [
@@ -1152,6 +1159,9 @@
           "$ref": "#/$defs/measurement"
         },
         "energy": {
+          "$ref": "#/$defs/measurement"
+        },
+        "cachedInputTokens": {
           "$ref": "#/$defs/measurement"
         }
       },
