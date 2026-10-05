@@ -150,7 +150,7 @@
         <ul style="margin: 0; padding-left: 20px; font-size: 0.8rem; color: var(--text3);">
           <li>Température adaptée au type de prompt</li>
           <li>Tokens max: <strong>32768</strong></li>
-          <li>Répétitions: <strong>3</strong></li>
+          <li>Répétitions: <strong>1</strong></li>
         </ul>
         <button class="btn btn-ghost btn-sm" onclick="openAdvancedConfigModal()" style="margin-top: 8px;">
           Voir les températures par type
@@ -166,11 +166,12 @@
         </div>
         <div class="form-group">
           <label>Tokens max <span class="tooltip-icon" title="Nombre maximum de tokens à générer. 32768 recommandé pour les grands modèles.">ⓘ</span></label>
-          <input type="number" id="maxTokens" value="4096" min="1" max="32768" step="64">
+          <input type="number" id="maxTokens" value="8192" min="1" max="32768" step="64">
         </div>
         <div class="form-group">
           <label>Répétitions par test <span class="tooltip-icon" title="Nombre de fois à exécuter chaque test pour une moyenne.">ⓘ</span></label>
-          <input type="number" id="repetitions" value="3" min="1" max="20" step="1">
+          <input type="number" id="repetitions" value="1" min="1" max="20" step="1">
+          <small>Une répétition par défaut. Plusieurs répétitions permettent d’estimer la variabilité et de fiabiliser les résultats à conditions comparables ; elles allongent la durée des tests.</small>
         </div>
         <div class="form-group" id="gpuSelectorGroup" style="display: none;">
           <label>GPU à utiliser <span class="tooltip-icon" title="Sélectionnez quelle carte graphique utiliser pour le benchmark. Nécessite le redémarrage d'Ollama avec CUDA_VISIBLE_DEVICES.">ⓘ</span></label>
@@ -186,6 +187,7 @@
     </div>
 
     <!-- LANCER -->
+    <p id="campaignPlan" aria-live="polite" style="font-size:.85rem"></p>
     <button class="btn btn-primary btn-lg" id="runBtn" onclick="runBenchmark()">
       ⚡ Lancer le benchmark
     </button>
@@ -625,22 +627,41 @@ window.PROMPT_TYPES = [
 <script src="js/utils/helpers.js"></script>
 <script src="js/ui/toast.js"></script>
 <script src="js/ui/modals.js"></script>
-<script src="js/ui/tabs.js?v=0.06-warmup1"></script>
+<script src="js/ui/tabs.js?v=0.08-reliability1"></script>
 <script src="js/core/storage.js"></script>
 <script src="js/core/environment.js?v=0.06-model-context1"></script>
-<script src="js/core/advancedConfig.js?v=0.06-warmup1"></script>
+<script src="js/core/advancedConfig.js?v=0.08-reliability1"></script>
 <script src="js/core/memory.js?v=0.06-apple-resources1"></script>
 <script src="js/core/runners.js?v=0.06-apple-resources1"></script>
 <script src="js/core/prompts.js"></script>
 <script src="js/core/streaming.js"></script>
-<script src="js/core/community-export.js?v=0.06-warmup1"></script>
-<script src="js/ui/results.js?v=0.06-warmup1"></script>
-<script src="js/core/protocol.js?v=0.06-warmup1"></script>
-<script src="js/core/benchmark.js?v=0.06-warmup1"></script>
+<script src="js/core/community-export.js?v=0.08-reliability1"></script>
+<script src="js/ui/results.js?v=0.08-reliability1"></script>
+<script src="js/core/protocol.js?v=0.08-reliability1"></script>
+<script src="js/core/benchmark.js?v=0.08-reliability1"></script>
 <script src="js/core/apiKeys.js"></script>
 <script src="js/core/connectivity.js"></script>
-<script src="js/core/history.js?v=0.06-warmup1"></script>
-<script src="js/ui/statistics.js?v=0.06-warmup1"></script>
+<script src="js/core/history.js?v=0.08-reliability1"></script>
+<script src="js/ui/statistics.js?v=0.08-reliability1"></script>
+
+<button class="btn btn-primary" onclick="toggleAnalysis()" style="position:fixed;bottom:20px;right:20px;z-index:1000">💬 Analyser les résultats</button>
+<section id="analysisPanel" hidden style="position:fixed;bottom:76px;right:16px;width:min(460px,calc(100vw - 32px));max-height:80vh;overflow:auto;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;z-index:1001;box-shadow:0 8px 32px #0008" aria-label="Assistant d’analyse">
+  <div style="display:flex;justify-content:space-between"><strong>Assistant d’analyse des résultats</strong><button class="btn btn-ghost btn-xs" onclick="toggleAnalysis()" aria-label="Fermer l’assistant">✕</button></div>
+  <p style="font-size:.8rem">Analyse à la demande, hors benchmark. L’IA peut se tromper : vérifiez ses conclusions avec les mesures.</p>
+  <label for="analysisProvider">Fournisseur</label><select id="analysisProvider" onchange="analysisProviderChanged()"><option value="ollama">Ollama local</option><option value="openai">OpenAI</option><option value="mistral">Mistral</option><option value="compatible">API compatible OpenAI / LM Studio</option></select>
+  <label for="analysisBase">URL de base (API compatible : inclure /v1)</label><input id="analysisBase" type="url" value="http://localhost:11434">
+  <label for="analysisModel">Modèle d’analyse (indépendant du modèle testé)</label><input id="analysisModel" list="analysisModelList" placeholder="Nom exact du modèle"><datalist id="analysisModelList"></datalist>
+  <button class="btn btn-ghost btn-xs" onclick="loadAnalysisModels()">Lister les modèles</button>
+  <label for="analysisKey">Clé API si nécessaire — conservée seulement dans ce panneau</label><input id="analysisKey" type="password" autocomplete="off">
+  <p style="font-size:.8rem">Seuls les chiffres, réglages et caractéristiques matérielles synthétiques sont envoyés avec vos questions et les échanges récents. Les prompts, réponses des tests, logs et clés du benchmark sont exclus.</p>
+  <label style="font-size:.8rem"><input id="analysisConsent" type="checkbox"> J’autorise cet envoi à une API distante lorsque j’appuie sur un bouton d’analyse.</label>
+  <div id="analysisMessages" aria-live="polite" style="max-height:260px;overflow:auto"></div>
+  <label for="analysisQuestion">Question sur la campagne affichée</label><textarea id="analysisQuestion" maxlength="4000" rows="3"></textarea>
+  <div style="display:flex;gap:6px;flex-wrap:wrap"><button id="analysisSend" class="btn btn-primary btn-sm" onclick="askAnalysis(false)">Envoyer</button><button id="analysisConclusion" class="btn btn-ghost btn-sm" onclick="askAnalysis(true)">Écrire une conclusion</button><button class="btn btn-ghost btn-sm" onclick="cancelAnalysis()">Annuler</button><button class="btn btn-ghost btn-sm" onclick="clearAnalysis()">Effacer échanges et clé</button></div>
+</section>
+
+<script src="js/ui/analysis.js?v=0.08-reliability1"></script>
+<script>document.addEventListener("click",function(){setTimeout(updateCampaignPlan,0);});document.addEventListener("input",updateCampaignPlan);document.addEventListener("change",updateCampaignPlan);document.addEventListener("DOMContentLoaded",updateCampaignPlan);</script>
 <script src="js/main.js?v=0.06-model-context1"></script>
 </body>
 </html>
