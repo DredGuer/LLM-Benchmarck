@@ -345,6 +345,6 @@ function renderHardwareInventory(inventory) {
   n.gpus.forEach(function(gpu) { row('GPU', available(gpu.model) + ' · ' + available(gpu.computeUnits) + ' cœurs GPU', inventory.provenance.gpus); });
   if (!n.storage.length) row('Stockage', 'Non disponible', inventory.provenance.storage);
   n.storage.forEach(function(disk) { row('Stockage', available(disk.model) + ' · ' + disk.kind.toUpperCase() + ' / ' + disk.transport.toUpperCase() + ' · ' + (disk.capacity.value == null ? 'Capacité inconnue' : (disk.capacity.value / 1e9).toFixed(0) + ' GB'), disk.capacity.source); });
-  row('Débit SSD', 'Non mesuré — aucun test disque effectué', inventory.storageSpeed.source);
+  if (inventory.storageSpeed?.status === 'available') row('Débit SSD', inventory.storageSpeed.value + ' bytes/s', inventory.storageSpeed.source);
   row('Collecte', inventory.observedAt);
 }
