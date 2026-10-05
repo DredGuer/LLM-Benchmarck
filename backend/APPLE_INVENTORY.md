@@ -34,8 +34,9 @@ Les échecs partiels sont indiqués ; les valeurs non disponibles ne sont pas re
 Les numéros de série, UUID, noms de volumes, chemins et sorties système brutes ne sont pas retournés.
 
 L'interface conserve les réglages manuels comme affichage déclaré, et présente l'inventaire
-observé séparément. L'export Markdown ajoute cet inventaire avec sources ; le JSON v1 conserve
-l'inventaire dans environment.hardwareInventory. Il ne s'agit pas encore d'un export v2 complet.
+observé séparément. L'export Markdown ajoute cet inventaire avec sources ; le JSON v2 conserve
+le matériel dans machines[] avec une liste de champs autorisés. Voir [la télémétrie Apple](APPLE_RESOURCES.md)
+pour le swap, les E/S système et les pics allocateur MLX issus des nouveaux logs.
 
 ## Tester
 
