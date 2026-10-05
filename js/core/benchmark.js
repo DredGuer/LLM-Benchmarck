@@ -93,9 +93,13 @@ async function executeTest(model, promptType, promptText, rep, signal) {
   var maxTokens = getMaxTokens();
   var contextTokens = getRequestedContextTokens();
   var modelMetadata = state.modelMetadata && state.modelMetadata.model === model ? Object.assign({}, state.modelMetadata) : null;
+  if (state.runner === 'ollama') await ollamaMemoryMonitor.startResources();
+  try {
+  var testStartedAt = new Date().toISOString();
   var t0 = performance.now();
   var firstTokenTime = null, fullText = '', tokensGenerated = 0;
   var memoryStats = null;
+  var tokenCountSource = 'stream-chunk-count', tokenCountKind = 'estimated';
   currentTestState = { model: model, promptType: promptType, promptText: promptText, maxTokens: maxTokens, tokensReceived: 0, isStreaming: false, startTime: Date.now(), logs: [] };
   resetLiveOutput(); 
   showLiveSections(true); 
@@ -143,7 +147,8 @@ async function executeTest(model, promptType, promptText, rep, signal) {
               updateTokenProgress(tokensGenerated, maxTokens);
             }
             if (json.done && json.eval_count) { 
-              tokensGenerated = json.eval_count; 
+              tokensGenerated = json.eval_count;
+              tokenCountSource = 'ollama-api-generate:eval_count'; tokenCountKind = 'declared'; 
               currentTestState.tokensReceived = tokensGenerated; 
               updateTokenProgress(tokensGenerated, maxTokens); 
             }
@@ -232,6 +237,10 @@ async function executeTest(model, promptType, promptText, rep, signal) {
         fullText = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content ? data.choices[0].message.content : '';
         tokensGenerated = data.usage && data.usage.completion_tokens ? data.usage.completion_tokens : estimateTokens(fullText);
       }
+      var hasUsage = state.runner === 'claude' ? data.usage?.output_tokens != null :
+        state.runner === 'gemini' ? data.usageMetadata?.outputTokenCount != null : data.usage?.completion_tokens != null;
+      tokenCountSource = hasUsage ? 'provider:output-token-usage' : 'text-token-estimate';
+      tokenCountKind = hasUsage ? 'declared' : 'estimated';
       firstTokenTime = 0;
       updateThinkingOutput(fullText);
       updateTokenProgress(tokensGenerated, maxTokens);
@@ -239,9 +248,22 @@ async function executeTest(model, promptType, promptText, rep, signal) {
     }
   }
   
+  var generationTotalTime = performance.now() - t0;
+  var testFinishedAt = new Date().toISOString();
+  if (state.runner === 'ollama') memoryStats = ollamaMemoryMonitor.stop();
+  // Capture the last loaded runner context and resource sample after the stream closes.
+  if (state.runner === 'ollama') {
+    await ollamaMemoryMonitor._fetchLoadedModel(ollamaMemoryMonitor.generation, true);
+    if (ollamaMemoryMonitor.resourcesPending) await ollamaMemoryMonitor.resourcesPending;
+    // Ollama emits its MLX memory line just after completing the response.
+    await new Promise(resolve => setTimeout(resolve, 150));
+    await ollamaMemoryMonitor.pollResources(true);
+  }
+
   // Stop memory monitoring for Ollama
   if (state.runner === 'ollama') {
-    memoryStats = ollamaMemoryMonitor.stop();
+    memoryStats.loadedModel = ollamaMemoryMonitor.loadedModel;
+    memoryStats.resources = ollamaMemoryMonitor.resources;
     if (memoryStats.peakMemory) {
       addDebugLog('RAM pic: ' + memoryStats.peakMemory + ' MB', 'info');
     } else {
@@ -249,14 +271,16 @@ async function executeTest(model, promptType, promptText, rep, signal) {
     }
   }
   
-  var totalTime = performance.now() - t0;
+  var totalTime = generationTotalTime;
   var tokensPerSec = tokensGenerated > 0 ? (tokensGenerated / (totalTime / 1000)) : 0;
   var ttft = firstTokenTime !== null ? firstTokenTime : null;
   
   // Build result object
   var result = {
     id: crypto.randomUUID(),
-    timestamp: new Date().toISOString(),
+    timestamp: testFinishedAt,
+    startedAt: testStartedAt,
+    finishedAt: testFinishedAt,
     model: model,
     modelMetadata: modelMetadata,
     runner: RUNNERS[state.runner].name,
@@ -267,14 +291,18 @@ async function executeTest(model, promptType, promptText, rep, signal) {
     response: fullText,
     metrics: {
       totalTokens: tokensGenerated,
+      tokenCountSource: tokenCountSource,
+      tokenCountKind: tokenCountKind,
       tokensPerSec: Math.round(tokensPerSec * 10) / 10,
       ttft: ttft !== null ? Math.round(ttft) : null,
       totalTime: Math.round(totalTime),
       temperature: temperature,
       maxTokens: maxTokens,
-      contextRequestedTokens: contextTokens
+      contextRequestedTokens: contextTokens,
+      contextMode: 'auto',
+      contextObservedTokens: memoryStats?.loadedModel?.contextTokens ?? null
     },
-    env: state.env,
+    env: JSON.parse(JSON.stringify(state.env)),
     rep: rep,
     error: null
   };
@@ -286,11 +314,21 @@ async function executeTest(model, promptType, promptText, rep, signal) {
       average: memoryStats.averageMemory || null,
       source: memoryStats.source,
       unit: 'MiB',
-      loadedModel: memoryStats.loadedModel
+      sampleCount: memoryStats.readings.length,
+      readings: memoryStats.readings.map(r => ({ timestamp: r.timestamp, memory: r.memory })),
+      intervalMs: window.MEMORY_MONITOR_CONFIG.pollInterval,
+      loadedModel: memoryStats.loadedModel,
+      resources: memoryStats.resources
     };
   }
   
   return result;
+  } finally {
+    if (state.runner === 'ollama') {
+      if (ollamaMemoryMonitor.isActive) ollamaMemoryMonitor.stop();
+      await ollamaMemoryMonitor.cancelResources();
+    }
+  }
 }
 
 function buildErrorResult(model, promptType, errorMsg, rep) {
