@@ -34,6 +34,12 @@ const scope = { crypto, Blob, state: { results: [input] },
 vm.createContext(scope);
 vm.runInContext(fs.readFileSync(path.join(__dirname, '../js/core/community-export.js'), 'utf8'), scope);
 vm.runInContext(fs.readFileSync(path.join(__dirname, '../js/ui/results.js'), 'utf8'), scope);
+const named = scope.communityFilename([{model:'hf.co/empero-ai/Qwen:Q4_K_M'}],new Date(observedAt));
+assert(named.startsWith('LLMB-hf.co-empero-ai-Qwen-Q4_K_M-community-v2-'));assert(!/[\\/]/.test(named));
+assert(scope.communityFilename([{model:'a'},{model:'b'}],new Date(observedAt)).includes('a-et-1-autres-modeles'));
+assert(scope.communityFilename([],new Date(observedAt)).includes('modele-inconnu'));
+assert(scope.benchmarkHelp('1er token (TTFT)').includes('thinking'));
+assert(scope.benchmarkHelp('RSS cumulée pic').includes('Metal/MLX'));
 const report = scope.buildCommunityV2([input], observedAt);
 validateReport(report);
 assert.equal(report.tests[0].resourceSamples.length, 7);
