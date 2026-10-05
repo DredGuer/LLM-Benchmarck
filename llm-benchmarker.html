@@ -319,13 +319,18 @@
     <!-- ── TAB ABOUT ── -->
     <div class="tab-content" id="tab-statistics">
       <div class="card"><div class="card-title">📈 Tendances de votre historique</div>
-        <p>Les chauffes et erreurs sont exclues. Les conditions différentes sont regroupées séparément. Une seule mesure ne constitue pas une tendance.</p>
+        <p>Sélectionnez les modèles, catégories et passes à comparer. Les chauffes, erreurs et réponses limitées sont exclues. Dépliez un modèle puis ses conditions pour retrouver chaque passe.</p>
         <label for="statisticsMetric">Mesure du graphique</label>
         <select id="statisticsMetric" onchange="renderStatistics()">
           <option value="tps">Débit moyen · durée totale</option><option value="generationTPS">Débit de génération seule</option>
-          <option value="ttft">TTFT</option><option value="rss">Pic RSS</option>
+          <option value="ttft">TTFT</option><option value="rss">Pic RSS</option><option value="prefill">Temps de prefill</option>
         </select>
         <p style="font-size:0.8rem;color:var(--text3)">Tok/s par milliard de paramètres totaux est un ratio descriptif : il ne mesure pas la qualité et ne normalise pas Dense et MoE par leurs paramètres actifs. Les APIs distantes ne mesurent pas le matériel de votre machine.</p>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin:12px 0">
+          <div><label for="statisticsChartType">Type de graphique</label><select id="statisticsChartType" onchange="renderStatistics()"><option value="line">Lignes</option><option value="area">Aires</option></select></div>
+          <div><label for="statisticsAggregate">Synthèse des passes sélectionnées</label><select id="statisticsAggregate" onchange="renderStatistics()"><option value="mean">Moyenne</option><option value="median">Médiane</option></select></div>
+          <div><label for="statisticsWindow">Lissage des tendances par modèle</label><select id="statisticsWindow" onchange="renderStatistics()"><option value="1">Aucun · chaque passe</option><option value="3">Moyenne mobile · 3 passes</option><option value="5">Moyenne mobile · 5 passes</option><option value="10">Moyenne mobile · 10 passes</option></select></div>
+        </div>
         <div id="statisticsContent"></div>
       </div>
     </div>
@@ -652,7 +657,7 @@ window.PROMPT_TYPES = [
 <script src="js/core/apiKeys.js"></script>
 <script src="js/core/connectivity.js"></script>
 <script src="js/core/history.js?v=0.08-reliability1"></script>
-<script src="js/ui/statistics.js?v=0.08-reliability1"></script>
+<script src="js/ui/statistics.js?v=0.08-statistics2"></script>
 
 <button class="btn btn-primary" onclick="toggleAnalysis()" style="position:fixed;bottom:20px;right:20px;z-index:1000">💬 Analyser les résultats</button>
 <section id="analysisPanel" hidden style="position:fixed;bottom:76px;right:16px;width:min(460px,calc(100vw - 32px));max-height:80vh;overflow:auto;background:var(--surface,#161b22);color:var(--text,#e6edf3);border:1px solid var(--border,#30363d);border-radius:12px;padding:16px;z-index:1001;box-shadow:0 8px 32px #0008" aria-label="Assistant d’analyse">
