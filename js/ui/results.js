@@ -2,7 +2,7 @@ function exportResourceSummary(resources) {
   if (!resources) return null;
   var result = { sampleCount: resources.sampleCount, startedAt: resources.startedAt,
     scopeNote: resources.scopeNote, sampleLimitReached: !!resources.sampleLimitReached };
-  ['swapPeak', 'compressedPeak', 'swapReadDelta', 'swapWriteDelta', 'diskReadDelta', 'diskWriteDelta', 'mlxPeak'].forEach(function(key) {
+  ['swapStart', 'swapEnd', 'compressedStart', 'compressedEnd', 'swapPeak', 'compressedPeak', 'swapReadDelta', 'swapWriteDelta', 'diskReadDelta', 'diskWriteDelta', 'mlxPeak', 'mlxHeldEnd'].forEach(function(key) {
     var r = resources[key];
     if (r) result[key] = Object.assign({}, r);
   });
@@ -13,7 +13,12 @@ function resourceMetricItems(resources) {
   if (!resources) return [];
   return [
     ['Pic MLX · logs serveur Ollama', resources.mlxPeak],
+    ['Allocation MLX conservée · dernier événement serveur', resources.mlxHeldEnd],
+    ['Swap système · avant', resources.swapStart],
+    ['Swap système · après', resources.swapEnd],
     ['Swap système · pic échantillonné', resources.swapPeak],
+    ['Mémoire compressée · avant', resources.compressedStart],
+    ['Mémoire compressée · après', resources.compressedEnd],
     ['Mémoire compressée système · pic', resources.compressedPeak],
     ['Lectures disques · système', resources.diskReadDelta],
     ['Écritures disques · système', resources.diskWriteDelta],
@@ -22,6 +27,10 @@ function resourceMetricItems(resources) {
   ];
 }
 
+function cacheDescription(value) {
+  return ({cold:'aucun token réutilisé déclaré',warm:'cache présent (ancienne mesure, couverture inconnue)',
+    'present-coverage-unknown':'tokens réutilisés ; couverture inconnue',unknown:'inconnu',disabled:'désactivé'})[value] || value;
+}
 function resourceValue(reading) {
   if (reading?.status !== 'available' || !Number.isFinite(reading.value)) return 'Non disponible';
   var bytes = reading.value;
@@ -107,6 +116,7 @@ function renderResultCard(result) {
   var html = '<div class="result-card-header">';
   html += '<span class="prompt-type-emoji" style="font-size:1.4rem">' + result.promptEmoji + '</span>';
   html += '<span class="model-name">' + escapeHtml(result.model) + '</span>';
+  if (result.completion?.limitReached) html += '<span class="badge badge-orange">⚠️ Limite de tokens atteinte · réponse possiblement tronquée</span>';
   if (result.phase === 'warmup') html += '<span class="badge badge-orange">🔥 Chauffe · hors moyennes</span>';
   html += '<span class="badge badge-blue">' + escapeHtml(result.runner) + '</span>';
   html += '<span class="badge ' + (isError ? 'badge-red' : 'badge-green') + '">' + (isError ? '❌ Erreur' : '✅ OK') + '</span>';
@@ -132,6 +142,8 @@ function renderResultCard(result) {
     html += '<div class="metric-box ' + tpsColor + '"><div class="metric-value">' + m.tokensPerSec + '</div><div class="metric-label">Tokens / sec</div></div>';
     html += '<div class="metric-box highlight-orange"><div class="metric-value">' + ttftStr + '</div><div class="metric-label">1er token (TTFT)</div></div>';
     html += '<div class="metric-box"><div class="metric-value">' + (m.totalTime/1000).toFixed(2) + 's</div><div class="metric-label">Temps total</div></div>';
+    if (Number.isFinite(m.firstAnswerTimeMs)) html += '<div class="metric-box"><div class="metric-value">' + Math.round(m.firstAnswerTimeMs) + ' ms</div><div class="metric-label">Premier segment de réponse finale</div></div>';
+    if (result.memory?.loadedModelBefore) html += '<div class="metric-box"><div class="metric-value">' + (result.memory.loadedModelBefore.sizeBytes / 1024 ** 3).toFixed(2) + ' GiB</div><div class="metric-label">Allocation déclarée Ollama · avant</div></div>';
     if (result.memory && result.memory.peak > 0) {
       html += '<div class="metric-box highlight-purple"><div class="metric-value">' + result.memory.peak + ' MiB</div><div class="metric-label">' + memoryLabel(result.memory) + ' pic</div></div>';
       html += '<div class="metric-box highlight-green"><div class="metric-value">' + result.memory.average + ' MiB</div><div class="metric-label">' + memoryLabel(result.memory) + ' moyenne</div></div>';
@@ -144,7 +156,7 @@ function renderResultCard(result) {
     });
     html += '</div>';
     if (result.memory?.resources) html += '<p style="font-size:0.8rem;padding:0 16px">Swap et E/S : système entier. Pic MLX des logs serveur Ollama, attribution au modèle non vérifiée. Activité disque observée, pas vitesse maximale SSD.</p>';
-    if (result.protocol) html += '<p style="padding:0 16px;font-size:0.8rem">Chargement : ' + escapeHtml(result.protocol.loadState) + ' · Cache : ' + escapeHtml(result.protocol.cacheState) + ' · Chauffes préalables : ' + result.protocol.warmupRuns + '</p>';
+    if (result.protocol) html += '<p style="padding:0 16px;font-size:0.8rem">Chargement : ' + escapeHtml(result.protocol.loadState) + ' · Cache : ' + escapeHtml(cacheDescription(result.protocol.cacheState)) + ' · Chauffes préalables : ' + result.protocol.warmupRuns + '</p>';
     html += '<div class="prompt-echo"><strong>Prompt :</strong> ' + escapeHtml(result.promptText.substring(0, 180)) + (result.promptText.length > 180 ? '…' : '') + '</div>';
     html += '<div class="response-block">' + escapeHtml(result.response) + '</div>';
   }
@@ -240,10 +252,14 @@ function exportMarkdown() {
       md += '| Temps total | ' + (m.totalTime/1000).toFixed(2) + ' s |\n';
       md += '| Température | ' + m.temperature + ' |\n';
       md += '| Phase | ' + (r.phase || 'Historique non standardisé') + ' |\n';
-      md += '| Chargement / cache | ' + (r.protocol?.loadState || 'unknown') + ' / ' + (r.protocol?.cacheState || 'unknown') + ' |\n';
+      md += '| Chargement / cache | ' + (r.protocol?.loadState || 'unknown') + ' / ' + cacheDescription(r.protocol?.cacheState || 'unknown') + ' |\n';
       md += '| Temps chargement (ms) | ' + (m.loadTimeMs ?? 'N/A') + ' |\n';
       md += '| Débit génération seule (tok/s) | ' + (m.generationTokensPerSec ?? 'N/A') + ' |\n';
+      if (r.memory?.loadedModelBefore) md += '| Allocation déclarée Ollama · avant | ' + (r.memory.loadedModelBefore.sizeBytes / 1024 ** 3).toFixed(2) + ' GiB |\n';
       md += '| Tokens max | ' + m.maxTokens + ' |\n';
+      md += '| Fin de génération | ' + markdownCell(r.completion?.state || 'unknown') + ' · ' + markdownCell(r.completion?.reason || 'non déclarée') + ' |\n';
+      md += '| Premier segment de réponse finale | ' + (Number.isFinite(m.firstAnswerTimeMs) ? Math.round(m.firstAnswerTimeMs) + ' ms' : 'Non disponible') + ' |\n';
+      md += '| Version du runner | ' + markdownCell(r.runnerVersion || 'inconnue') + ' |\n';
       md += '| Contexte Auto · runner chargé (tokens, Ollama) | ' + (m.contextObservedTokens ?? 'Inconnu / non applicable') + ' |\n';
       md += '| Architecture Dense / MoE | ' + markdownCell(modelArchitectureText(r.modelMetadata)) + ' |\n';
       md += '| Contexte maximal déclaré (tokens) | ' + (r.modelMetadata?.contextMaxTokens ?? 'N/A') + ' |\n';
