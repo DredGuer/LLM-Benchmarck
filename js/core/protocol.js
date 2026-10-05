@@ -62,3 +62,25 @@ function lockCampaignControls(lock) {
     window.campaignControls = [];
   }
 }
+
+function classifyCompletion(reason, count, limit, kind) {
+  var limited = ['length','max_tokens','MAX_TOKENS'].includes(reason);
+  var suspected = !limited && kind === 'declared' && count >= limit;
+  return { reason: reason || null, limitReached: limited || suspected,
+    state: limited ? 'truncated' : suspected ? 'possibly-truncated' : ['stop','end_turn','stop_sequence','STOP','eos'].includes(reason) ? 'completed' : 'unknown' };
+}
+
+async function loadedModelSnapshot(model) {
+  if (state.runner !== 'ollama') return null;
+  try {
+    var res = await fetchWithTimeout(RUNNERS.ollama.base + '/api/ps', {}, 5000);
+    if (!res.ok) return null;
+    var data = await res.json(), item = (data.models || []).find(m => [m.name,m.model].some(n => typeof n === 'string' && n.replace(/:latest$/, '') === model.replace(/:latest$/, '')));
+    return item && Number.isFinite(item.size) && item.size >= 0 ? {sizeBytes:item.size,source:'ollama-api-ps',observedAt:Date.now()} : null;
+  } catch (_) { return null; }
+}
+function updateCampaignPlan() {
+  var el = document.getElementById('campaignPlan');if(!el)return;
+  var count = state.selectedPrompts.size, reps = getRepetitions();
+  el.textContent = count+' catégorie(s) × '+reps+' répétition(s) = '+count*reps+' mesure(s)'+(RUNNERS[state.runner]?.type === 'local' ? ' + chauffe séparée' : '')+'. Limite : '+getMaxTokens()+' tokens par réponse.';
+}
