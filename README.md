@@ -54,12 +54,12 @@ Prérequis : Git et Python 3, ainsi qu'un navigateur récent.
 ```bash
 git clone https://github.com/DredGuer/LLM-Benchmarck.git
 cd LLM-Benchmarck
-python3 -m http.server 8000
+python3 -m http.server 8001
 ```
 
-Gardez ce terminal ouvert et accédez à [LLM Benchmarker](http://localhost:8000/llm-benchmarker.html).
+Gardez ce terminal ouvert et accédez à [LLM Benchmarker](http://localhost:8001/llm-benchmarker.html).
 
-Sans Git, téléchargez [l'archive du dépôt](https://github.com/DredGuer/LLM-Benchmarck/archive/refs/heads/main.zip), décompressez-la, puis lancez `python3 -m http.server 8000` depuis le dossier extrait `LLM-Benchmarck-main`.
+Sans Git, téléchargez [l'archive du dépôt](https://github.com/DredGuer/LLM-Benchmarck/archive/refs/heads/main.zip), décompressez-la, puis lancez `python3 -m http.server 8001` depuis le dossier extrait `LLM-Benchmarck-main`.
 
 Conservez tous les fichiers du dépôt. Ouvrez l'application via le serveur HTTP, plutôt qu'en double-cliquant sur le fichier HTML. Le runner doit également autoriser les requêtes depuis cette origine ; un serveur web local ne résout pas à lui seul toutes les erreurs CORS.
 
@@ -75,6 +75,80 @@ Conservez tous les fichiers du dépôt. Ouvrez l'application via le serveur HTTP
 Le backend Node.js n'est pas nécessaire pour ce premier benchmark.
 
 ## ⚙️ Options de lancement
+
+### Relancer après une mise à jour
+
+Depuis votre copie du dépôt (pas depuis le dossier personnel), arrêtez le backend avec **Ctrl+C**, puis :
+
+```bash
+git pull origin main
+npm install
+node backend/apple-inventory.test.cjs
+node schemas/test.cjs
+npm start
+```
+
+Gardez ce terminal ouvert. Dans un **deuxième terminal**, placez-vous dans le même dossier du dépôt et lancez :
+
+```bash
+python3 -m http.server 8001
+```
+
+Ouvrez **http://localhost:8001/llm-benchmarker.html**. Ollama doit également fonctionner sur le port 11434 :
+ouvrez son application, ou lancez `ollama serve` dans un troisième terminal si son serveur n'est pas déjà actif.
+
+Le backend Node.js (3001), l'interface Python (8001) et Ollama (11434) sont trois services distincts.
+Arrêtez chaque serveur avec **Ctrl+C** dans son terminal.
+
+Sur Windows, remplacez `python3` par `py -3` si nécessaire.
+
+### Vérifier les services
+
+Dans un terminal libre :
+
+```bash
+curl -fsS http://localhost:3001/api/ping
+curl -fsS http://localhost:3001/api/memory
+curl -fsS http://localhost:3001/api/ollama/models
+curl -fsS http://localhost:11434/api/ps
+```
+
+Pour l'inventaire Apple sur macOS :
+
+```bash
+curl -fsS http://localhost:3001/api/hardware
+```
+
+Il fournit CPU/cœurs, RAM unifiée, GPU/cœurs, disques physiques et provenance.
+La fréquence CPU peut être inconnue ; le débit SSD n'est pas encore mesuré.
+Voir [les sources et limites de l'inventaire Apple](backend/APPLE_INVENTORY.md).
+
+### Interface ancienne, cache ou port occupé
+
+Après une mise à jour, rechargez l'interface avec **⌘⇧R sur Mac** ou **Ctrl+Shift+R sur Windows/Linux**.
+Si elle reste ancienne, videz uniquement le cache des fichiers du site : effacer les données du site
+supprime aussi l'historique, les clés et réglages locaux. Vérifiez l'adresse et le dossier depuis lequel
+le serveur Python a été lancé. Les exports actuels indiquent **v0.06**, les sources mémoire et un bloc JSON.
+
+Pour vérifier le fichier réellement servi :
+
+```bash
+curl -fsS "http://localhost:8001/js/ui/results.js?v=0.06-apple-export1"
+```
+
+Il doit contenir `Inventaire Apple détecté` et `buildCommunityExport`.
+Lancez un **nouveau test** : les résultats historiques ne récupèrent pas rétroactivement les données manquantes.
+
+Si `npm start` indique `EADDRINUSE`, un service utilise déjà le port 3001.
+Sur macOS/Linux, identifiez-le avec :
+
+```bash
+lsof -nP -iTCP:3001 -sTCP:LISTEN
+```
+
+Arrêtez votre ancien backend dans son terminal, puis relancez `npm start`.
+Si le port 8001 est occupé, arrêtez votre ancien serveur web ou utilisez
+`python3 -m http.server 8002` et ouvrez alors le port 8002 dans le navigateur.
 
 ### Autres runners et fournisseurs
 
@@ -103,10 +177,10 @@ Consultez [la documentation du backend](BACKEND_README.md) pour les ports, les m
 Depuis la racine du dépôt, vous pouvez remplacer le serveur Python par :
 
 ```bash
-php -S localhost:8000
+php -S localhost:8001
 ```
 
-Ouvrez alors la même URL sur le port 8000. Avec MAMP, placez **tout le dépôt** dans le répertoire web configuré et utilisez l'URL correspondant à ce dossier.
+Ouvrez alors la même URL sur le port 8001. Avec MAMP, placez **tout le dépôt** dans le répertoire web configuré et utilisez l'URL correspondant à ce dossier.
 
 ---
 
@@ -149,8 +223,9 @@ Ouvrez alors la même URL sur le port 8000. Avec MAMP, placez **tout le dépôt*
 | TTFT (Time To First Token) | Temps avant le premier token | ✅ Ollama (streaming) |
 | Temps total | Durée complète de la réponse | ✅ Tous |
 | Température | Paramètre de créativité utilisé | ✅ Tous |
-| **RAM pic** | Consommation mémoire maximale | ✅ Ollama (avec backend) |
-| **RAM moyenne** | Consommation mémoire moyenne | ✅ Ollama (avec backend) |
+| **RSS cumulée pic** | Maximum des échantillons RSS, en MiB | ✅ Ollama (avec backend) |
+| **RSS cumulée moyenne** | Moyenne des échantillons RSS, en MiB | ✅ Ollama (avec backend) |
+| **Modèle chargé** | Taille déclarée par Ollama, en GiB ; pas un pic RAM | ✅ Ollama (avec backend) |
 
 ### Fonctionnalités de debugging
 
@@ -200,6 +275,7 @@ Pour utiliser un runner personnalisé :
 - **TTFT** : disponible avec le streaming Ollama ; inclut le délai observé avant le premier token.
 - **Temps total** : durée observée de la requête, influencée par le chargement du modèle et les communications.
 - **RAM pic et moyenne** : statistiques des échantillons de RSS cumulée de l'arbre de processus surveillé pendant le test, avec le backend Ollama. La RAM du navigateur est une mesure distincte.
+- **Modèle chargé** : taille fournie par `/api/ps` d'Ollama, affichée séparément en GiB. Elle ne remplace pas une mesure du pic réel de mémoire unifiée MLX ; ne pas additionner `size` et `size_vram` sur Apple Silicon.
 - **Environnement** : les informations du navigateur peuvent être approximatives ; le backend complète la détection matérielle.
 
 Pour comparer des tests, gardez les mêmes prompts et paramètres, et indiquez le matériel ainsi que le runner utilisé.
@@ -214,63 +290,20 @@ Pour comparer des tests, gardez les mêmes prompts et paramètres, et indiquez l
 
 Le rapport généré contient :
 
-1. **En-tête** : Date, version de l'outil
-2. **Environnement** : Configuration matérielle et logicielle
-3. **Résumé** : Tableau récapitulatif de tous les tests (**avec colonnes RAM pic et RAM moyenne**)
-4. **Détails** : Pour chaque test, métriques, prompt utilisé et réponse complète
+1. **En-tête** : date et version de l'outil.
+2. **Environnement** : configuration et inventaire Apple détecté avec provenance, lorsque disponible.
+3. **Résumé** : tokens, débit moyen, TTFT, durée, source mémoire, pic/moyenne en MiB et modèle chargé en GiB.
+4. **JSON communautaire v1** : paramètres, mesures et environnement, sans prompts, réponses ni clés API dans ce bloc.
+5. **Détails** : métriques, prompt et réponse de chaque test.
 
-Exemple de structure :
+Le débit moyen correspond aux tokens générés divisés par la durée totale du test.
+La RSS cumulée et la taille du modèle déclarée par Ollama restent des mesures distinctes.
+Une valeur inconnue est indiquée par **N/A** ; elle n'est pas remplacée par zéro.
 
-```markdown
-# 📊 Rapport de Benchmark LLM
-
-> Généré le 15 janvier 2025 à 14:30 par **LLM Benchmarker v0.06**
-
----
-
-## 💻 Environnement de test
-
-| Paramètre | Valeur |
-|-----------|--------|
-| Système d'exploitation | macOS |
-| Navigateur | Chrome |
-| Cœurs CPU | 8 vCPU |
-| RAM (approx.) | 16 GB |
-
-## 📈 Résumé des tests
-
-| # | Modèle | Runner | Type | Tokens | Tok/s | TTFT | Temps total | RAM pic | RAM moy | Statut |
-|---|--------|--------|------|--------|-------|------|-------------|---------|---------|--------|
-| 1 | qwen3.6:27b | Ollama | 💬 Conversation | 1542 | 45.2 | 234ms | 8.50s | 2456 MB | 1892 MB | ✅ OK |
-| 2 | gemini-1.5-pro | Gemini | 🏛️ Factuel | 89 | 12.4 | N/A | 7.20s | N/A | N/A | ✅ OK |
-
-## 🔍 Détail des tests
-
-### Test 1 — 💬 Conversation
-**Modèle :** `qwen3.6:27b` | **Runner :** Ollama | **Date :** 15/01/2025, 14:30:00
-
-#### Métriques
-| Métrique | Valeur |
-|----------|--------|
-| Tokens générés | 1542 |
-| Tokens / seconde | 45.2 |
-| Temps 1er token (TTFT) | 234 ms |
-| Temps total | 8.50 s |
-| Température | 0.7 |
-| Tokens max | 2000 |
-| RAM pic | 2456 MB | ✨ NOUVEAU
-| RAM moyenne | 1892 MB | ✨ NOUVEAU
-
-#### Prompt
-Bonjour ! Présente-toi brièvement...
-
-#### Réponse
-Je suis un modèle de langage...
-
----
-
-*Rapport généré automatiquement par LLM Benchmarker v0.06*
-```
+Le rapport Markdown complet contient les prompts et réponses : vérifiez-le avant partage.
+L'export actuel utilise `llm-benchmarker.community` **1.0.0** ; le
+[schéma v2](schemas/README.md) prépare les collectes et benchmarks futurs, sans en être encore l'export actif.
+L'envoi automatique vers le futur site communautaire n'est pas encore implémenté.
 
 ---
 
@@ -402,7 +435,7 @@ ollama list
 
 **performance.memory non disponible** :
 - Utilisez Chrome avec le flag `--enable-precision-memory-info`
-- Ou lancez le backend Node.js pour un monitoring précis
+- Pour suivre Ollama, lancez le backend Node.js ; le tas JavaScript de Chrome ne mesure pas la RAM du modèle.
 
 ---
 
