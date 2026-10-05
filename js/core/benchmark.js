@@ -101,7 +101,7 @@ async function executeTest(model, promptType, promptText, rep, signal) {
   
   // Start memory monitoring for local runners (Ollama)
   if (state.runner === 'ollama') {
-    ollamaMemoryMonitor.start();
+    ollamaMemoryMonitor.start(model);
   }
 
   if (state.runner === 'ollama') {
@@ -274,7 +274,10 @@ async function executeTest(model, promptType, promptText, rep, signal) {
   if (state.runner === 'ollama' && memoryStats) {
     result.memory = {
       peak: memoryStats.peakMemory || null,
-      average: memoryStats.averageMemory || null
+      average: memoryStats.averageMemory || null,
+      source: memoryStats.source,
+      unit: 'MiB',
+      loadedModel: memoryStats.loadedModel
     };
   }
   
