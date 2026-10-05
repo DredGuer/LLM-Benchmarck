@@ -16,6 +16,9 @@ detectEnvironment().catch(function(err) {
 renderPromptTypes();
 updateRunnerConfig();
 populateModelSelect();
+fetchModels();
+document.getElementById("modelSelect").addEventListener("change", refreshModelMetadata);
+document.getElementById("modelCustom").addEventListener("change", refreshModelMetadata);
 loadApiKeys();
 loadHistory();
 updateTime();
