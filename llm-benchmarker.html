@@ -671,11 +671,14 @@ window.PROMPT_TYPES = [
   <p style="font-size:.8rem">Seuls les chiffres, réglages et caractéristiques matérielles synthétiques sont envoyés avec vos questions et les échanges récents. Les prompts, réponses des tests, logs et clés du benchmark sont exclus.</p>
   <label style="font-size:.8rem"><input id="analysisConsent" type="checkbox"> J’autorise cet envoi à une API distante lorsque j’appuie sur un bouton d’analyse.</label>
   <div id="analysisMessages" aria-live="polite" style="max-height:260px;overflow:auto"></div>
-  <label for="analysisQuestion">Question sur la campagne affichée</label><textarea id="analysisQuestion" maxlength="4000" rows="3"></textarea>
+  <label for="analysisScope">Résultats à consulter</label><select id="analysisScope" onchange="resetAnalysisModelFilter()"><option value="history">Tout l’historique disponible</option><option value="statistics">Sélection des statistiques</option><option value="current">Campagne affichée</option></select>
+  <p id="analysisScopeInfo" style="font-size:.8rem"></p><button class="btn btn-ghost btn-xs" onclick="resetAnalysisModelFilter()">Effacer le filtre @ · tous les modèles du périmètre</button>
+  <label for="analysisQuestion">Question sur les résultats · tapez @ pour choisir un modèle testé</label><textarea id="analysisQuestion" maxlength="4000" rows="3" oninput="updateAnalysisMentions()" placeholder="Compare @… avec @… sur le débit et le prefill"></textarea>
+  <div id="analysisMentions" aria-live="polite" style="display:flex;gap:4px;flex-wrap:wrap;max-height:150px;overflow:auto"></div>
   <div style="display:flex;gap:6px;flex-wrap:wrap"><button id="analysisSend" class="btn btn-primary btn-sm" onclick="askAnalysis(false)">Envoyer</button><button id="analysisConclusion" class="btn btn-ghost btn-sm" onclick="askAnalysis(true)">Écrire une conclusion</button><button class="btn btn-ghost btn-sm" onclick="cancelAnalysis()">Annuler</button><button class="btn btn-ghost btn-sm" onclick="clearAnalysis()">Effacer échanges et clé</button></div>
 </section>
 
-<script src="js/ui/analysis.js?v=0.08-reliability1"></script>
+<script src="js/ui/analysis.js?v=0.08-history-mentions1"></script>
 <script>document.addEventListener("click",function(){setTimeout(updateCampaignPlan,0);});document.addEventListener("input",updateCampaignPlan);document.addEventListener("change",updateCampaignPlan);document.addEventListener("DOMContentLoaded",updateCampaignPlan);</script>
 <script src="js/main.js?v=0.06-model-context1"></script>
 </body>

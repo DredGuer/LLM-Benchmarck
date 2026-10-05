@@ -41,6 +41,7 @@ node backend/monitor-integration.test.cjs
 node backend/community-export.test.cjs
 node backend/protocol-statistics.test.cjs
 node backend/reliability-analysis.test.cjs
+node backend/analysis-history.test.cjs
 node backend/statistics-selection.test.cjs
 node schemas/test.cjs
 ```

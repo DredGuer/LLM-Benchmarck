@@ -139,9 +139,15 @@ Les filtres statistiques sont conservés pendant l’utilisation de la page, san
 
 L’analyse démarre uniquement avec **Envoyer** ou **Écrire une conclusion**, après les tests. Analyse et benchmark ne tournent pas simultanément depuis cette interface. Utiliser un autre modèle local peut modifier la mémoire et le cache de la campagne suivante.
 
-Le contexte comprend au plus 100 tests : mesures, réglages, matériel synthétique, votre question et les échanges récents. Les prompts, réponses et logs des tests sont exclus. Pour une API distante, cochez l’autorisation d’envoi. La clé propre à ce panneau reste dans le champ de la page, sans sauvegarde ni export ; **Effacer échanges et clé** la retire.
+L’assistant consulte par défaut **tout l’historique disponible**, même sans campagne affichée, ainsi que les résultats affichés qui n’y figurent pas encore. Un sélecteur permet de choisir **la sélection des statistiques** ou **la campagne affichée**. Les tests sont dédupliqués par ID.
 
-Les conclusions restent consultatives, séparées des mesures et de l’export communautaire. Les accès directs dépendent des autorisations CORS du fournisseur ; aucun proxy de clés n’est intégré.
+Tapez **@** dans la question puis choisissez un modèle testé dans les suggestions. Plusieurs mentions permettent une comparaison. Le filtre reste actif pour les questions suivantes ; **Effacer le filtre @** revient à tous les modèles du périmètre. Cette sélection concerne les résultats à lire, pas le modèle LLM qui répond, choisi séparément au-dessus. Exemple : `Compare @{gemma4:12b-MLX} avec @{qwen3.8:27b-mlx} sur le débit et le prefill` (si ces noms sont présents dans votre historique).
+
+**Écrire une conclusion** utilise la campagne actuellement affichée : lancez ou restaurez une session pour ce bouton. Il ne réanalyse pas implicitement tout l’historique.
+
+Les synthèses portent sur **toutes les passes du périmètre**, avec regroupement par modèle et conditions. Chauffes, erreurs et réponses limitées sont exclues des moyennes. Le contexte comprend ces synthèses, jusqu’à 100 détails récents, les réglages/matériel synthétiques, votre question et les échanges récents. Le nombre total, le nombre de mesures éligibles et la limitation des détails sont indiqués. Un contexte trop volumineux demande de réduire le périmètre, sans supprimer silencieusement des passes des moyennes. Les prompts, réponses et logs des tests sont exclus. Pour une API distante, cochez l’autorisation d’envoi. La clé propre à ce panneau reste dans le champ de la page, sans sauvegarde ni export ; **Effacer échanges et clé** la retire.
+
+Les consignes demandent une réponse courte, distinguant constats et hypothèses : un écart RSS/allocation déclarée n’est pas un overhead mesuré, et un MLX absent ne prouve pas l’absence d’accélération GPU. Ces consignes ne garantissent pas l’exactitude du modèle. Les conclusions restent consultatives, séparées des mesures et de l’export communautaire. Les accès directs dépendent des autorisations CORS du fournisseur ; aucun proxy de clés n’est intégré.
 
 ## Exports
 
