@@ -2,7 +2,13 @@
  * LLM Benchmarker - Runner Management
  */
 
+var modelListGeneration = 0;
+var modelMetadataGeneration = 0;
+
 function selectRunner(runner) {
+  modelListGeneration++;
+  modelMetadataGeneration++;
+  state.modelMetadata = null;
   state.runner = runner;
   var buttons = document.querySelectorAll(".runner-btn");
   for (var i = 0; i < buttons.length; i++) {
@@ -10,6 +16,7 @@ function selectRunner(runner) {
   }
   updateRunnerConfig();
   populateModelSelect();
+  renderModelMetadata(null);
   if (RUNNERS[runner].type === "local" || runner === "custom") fetchModels();
 }
 
@@ -45,7 +52,9 @@ function populateModelSelect() {
 async function fetchModels() {
   var status = document.getElementById('modelStatus');
   status.textContent = '⏳ Récupération des modèles…';
-  var r = RUNNERS[state.runner];
+  var runner = state.runner, generation = ++modelListGeneration;
+  var previous = document.getElementById('modelSelect').value;
+  var r = RUNNERS[runner];
   if (r.type !== 'local' && state.runner !== 'custom') {
     status.textContent = '⚠️ Auto-détection non disponible pour les APIs externes.';
     return;
@@ -63,6 +72,7 @@ async function fetchModels() {
       var data = await res.json();
       models = data.data ? data.data.map(function(m) { return m.id; }) : [];
     }
+    if (generation !== modelListGeneration || runner !== state.runner) return;
     if (models.length === 0) { status.textContent = '⚠️ Aucun modèle trouvé.'; return; }
     var sel = document.getElementById('modelSelect');
     sel.innerHTML = '<option value="">— Choisir —</option>';
@@ -72,11 +82,82 @@ async function fetchModels() {
       opt.textContent = models[i];
       sel.appendChild(opt);
     }
-    sel.value = models[0];
+    sel.value = models.includes(previous) ? previous : models[0];
+    refreshModelMetadata();
     status.textContent = '✅ ' + models.length + ' modèle(s) trouvé(s)';
     showToast(models.length + ' modèles détectés', 'success');
   } catch (e) {
+    if (generation !== modelListGeneration || runner !== state.runner) return;
     status.textContent = "❌ Impossible de contacter le runner. Vérifiez que le service est lancé ou servez ce fichier via un serveur web (ex: `python -m http.server`).";
     showToast('Runner inaccessible', 'error');
   }
+}
+
+function parseModelMetadata(data, model) {
+  var info = data.model_info || {};
+  var architecture = typeof info['general.architecture'] === 'string' ? info['general.architecture'] : null;
+  function numeric(key) { var value = info[key]; return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null; }
+  var experts = architecture ? numeric(architecture + '.expert_count') : null;
+  return {
+    model: model, source: 'ollama-api-show', observedAt: new Date().toISOString(),
+    architecture: architecture,
+    type: experts === null ? 'unknown' : experts > 1 ? 'moe' : 'dense',
+    expertCount: experts,
+    activeExperts: architecture ? numeric(architecture + '.expert_used_count') : null,
+    parameterCount: numeric('general.parameter_count'),
+    contextMaxTokens: architecture ? numeric(architecture + '.context_length') : null,
+    quantization: typeof data.details?.quantization_level === 'string' ? data.details.quantization_level : null
+  };
+}
+
+function modelArchitectureText(metadata) {
+  if (!metadata) return 'Architecture non disponible';
+  return metadata.type === 'moe' ? 'MoE · ' + metadata.expertCount + ' experts · actifs par token : ' + (metadata.activeExperts ?? 'inconnu') :
+    metadata.type === 'dense' ? 'Dense' : 'Dense / MoE : non déclaré';
+}
+
+function renderModelMetadata(metadata) {
+  var panel = document.getElementById('modelMetadata');
+  if (!panel) return;
+  panel.textContent = metadata ?
+    modelArchitectureText(metadata) + '\nContexte maximal déclaré : ' + (metadata.contextMaxTokens ?? 'inconnu') + ' tokens' +
+    '\nParamètres totaux : ' + (metadata.parameterCount === null ? 'inconnus' : (metadata.parameterCount / 1e9).toFixed(2) + ' milliards') +
+    '\nQuantification : ' + (metadata.quantization || 'inconnue') +
+    '\nSource : /api/show Ollama. Le contexte maximal du modèle ne garantit pas le contexte alloué par le runner.' :
+    'Informations non disponibles pour ce modèle ou fournisseur.';
+}
+
+async function refreshModelMetadata() {
+  var generation = ++modelMetadataGeneration, runner = state.runner, model = getSelectedModel();
+  state.modelMetadata = null;
+  renderModelMetadata(null);
+  if (runner !== 'ollama' || !model || model === 'unknown-model') return null;
+  try {
+    var response = await fetchWithTimeout(RUNNERS.ollama.base + '/api/show', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: model })
+    }, 10000);
+    if (!response.ok) throw new Error('Métadonnées non disponibles');
+    var metadata = parseModelMetadata(await response.json(), model);
+    if (generation !== modelMetadataGeneration || runner !== state.runner || model !== getSelectedModel()) return null;
+    state.modelMetadata = metadata;
+    renderModelMetadata(metadata);
+    return metadata;
+  } catch (error) {
+    if (generation === modelMetadataGeneration) renderModelMetadata(null);
+    return null;
+  }
+}
+
+function getRequestedContextTokens() {
+  var input = document.getElementById('contextTokens');
+  if (state.runner !== 'ollama' || !input || !input.value.trim()) return null;
+  var value = Number(input.value);
+  if (!Number.isSafeInteger(value) || value < 1) throw new Error('Le contexte doit être un nombre entier positif.');
+  return value;
+}
+
+function buildOllamaOptions(temperature, maxTokens, contextTokens) {
+  var options = { temperature: temperature, num_predict: maxTokens };
+  if (contextTokens !== null) options.num_ctx = contextTokens;
+  return options;
 }
