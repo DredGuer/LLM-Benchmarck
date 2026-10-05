@@ -30,7 +30,8 @@ function buildCommunityExport(results, generatedAt) {
         },
         environment: {
           os: env.os || null, browser: env.browser || null,
-          cpuCores: number(env.cores), ramDescription: env.ram || null, gpu: env.gpu || null
+          cpuCores: number(env.cores), ramDescription: env.ram || null, gpu: env.gpu || null,
+          hardwareInventory: env.hardwareInventory || null
         }
       };
     })
@@ -129,6 +130,24 @@ function exportMarkdown() {
   md += '| Cœurs CPU | ' + (env.cores || 'N/A') + ' |\n';
   md += '| RAM (approx.) | ' + (env.ram || 'N/A') + ' |\n';
   md += '| GPU | ' + (env.gpu || 'N/A') + ' |\n\n';
+  if (env.hardwareInventory) {
+    var inventory = env.hardwareInventory, node = inventory.machine, cpu = node.cpus[0];
+    md += '### Inventaire Apple détecté\n\n';
+    md += '| Élément | Valeur | Source |\n|---|---|---|\n';
+    function hardwareRow(label, value, source) {
+      md += '| ' + [label, value == null ? 'N/A' : value, source].map(markdownCell).join(' | ') + ' |\n';
+    }
+    hardwareRow('CPU', cpu.model, inventory.provenance.cpuModel);
+    hardwareRow('Cœurs physiques / logiques', (cpu.physicalCores ?? 'N/A') + ' / ' + (cpu.logicalCores ?? 'N/A'), inventory.provenance.physicalCores);
+    hardwareRow('Cœurs performance / efficacité', (cpu.performanceCores ?? 'N/A') + ' / ' + (cpu.efficiencyCores ?? 'N/A'), inventory.provenance.coreClasses);
+    hardwareRow('Fréquence déclarée (Hz, pas en direct)', cpu.frequency.value, cpu.frequency.source);
+    hardwareRow('RAM physique (octets)', node.memory.physicalCapacity.value, node.memory.physicalCapacity.source);
+    hardwareRow('Architecture mémoire', node.memory.architecture, inventory.provenance.memory);
+    node.gpus.forEach(function(g) { hardwareRow('GPU ' + g.id, (g.model || 'N/A') + ' ; cœurs GPU : ' + (g.computeUnits ?? 'N/A'), inventory.provenance.gpus); });
+    node.storage.forEach(function(d) { hardwareRow('Stockage ' + d.id, (d.model || 'N/A') + ' ; ' + d.kind + '/' + d.transport + ' ; octets : ' + (d.capacity.value ?? 'N/A'), d.capacity.source); });
+    hardwareRow('Débit SSD', 'Non mesuré', inventory.storageSpeed.source);
+    md += '\n';
+  }
   md += '---\n\n';
   md += '## 📈 Résumé des tests\n\n';
   md += '| # | Modèle | Runner | Type | Tokens | Tok/s moyen | TTFT (ms) | Temps total (s) | Source mémoire échantillonnée | Pic (MiB) | Moyenne (MiB) | Modèle chargé (GiB) | Source modèle chargé | Statut |\n';
