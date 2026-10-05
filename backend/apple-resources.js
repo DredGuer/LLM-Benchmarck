@@ -67,7 +67,9 @@ function parseMLXEvents(text, since) {
     const timestamp = time ? Date.parse(time[1]) : NaN;
     if (!/\blevel=INFO\b/.test(line) || !/\bsource=(?:\S*\/)?pipeline\.go:\d+\s/.test(line) || !peak || !Number.isFinite(timestamp) || timestamp < since || !units[peak[2]]) return [];
     const value = nonnegative(Number(peak[1]) * units[peak[2]]);
-    return value === null ? [] : [{ value, observedAt: new Date(timestamp).toISOString() }];
+    const held = line.match(/\bheld="([\d.]+)\s+([A-Za-z]+)"/);
+    const heldBytes = held && units[held[2]] ? nonnegative(Number(held[1]) * units[held[2]]) : null;
+    return value === null ? [] : [{ value, heldBytes, observedAt: new Date(timestamp).toISOString() }];
   });
 }
 const logPath = path.join(os.homedir(), '.ollama', 'logs', 'server.log');
@@ -132,12 +134,17 @@ function createTelemetry({ collect = collectAppleResources, state = logState, ch
         sample: Object.fromEntries(Object.entries(current).filter(([key]) => key !== 'deviceSet')), sampleCount: s.samples.length, startedAt: new Date(s.startedAt).toISOString(),
         swapStatus: current.swapStatus || 'unknown',
         scopeNote: 'Swap and disk I/O are system-wide, not attributed to the model. Disk I/O is observed activity, not SSD maximum speed.',
+        swapStart: { ...reading(s.baseline.swapUsedBytes, 'sysctl:vm.swapusage'), observedAt: s.baseline.observedAt },
+        swapEnd: reading(current.swapUsedBytes, 'sysctl:vm.swapusage'),
+        compressedStart: { ...reading(s.baseline.compressedBytes, 'vm_stat:compressor-pages'), observedAt: s.baseline.observedAt },
+        compressedEnd: reading(current.compressedBytes, 'vm_stat:compressor-pages'),
         swapPeak: reading(peak('swapUsedBytes'), 'sysctl:vm.swapusage'),
         compressedPeak: reading(peak('compressedBytes'), 'vm_stat:compressor-pages'),
         swapReadDelta: { ...reading(delta('swapReadBytes'), 'vm_stat:Swapins*page-size'), kind: 'estimated', method: 'page-equivalent bytes, not compressed disk transfer size' },
         swapWriteDelta: { ...reading(delta('swapWriteBytes'), 'vm_stat:Swapouts*page-size'), kind: 'estimated', method: 'page-equivalent bytes, not compressed disk transfer size' },
         diskReadDelta: reading(delta('diskReadBytes'), 'ioreg:IOBlockStorageDriver.Statistics'),
         diskWriteDelta: reading(delta('diskWriteBytes'), 'ioreg:IOBlockStorageDriver.Statistics'),
+        mlxHeldEnd: { ...reading(s.events.length && !s.logIssue ? s.events[s.events.length - 1].heldBytes : null, 'ollama-server-log:memory-held', 'process-tree'), attribution: 'ollama-server-unverified-model' },
         mlxPeak: { ...reading(mlx, 'ollama-server-log:memory-peak', 'process-tree'),
           attribution: 'ollama-server-unverified-model', eventCount: s.events.length,
           logStatus: s.logIssue || (s.events.length ? 'observed' : 'no-event'),
