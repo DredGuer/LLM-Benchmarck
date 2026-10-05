@@ -52,6 +52,11 @@ assert.equal(bundle.reports[1].tests[0].participatingNodeIds[0], 'inference-unkn
 assert.equal(bundle.reports[1].machines[1].memory.physicalCapacity.value, null);
 const failure = scope.buildCommunityV2([{ ...legacy, error: secret }], observedAt);
 validateReport(failure); assert(!JSON.stringify(failure).includes(secret));
+const warm = { ...input, id: 'warmup', phase: 'warmup', protocol: { phase:'warmup',version:'0.07',loadState:'cold',cacheState:'unknown',warmupRuns:0,promptDigest:'abc' } };
+const heatedReport = scope.buildCommunityV2([warm, { ...input, protocol:{phase:'measurement',version:'0.07',loadState:'warm',cacheState:'cold',warmupRuns:1} }], observedAt);
+validateReport(heatedReport);
+assert.equal(heatedReport.tests[0].protocol.phase,'warmup');
+assert.equal(heatedReport.tests[1].protocol.warmupRuns,1);
 const altered = structuredClone(report); altered.tests[0].model.expertCount = -1;
 assert.throws(() => validateReport(altered));
 (async () => {
