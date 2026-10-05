@@ -3,6 +3,7 @@
  */
 
 async function runBenchmark() {
+  if (document.getElementById('benchmarkMode')?.value === 'agentic') return runAgenticBenchmark();
   if (state.isRunning || state.analysisRunning) return;
   if (!state.selectedPrompts.size) { showToast('Sélectionnez un type de prompt', 'error'); return; }
   var model = getSelectedModel();
@@ -112,6 +113,9 @@ async function executeTest(model, promptType, promptText, rep, signal, protocol)
   resetLiveOutput(); 
   showLiveSections(true); 
   setControlButtons(true);
+  if (protocol.warmup && document.getElementById('benchmarkMode')?.value === 'agentic') {
+    document.getElementById('nextBtn').disabled = true; document.getElementById('retryBtn').disabled = true;
+  }
   addDebugLog('Démarrage du test: ' + model + ' - ' + promptType.name, 'info');
   addDebugLog('Config: temp=' + temperature + ', max_tokens=' + maxTokens, 'info');
   

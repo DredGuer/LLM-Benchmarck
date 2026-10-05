@@ -2,7 +2,7 @@
 
 [Prise en main](README.md) · [Backend](BACKEND_README.md) · [Contrat communautaire](schemas/README.md)
 
-État documenté le 5 octobre 2026 : interface v0.06, protocole de génération 0.08, export 2.0.0 et bundle 1.0.0. Les exemples agentiques/Exo sont synthétiques et ne prouvent pas l’existence d’un exécuteur.
+État documenté le 5 octobre 2026 : interface v0.06, protocole de génération 0.08, export 2.0.0 et bundle 1.0.0. Le scénario agentique fichiers `agentic-files-1.0.0` est exécuté ; les fixtures de schéma agentiques/Exo restent synthétiques. Exo n’est pas exécuté.
 
 ## Organisation
 
@@ -17,6 +17,7 @@ L’application charge des scripts classiques dans l’ordre déclaré dans `llm
 | `js/core/runners.js` | Modèles, métadonnées autorisées et contexte Auto |
 | `js/core/advancedConfig.js` | Mode Manuel/Auto, températures, répétitions et plafond de tokens |
 | `js/core/protocol.js` | Observation du chargement, empreinte du prompt, flux NDJSON, contrôles et arrêt de génération |
+| `js/core/agentic.js`, `backend/agentic-harness.js` | Boucle native d’outils locale, budgets, fichiers restreints et vérification réelle |
 | `js/core/benchmark.js` | Campagne, chauffe, mesures, requêtes fournisseurs et finalisation |
 | `js/core/memory.js` | RSS, taille déclarée du modèle et sessions de télémétrie |
 | `js/core/history.js` | Sauvegarde, quota, restauration et liste des campagnes |
@@ -66,3 +67,13 @@ L’assistant collecte historique et campagne affichée, déduplique par ID et a
 Les synthèses couvrent toutes les passes du périmètre et les conditions, avec exclusions explicites des chauffes/erreurs/limites pour les moyennes. Les détails sont limités aux 100 tests les plus récents ; le contexte expose les comptes et cette limitation. Une limite de taille de 180 000 caractères demande de cibler davantage les données, sans tronquer les groupes de synthèse. Le contexte utilise une liste explicite de champs, sans séries brutes, prompts/réponses de tests, logs, chemins ou clés de benchmark. `Écrire une conclusion` utilise exclusivement la campagne affichée. Il reçoit aussi la question et les échanges récents. La clé de ce panneau n’est pas persistée. L’analyse est déclenchée manuellement, autorisée explicitement pour une API distante et bloquée pendant une campagne. Le texte reçu est affiché comme texte, sans exécution HTML.
 
 Le schéma communautaire, ses contraintes et ses limites de validation sont décrits dans [schemas/README.md](schemas/README.md). La documentation doit évoluer avec le code selon [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Parcours agentique
+
+[Contrat du scénario fichiers](backend/AGENTIC_BENCHMARK.md). La sélection du mode dispatch depuis `runBenchmark` vers `runAgenticBenchmark` ; chauffe, verrouillage, remplacement de campagne et historique restent explicites. `executeAgenticTest` utilise le chat natif Ollama ou compatible, garde les messages structurés et ajoute chaque retour d’outil. Un plafond de tours évite les boucles ; les budgets temps/tokens/appels sont distincts. Le backend ne reçoit jamais de code à exécuter ni de chemin libre.
+
+Le résultat ajoute `kind`, `agentic` et le texte local de l’artefact. L’export v2 construit une liste explicite de champs agentiques et exclut ce texte. Les statistiques de génération excluent ce type ; les scores agentiques comptent tous les essais évalués, échecs compris. L’assistant reçoit un résumé séparé. Les erreurs de prérequis avant session sont affichées sans inventer un score backend.
+
+`fetchWithTimeout` propage maintenant le signal d’annulation externe vers sa propre requête. Le scénario garde en plus un contrôleur de durée de tâche couvrant la lecture du corps de réponse et les échanges d’outils. Les jetons de session ne sont pas persistés ; nettoyage en fin/abandon/expiration. Les restrictions de fichiers sont applicatives, sans sandbox OS ; une interruption brutale du backend peut laisser un dossier temporaire.
+
+Tests : `node backend/agentic-harness.test.cjs` et `node backend/agentic-integration.test.cjs`, plus les suites génération/export existantes. Les adaptateurs sont testés avec réponses simulées ; validation réelle sur modèles Apple Silicon à réaliser avant de généraliser les comparaisons.

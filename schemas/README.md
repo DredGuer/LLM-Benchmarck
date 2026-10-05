@@ -1,8 +1,8 @@
 # Export communautaire v2 — contrat et collecte actuelle
 
-Statut : **export v2 actif pour les tests de génération**, dans le Markdown et via le bouton JSON v2.
+Statut : **export v2 actif pour les tests de génération et le scénario agentique fichiers v1**, dans le Markdown et via le bouton JSON v2.
 L'inventaire Apple, les métadonnées modèle, le contexte Auto observé, les métriques et la télémétrie disponible
-alimentent le rapport. Les champs non collectés restent inconnus ; aucun exécuteur agentique ni cluster n'est lancé.
+alimentent le rapport. Les champs non collectés restent inconnus ; le scénario de fichiers dispose d’un exécuteur restreint, mais aucun cluster n’est lancé.
 
 Un seul runner/inventaire donne un objet `llm-benchmarker.community` 2.0.0.
 Des résultats hétérogènes donnent un objet `llm-benchmarker.community.bundle` 1.0.0 avec `reports[]`.
@@ -90,7 +90,7 @@ la réussite doit être vérifiée par le harness.
 L'agenticité mesure la combinaison **modèle + harness + outils + budgets**.
 Comparer les résultats exige les mêmes versions du protocole et de l'évaluateur.
 Le schéma décrit des autorisations ; il ne les applique pas. L'isolation, les liens
-symboliques et les contrôles d'accès appartiennent au futur exécuteur.
+symboliques et les contrôles d'accès relèvent de l’exécuteur, pas de la validation JSON. Le scénario fichiers v1 les contrôle dans son harness restreint.
 
 ## Partage et compatibilité
 
@@ -123,7 +123,7 @@ Exemples : Apple génération, Apple agentique, cluster Exo Apple et Linux multi
 
 Le contrat, l’inventaire Apple, l’export v2, le contexte Auto et la télémétrie disponible sont intégrés. Le protocole de génération courant est **0.08** ; les anciennes sessions ne sont pas réécrites et gardent leurs inconnues. La migration persistante d’historique n’est pas une fonctionnalité livrée.
 
-Les tâches agentiques, placements multi-GPU réellement observés et adaptateur Exo restent prévus. Les exemples sont synthétiques. Voir [la roadmap](../innovation.md).
+Le scénario agentique fichiers v1 est exécuté et exporté avec le contrat actuel. Les autres tâches, placements multi-GPU réellement observés et adaptateur Exo restent prévus. Les exemples sont synthétiques. Voir [la roadmap](../innovation.md).
 
 ## Export runtime et télémétrie
 
@@ -165,3 +165,16 @@ Un ensemble hétérogène de runner/version/inventaire forme un bundle. Les `rep
 L’assistant IA utilise un contexte synthétique distinct et ne stocke pas sa conclusion dans les mesures communautaires. Les sélections statistiques filtrent l’affichage sans modifier les tests exportés.
 
 [Architecture](../TECHNICAL_README.md) · [Contribution et maintien de la documentation](../CONTRIBUTING.md)
+
+## Scénario agentique runtime
+
+`llmb-agentic-files` / `agentic-files-1.0.0` produit des tests `agentic` après chauffe séparée. Les étapes référencent les outils fixes, avec dépendances séquentielles, statut, durée et contrôles. Les artefacts ont uniquement leurs chemins relatifs fixes, type, taille et digest SHA-256 ; contenu et arguments bruts exclus. La reprise compte un appel du même outil après rejet. L’évaluation déterministe vérifie calcul, fichier structuré et relecture, sans juger toute la qualité sémantique du texte.
+
+Temps total = tâche entière ; TTFT non mesuré, chat non streaming. Les moyennes de génération et taux de réussite agentique restent séparés. Le runner est local ; aucun placement distribué/Exo n’est déduit. [Documentation et budgets](../backend/AGENTIC_BENCHMARK.md).
+
+```bash
+node backend/agentic-harness.test.cjs
+node backend/agentic-integration.test.cjs
+```
+
+Ces tests valident des exports issus du harness exécuté avec réponses modèle simulées, en complément des fixtures synthétiques existantes.

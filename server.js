@@ -26,6 +26,7 @@ const PORT = process.argv.includes('--port') ?
 // Middleware
 app.use(cors());
 app.use(express.json());
+require('./backend/agentic-harness').mountAgenticRoutes(app);
 
 /**
  * Snapshot the process tree. Descendants may be MLX/Python runners whose

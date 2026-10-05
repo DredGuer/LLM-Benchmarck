@@ -53,7 +53,7 @@ function resetCampaignResults() {
 }
 
 function lockCampaignControls(lock) {
-  var elements = Array.from(document.querySelectorAll('.runner-btn, #modelSelect, #modelCustom, #manualModeToggle, #temperature, #maxTokens, #repetitions, #customPromptText'));
+  var elements = Array.from(document.querySelectorAll('.runner-btn, #benchmarkMode, #modelSelect, #modelCustom, #manualModeToggle, #temperature, #maxTokens, #repetitions, #customPromptText'));
   if (lock) {
     window.campaignControls = elements.map(el => [el, el.disabled]);
     elements.forEach(el => { el.disabled = true; });
@@ -81,6 +81,8 @@ async function loadedModelSnapshot(model) {
 }
 function updateCampaignPlan() {
   var el = document.getElementById('campaignPlan');if(!el)return;
-  var count = state.selectedPrompts.size, reps = getRepetitions();
+  var agentic = document.getElementById('benchmarkMode')?.value === 'agentic';
+  var count = agentic ? 1 : state.selectedPrompts.size, reps = getRepetitions();
+  if (agentic) { el.textContent = reps+' tentative(s) agentique(s) + chauffe séparée. Par tentative : 8 tours modèle, 12 appels d’outils, 3 minutes ; '+getMaxTokens()+' tokens de sortie cumulés (comptage estimé si absent).'; return; }
   el.textContent = count+' catégorie(s) × '+reps+' répétition(s) = '+count*reps+' mesure(s)'+(RUNNERS[state.runner]?.type === 'local' ? ' + chauffe séparée' : '')+'. Limite : '+getMaxTokens()+' tokens par réponse.';
 }

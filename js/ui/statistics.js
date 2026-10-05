@@ -8,7 +8,7 @@ function buildStatistics(sessions) {
   var groups = new Map(), seen = new Set();
   (Array.isArray(sessions) ? sessions : []).forEach(function(session) {
     (session.results || []).forEach(function(r) {
-      if (r.error || r.completion?.limitReached || r.phase === 'warmup' || seen.has(r.id)) return;
+      if (r.kind === 'agentic' || r.error || r.completion?.limitReached || r.phase === 'warmup' || seen.has(r.id)) return;
       if (r.id) seen.add(r.id);
       var m = r.metrics || {}, p = r.protocol || {}, meta = r.modelMetadata || {};
       if (!Number.isFinite(m.tokensPerSec) || m.tokensPerSec < 0) return;
@@ -131,6 +131,7 @@ function renderStatistics() {
   var type=document.getElementById('statisticsChartType')?.value||'line',aggregate=document.getElementById('statisticsAggregate')?.value||'mean';
   var windowSize=Number(document.getElementById('statisticsWindow')?.value)||1;
   panel.textContent='';
+  renderAgenticStatistics(history,panel);
   if(!groups.length){statisticsElement('p','Aucune mesure exploitable dans l’historique. Lancez une campagne.',panel);return;}
   statisticsElement('p','Chaque passe sélectionnée a le même poids dans la moyenne. Les comparaisons globales sont descriptives : catégories, cache, versions, matériel et longueurs des réponses peuvent différer. Les conditions comparables restent détaillées séparément. Avec N = 1, aucune dispersion ne peut être estimée.',panel);
   var controls=statisticsElement('div',undefined,panel);statisticsElement('strong','Modèles à afficher',controls);
@@ -187,4 +188,29 @@ function renderStatistics() {
       });
     });
   });
+}
+
+// Failed attempts remain in the denominator. Never mix task throughput with generation charts.
+function buildAgenticStatistics(sessions) {
+  var groups=new Map(),seen=new Set();
+  (sessions||[]).forEach(session=>(session.results||[]).forEach(r=>{
+    if(r.kind!=='agentic'||!r.agentic||seen.has(r.id))return;if(r.id)seen.add(r.id);
+    var key=JSON.stringify([r.model,r.runner,r.runnerVersion,r.protocol?.version,r.protocol?.promptDigest,
+      statisticsHardware(r.env),r.modelMetadata?.quantization,r.metrics?.temperature,r.metrics?.maxTokens,
+      r.metrics?.contextObservedTokens,r.protocol?.loadState,r.protocol?.cacheState,r.agentic.budget]);
+    if(!groups.has(key))groups.set(key,{model:r.model,runner:r.runner,scenario:r.protocol?.version||'unknown',rows:[]});
+    groups.get(key).rows.push(r);
+  }));
+  return Array.from(groups.values()).map(g=>({...g,attempts:g.rows.length,successes:g.rows.filter(r=>!r.error&&r.agentic.evaluation.taskSuccess===true).length,
+    meanDurationMs:g.rows.reduce((n,r)=>n+(r.metrics?.totalTime||0),0)/g.rows.length,
+    meanToolCalls:g.rows.reduce((n,r)=>n+r.agentic.evaluation.toolCallCount,0)/g.rows.length}));
+}
+function renderAgenticStatistics(history,panel) {
+  var groups=buildAgenticStatistics(history);if(!groups.length)return;
+  var section=statisticsDetails(panel,'agentic-results','Agentique · réussite des scénarios ('+groups.reduce((n,g)=>n+g.attempts,0)+' tentatives)');
+  statisticsElement('p','Chaque ligne conserve les mêmes conditions, matériel et version du scénario. Les échecs comptent dans le taux de réussite. Un petit scénario de fichiers ne représente pas toutes les capacités agentiques.',section);
+  statisticsTable(section,['Modèle','Runner','Scénario','Réussites / tentatives','Taux','Durée moyenne, tous essais (s)','Appels moyens'],groups.map(g=>[
+    g.model,g.runner,g.scenario,g.successes+' / '+g.attempts,(100*g.successes/g.attempts).toFixed(1)+'%',(g.meanDurationMs/1000).toFixed(2),g.meanToolCalls.toFixed(1)]));
+  groups.forEach((g,i)=>{var detail=statisticsDetails(section,'agentic-group-'+i,g.model+' · détail des tentatives');
+    statisticsTable(detail,['Passe','Réussite','Temps (s)','Appels','Reprises'],g.rows.map(r=>[r.rep,!r.error&&r.agentic.evaluation.taskSuccess===true?'Oui':'Non',(r.metrics.totalTime/1000).toFixed(2),r.agentic.evaluation.toolCallCount,r.agentic.evaluation.retryCount]));});
 }

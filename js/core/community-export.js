@@ -119,9 +119,10 @@ function buildCommunityV2(results, generatedAt) {
             summaries.push(summary);
           });
         }
+        var apiTimingSource = r.kind === 'agentic' ? 'ollama-api-chat:sum' : 'ollama-api-generate';
         var tokenKind = m.tokenCountKind || 'estimated';
         var test = {
-          id: r.id || 'test-' + index, kind: 'generation', status: r.error ? 'failure' : r.completion?.limitReached ? 'partial' : 'success',
+          id: r.id || 'test-' + index, kind: r.kind === 'agentic' ? 'agentic' : 'generation', status: r.error ? 'failure' : r.completion?.limitReached ? 'partial' : 'success',
           startedAt: startedAt, finishedAt: finishedAt,
           model: { id: r.model || 'unknown', digest: mem.loadedModel?.digest || null, quantization: meta.quantization || null,
             contextMaxTokens: communityInteger(meta.contextMaxTokens),
@@ -131,19 +132,19 @@ function buildCommunityV2(results, generatedAt) {
           parameters: { temperature: communityNumber(m.temperature), maxOutputTokens: communityInteger(m.maxTokens),
             contextTokens: communityInteger(m.contextObservedTokens), contextSource: m.contextObservedTokens != null ? 'ollama-api-ps:context_length (observed loaded runner)' : null, concurrency: 1,
             thinking: { enabled: typeof m.thinkingEnabled === 'boolean' ? m.thinkingEnabled : null, observed: typeof m.thinkingObserved === 'boolean' ? m.thinkingObserved : null } },
-          protocol: { id: 'llmb-generation-' + (['conversation','factual','math','code','logic','creative','warmup'].includes(r.promptType) ? r.promptType : 'custom'),
+          protocol: { id: r.kind === 'agentic' ? 'llmb-agentic-files' : 'llmb-generation-' + (['conversation','factual','math','code','logic','creative','warmup'].includes(r.promptType) ? r.promptType : 'custom'),
             version: r.protocol?.version || '0.06', phase: r.phase || 'unknown', promptDigest: r.protocol?.promptDigest || null,
             warmupRuns: r.protocol?.warmupRuns || 0, loadState: r.protocol?.loadState || 'unknown', cacheState: r.protocol?.cacheState || 'unknown',
             cachePolicy: r.protocol?.cachePolicy || null, repetition: Math.max(1, communityInteger(r.rep) || 1) },
           participatingNodeIds: [inferenceNode],
-          metrics: { loadTime: metric(m.loadTimeMs, 'ms', 'ollama-api-generate:load_duration', 'declared'),
-            prefillTime: metric(m.prefillTimeMs, 'ms', 'ollama-api-generate:prompt_eval_duration', 'declared'),
-            generationTime: metric(m.generationTimeMs, 'ms', 'ollama-api-generate:eval_duration', 'declared'),
+          metrics: { loadTime: metric(m.loadTimeMs, 'ms', apiTimingSource+':load_duration', 'declared'),
+            prefillTime: metric(m.prefillTimeMs, 'ms', apiTimingSource+':prompt_eval_duration', 'declared'),
+            generationTime: metric(m.generationTimeMs, 'ms', apiTimingSource+':eval_duration', 'declared'),
             generationThroughput: metric(m.generationTokensPerSec, 'tokens/s', 'eval_count/eval_duration', 'estimated'),
             firstAnswerTime: metric(m.firstAnswerTimeMs, 'ms', 'browser:first-visible-answer-segment', 'measured'),
             inputTokens: metric(m.inputTokens, 'tokens', 'ollama-api-generate:prompt_eval_count', 'declared'),
             cachedInputTokens: metric(m.cachedInputTokens, 'tokens', 'ollama-api-generate:prompt_eval_cached_count', 'declared'),
-            totalTime: metric(m.totalTime, 'ms', 'browser:performance.now', 'measured', 'Request duration excluding telemetry finalization'),
+            totalTime: metric(m.totalTime, 'ms', 'browser:performance.now', 'measured', r.kind === 'agentic' ? 'Whole task including orchestration, model calls, tools and verification; excludes telemetry finalization' : 'Request duration excluding telemetry finalization'),
             totalOutputTokens: metric(m.totalTokens, 'tokens', m.tokenCountSource || 'legacy-unknown-token-count', tokenKind),
             thinkingTokens: metric(null, 'tokens', 'not-separated'), answerTokens: metric(null, 'tokens', 'not-separated'),
             averageThroughput: metric(m.tokensPerSec, 'tokens/s', 'generated-tokens/total-test-seconds', 'estimated'),
@@ -151,7 +152,8 @@ function buildCommunityV2(results, generatedAt) {
           resourceSamples: samples.sort((a,b) => a.elapsedMs - b.elapsedMs), resourceSummaries: summaries
         };
         if (r.completion) test.completion = { reason: r.completion.reason || null, limitReached: !!r.completion.limitReached, state: r.completion.state || 'unknown' };
-        if (r.error) test.failureCode = 'generation-error'; // Do not leak raw error text/URLs.
+        if (r.kind === 'agentic' && r.agentic) test.agentic = communityAgentic(r.agentic);
+        if (r.error) test.failureCode = r.kind === 'agentic' ? 'agentic-task-failed' : 'generation-error'; // Do not leak raw error text/URLs.
         return test;
       })
     };
@@ -175,4 +177,20 @@ function exportCommunityJSON() {
   link.href = url; link.download = communityFilename(state.results, new Date());
   link.click(); URL.revokeObjectURL(url);
   showToast('Export communautaire v2 téléchargé', 'success');
+}
+
+// Explicit field selection: generated files, tool arguments, session tokens and paths are excluded.
+function communityAgentic(a) {
+  return {orchestrator:{name:a.orchestrator.name,version:a.orchestrator.version,agentCount:a.orchestrator.agentCount},
+    workspacePolicy:{scope:a.workspacePolicy.scope,networkAllowed:a.workspacePolicy.networkAllowed,shellAllowed:a.workspacePolicy.shellAllowed,outsideWorkspaceAllowed:false},
+    tools:a.tools.map(t=>({id:t.id,name:t.name,version:t.version,capabilities:t.capabilities.slice()})),
+    budget:{maxSteps:a.budget.maxSteps,maxToolCalls:a.budget.maxToolCalls,timeoutMs:a.budget.timeoutMs},
+    steps:a.steps.map(s=>({id:s.id,order:s.order,action:s.action,dependsOn:s.dependsOn.slice(),status:s.status,
+      ...(s.toolId?{toolId:s.toolId}:{}),toolCallCount:s.toolCallCount,retryCount:s.retryCount,artifactIds:s.artifactIds.slice(),
+      checks:s.checks.map(c=>({id:c.id,passed:c.passed,evaluator:c.evaluator,evaluatorVersion:c.evaluatorVersion})),
+      ...(s.duration?{duration:communityReading(s.duration.value,'ms',s.duration.source,s.duration.observedAt,'test','local')}: {})})),
+    artifacts:a.artifacts.map(f=>({id:f.id,relativePath:f.relativePath,kind:f.kind,...(f.mediaType?{mediaType:f.mediaType}:{}),
+      ...(f.sizeBytes!==undefined?{sizeBytes:f.sizeBytes}:{}),...(f.digest?{digest:f.digest}:{})})),
+    evaluation:{taskSuccess:a.evaluation.taskSuccess,evaluator:a.evaluation.evaluator,evaluatorVersion:a.evaluation.evaluatorVersion,
+      successRate:a.evaluation.successRate,toolCallCount:a.evaluation.toolCallCount,retryCount:a.evaluation.retryCount}};
 }

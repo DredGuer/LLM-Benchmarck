@@ -16,6 +16,7 @@ Mise à jour : **5 octobre 2026**. Ce document distingue les fonctions exécuté
 | Exports | Markdown et JSON communautaire v2 ; nom JSON comprenant le modèle |
 | Statistiques | Sélection des modèles/catégories/passes, moyennes/médianes, détails repliables, lignes/aires, lissage et prefill |
 | Assistant IA | Conclusion et questions à la demande ; modèle local ou API choisi indépendamment |
+| Agentique fichiers v1 | Appels d’outils natifs locaux, dossier temporaire, vérification réelle, budgets, export v2 et taux de réussite séparés ; validation modèles réels à poursuivre |
 | Aide | Bulles ! au clic, au clavier et sur mobile |
 | Détection Windows/Linux | Collecteurs généraux existants ; couverture dépendante des commandes/pilotes, validation réelle à étendre |
 
@@ -37,7 +38,7 @@ La présence de mémoire conservée ne prouve pas une fuite. Une API externe ne 
 | Import communautaire manuel | Charger des exports v2, dédupliquer les ID de tests et comparer les conditions | Validation du schéma, limites de taille, unités et cohérence |
 | Site communautaire | Comparaison de machines/modèles équivalents et gestion des données partagées | Parcours de consultation/import et règles de données explicites |
 | Envoi automatique | Envoi à la demande avec aperçu et autorisation adaptée au futur service | Pas d’envoi implicite, authentification et protection côté serveur |
-| Tâches agentiques | Réponse, création de dossier/Markdown et vérification réelle des artifacts | Harness isolé, budgets et évaluateur ; déclaration du modèle insuffisante |
+| Extension agentique | Ajouter des tâches et évaluateurs après validation du scénario fichiers v1 | Versions de tâches, critères reproductibles et sécurité adaptée à chaque outil |
 | Exo / plusieurs Mac | Inventaire par nœud, modèle distribué, placements et liens observés | Adaptateur validé sur un cluster réel ; pas de somme naïve des débits |
 | Linux/Windows et multi-GPU | Inventaire structuré et VRAM/activité par appareil selon source | Tests sur matériel réel NVIDIA/AMD/Intel et sources explicites |
 | SSD/offload | Attribuer les lectures/placements lorsque le runner l’expose | L’activité disque seule ne suffit pas à conclure à un offload |
@@ -47,3 +48,11 @@ La présence de mémoire conservée ne prouve pas une fuite. Une API externe ne 
 Le schéma v2 décrit plusieurs CPU/GPU/nœuds, des placements demandés et observés, des liens et des tâches agentiques. Les fixtures Apple-agentic, Exo et Linux-multigpu sont **synthétiques**. Elles valident un contrat, pas une collecte complète ni un orchestrateur déjà disponible.
 
 Chaque étape sera intégrée progressivement avec ses tests et sa documentation. Les captures du README viendront après la remise à jour documentaire. Voir [la règle de contribution](CONTRIBUTING.md).
+
+## Ordre retenu
+
+1. Tester le premier [scénario agentique](backend/AGENTIC_BENCHMARK.md) sur le Mac avec des modèles compatibles, 1 passe puis 3 répétitions ; contrôler scores, étapes et export v2.
+2. Passer au site communautaire : import manuel v2, validation/déduplication, comparaisons à conditions équivalentes, scores agentiques séparés par tâche/version.
+3. Prévoir ensuite l’envoi explicite authentifié avec aperçu des données et règles du service.
+
+**Exo est reporté.** Aucun détecteur, adaptateur ni synchronisation multi-machine n’est ajouté par l’étape agentique. Sa déclaration et sa topologie devront être étudiées séparément avec un cluster réel.

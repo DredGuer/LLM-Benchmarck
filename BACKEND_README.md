@@ -2,7 +2,7 @@
 
 [Guide de démarrage](README.md) · [Architecture](TECHNICAL_README.md)
 
-Le backend Node.js fournit à l’interface des mesures Ollama et des informations sur la machine où il s’exécute. Il ne sert pas la page HTML et n’exécute pas les modèles. La version `package.json` 1.0.0 est distincte de l’interface v0.06 et du protocole 0.08.
+Le backend Node.js fournit à l’interface des mesures Ollama et des informations sur la machine où il s’exécute. Il exécute également les outils restreints du premier scénario agentique. Il ne sert pas la page HTML et n’exécute pas les modèles. La version `package.json` 1.0.0 est distincte de l’interface v0.06 et du protocole 0.08.
 
 ## Lancement
 
@@ -46,6 +46,18 @@ Ce changement n’adapte pas automatiquement les URLs utilisées par l’interfa
 | GET | `/api/telemetry/:id?finish=1` | Dernier échantillon, séries et fermeture de session |
 | DELETE | `/api/telemetry/:id` | Abandon et nettoyage de session |
 
+| GET | `/api/agentic/info` | Version et budgets du scénario (en-tête local requis) |
+| POST | `/api/agentic/start` | Nouveau dossier et jeton de session |
+| POST | `/api/agentic/:id/tool` | Appel d’un outil fixe, arguments contrôlés |
+| POST | `/api/agentic/:id/finish` | Vérification réelle, résultat et suppression du dossier |
+| DELETE | `/api/agentic/:id` | Abandon et nettoyage |
+
+Les routes agentiques exigent une connexion loopback, une origine locale si présente et `X-LLMB-Agentic: 1`. Les opérations sur une session demandent `Authorization: Bearer JETON_DE_SESSION`. Les jetons restent en mémoire pendant la tentative. Les protections ne s’appliquent pas rétroactivement aux anciennes routes. Voir [scénario et limites d’isolation](backend/AGENTIC_BENCHMARK.md).
+
+```bash
+curl -fsS -H 'X-LLMB-Agentic: 1' http://localhost:3001/api/agentic/info
+```
+
 La liste retournée par `/` n’est pas exhaustive ; ce tableau inclut les endpoints ajoutés depuis.
 
 ```bash
@@ -87,3 +99,12 @@ lsof -nP -iTCP:3001 -sTCP:LISTEN
 ```
 
 Les scripts de vérification et leur couverture figurent dans [CONTRIBUTING.md](CONTRIBUTING.md). Les sorties système sont simulées dans les tests automatisés ; une vérification sur une machine réelle reste nécessaire.
+
+## Tests agentiques
+
+```bash
+node backend/agentic-harness.test.cjs
+node backend/agentic-integration.test.cjs
+```
+
+Les opérations fichiers sont réellement exécutées en test ; les réponses des modèles sont simulées. La réussite sur modèles réels reste à vérifier.

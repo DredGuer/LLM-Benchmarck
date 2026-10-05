@@ -69,11 +69,14 @@ les obligations propres à une organisation.
 
 ## Tâches agentiques et fonctions prévues
 
-Le schéma v2 prévoit des tâches utilisant des outils et des fichiers ; leur exécuteur
-n'est pas encore intégré dans l'application actuelle. Lorsqu'elles seront disponibles,
-ces tâches devront être exécutées avec des droits limités dans un dossier de test isolé,
-sans accès implicite aux documents personnels. La présence d'une règle dans le schéma
-ne remplace pas les contrôles techniques de l'exécuteur.
+Le premier scénario agentique de fichiers utilise des outils fixes dans un dossier
+temporaire dédié, sans shell, accès aux documents personnels ni réseau depuis les outils.
+Le modèle est appelé sur le runner local. Les chemins et budgets sont contrôlés par
+l’application ; ce n’est pas une sandbox du système d’exploitation. Le fichier créé
+est supprimé après vérification, mais son contenu retourné reste dans l’historique local
+et peut être téléchargé. Un arrêt brutal du backend peut laisser un dossier temporaire.
+Voir [le scénario et ses limites](backend/AGENTIC_BENCHMARK.md). Les futures tâches
+plus larges nécessiteront leurs propres protections.
 
 ## Futur site communautaire
 

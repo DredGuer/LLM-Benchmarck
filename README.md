@@ -4,7 +4,7 @@ Benchmarkez vos modèles locaux ou vos API, conservez les campagnes dans votre n
 
 **Interface v0.06 · protocole de mesure 0.08 · export communautaire v2.** Documentation vérifiée le 5 octobre 2026. Ces versions désignent des éléments différents ; la version 1.0.0 de `package.json` concerne le backend.
 
-Fonctions actuelles : chauffe séparée, contexte Auto, identification Dense/MoE lorsqu’elle est disponible, inventaire Apple Silicon, suivi RSS/swap/MLX, exports Markdown/JSON, statistiques interactives et assistant d’analyse au choix. Les bulles **!** expliquent les réglages et mesures au clic, au clavier ou sur mobile.
+Fonctions actuelles : chauffe séparée, contexte Auto, identification Dense/MoE lorsqu’elle est disponible, inventaire Apple Silicon, suivi RSS/swap/MLX, exports Markdown/JSON, statistiques interactives, premier scénario agentique de fichiers et assistant d’analyse au choix. Les bulles **!** expliquent les réglages et mesures au clic, au clavier ou sur mobile.
 
 ## Premier lancement avec Ollama
 
@@ -30,7 +30,7 @@ npm install
 npm start
 ```
 
-Gardez ce terminal ouvert. Le backend écoute sur **http://localhost:3001**. Il est optionnel pour générer du texte, mais nécessaire pour l’inventaire et les mesures système décrites ici.
+Gardez ce terminal ouvert. Le backend écoute sur **http://localhost:3001**. Il est optionnel pour générer du texte, mais nécessaire pour l’inventaire, les mesures système et les tests agentiques décrits ici.
 
 ### 3. Servir l’interface dans un autre terminal
 
@@ -92,6 +92,18 @@ La chauffe utilise un prompt court fixe, une température nulle et au plus 32 to
 
 Le cache est géré par le runner et n’est pas vidé automatiquement. Des tokens réutilisés ne prouvent pas que tout le prompt est en cache. Le contexte observé du runner chargé est distinct du maximum théorique du modèle.
 
+## Benchmark agentique · fichiers
+
+Choisissez **Type de benchmark → Agentique · fichiers (v1)**, puis un modèle local avec appels d’outils natifs (**Ollama**, **LM Studio** ou **llama.cpp**). Le backend `npm start` doit être à jour et lancé. Les API externes et Exo restent pour une étape ultérieure.
+
+Après une chauffe séparée, le modèle doit calculer, créer un dossier, écrire un Markdown et le relire dans un répertoire temporaire dédié. Le backend contrôle les actions et le fichier réel : déclarer « fichier créé » ne suffit pas. Aucun shell ni accès aux documents personnels n’est proposé par les outils.
+
+Gardez **1 répétition** pour démarrer ; **3 répétitions** permettent de mieux voir la variabilité. Chaque tentative a ses propres fichiers et un budget de **8 tours modèle, 12 appels d’outils et 3 minutes**. Dans ce mode, **Tokens max** est le plafond cumulé des sorties, avec un comptage estimé si le runner ne fournit pas de compteur. Le bouton **Arrêter le test agentique** permet d’interrompre la campagne.
+
+Les cartes montrent réussite/échec, étapes repliables et reprises après rejet. Téléchargez le Markdown créé depuis la carte avant de quitter si vous souhaitez le conserver ; son texte est aussi sauvegardé dans l’historique local. Le dossier temporaire est supprimé après vérification. Les statistiques agentiques sont séparées des courbes de génération, avec les échecs dans le taux de réussite. **TTFT non mesuré** dans ce scénario non streaming ; le temps total couvre la tâche complète, outils compris. Un seul scénario de fichiers ne suffit pas à évaluer toutes les capacités agentiques.
+
+[Scénario, isolation, mesures et tests détaillés](backend/AGENTIC_BENCHMARK.md). L’export **JSON v2** inclut étapes, budgets, scores et empreinte du fichier, sans son contenu ni arguments bruts. Aucun envoi automatique n’est activé.
+
 ## Lire les résultats
 
 | Mesure | Signification et limite |
@@ -145,7 +157,7 @@ Tapez **@** dans la question puis choisissez un modèle testé dans les suggesti
 
 **Écrire une conclusion** utilise la campagne actuellement affichée : lancez ou restaurez une session pour ce bouton. Il ne réanalyse pas implicitement tout l’historique.
 
-Les synthèses portent sur **toutes les passes du périmètre**, avec regroupement par modèle et conditions. Chauffes, erreurs et réponses limitées sont exclues des moyennes. Le contexte comprend ces synthèses, jusqu’à 100 détails récents, les réglages/matériel synthétiques, votre question et les échanges récents. Le nombre total, le nombre de mesures éligibles et la limitation des détails sont indiqués. Un contexte trop volumineux demande de réduire le périmètre, sans supprimer silencieusement des passes des moyennes. Les prompts, réponses et logs des tests sont exclus. Pour une API distante, cochez l’autorisation d’envoi. La clé propre à ce panneau reste dans le champ de la page, sans sauvegarde ni export ; **Effacer échanges et clé** la retire.
+Les synthèses portent sur **toutes les passes du périmètre**, avec regroupement par modèle et conditions. Chauffes, erreurs et réponses limitées sont exclues des moyennes. Le contexte comprend ces synthèses, jusqu’à 100 détails récents, les réglages/matériel synthétiques, votre question et les échanges récents. Le nombre total, le nombre de mesures éligibles et la limitation des détails sont indiqués. Un contexte trop volumineux demande de réduire le périmètre, sans supprimer silencieusement des passes des moyennes. Les prompts, réponses, contenus des fichiers agentiques, arguments d’outils et logs des tests sont exclus. Les scores agentiques restent séparés des moyennes de génération. Pour une API distante, cochez l’autorisation d’envoi. La clé propre à ce panneau reste dans le champ de la page, sans sauvegarde ni export ; **Effacer échanges et clé** la retire.
 
 Les consignes demandent une réponse courte, distinguant constats et hypothèses : un écart RSS/allocation déclarée n’est pas un overhead mesuré, et un MLX absent ne prouve pas l’absence d’accélération GPU. Ces consignes ne garantissent pas l’exactitude du modèle. Les conclusions restent consultatives, séparées des mesures et de l’export communautaire. Les accès directs dépendent des autorisations CORS du fournisseur ; aucun proxy de clés n’est intégré.
 
@@ -168,7 +180,7 @@ Les benchmarks de génération proposent Ollama, LM Studio, llama.cpp, OpenAI, M
 
 L’inventaire général Windows/Linux peut détecter CPU/GPU selon les commandes disponibles. L’inventaire structuré Apple et la télémétrie swap/disques/MLX décrite ci-dessus sont réservés à macOS. Une liste de GPU détectés ne prouve pas leur utilisation simultanée. Le sélecteur GPU affiche une consigne de redémarrage manuel ; il ne reconfigure pas Ollama automatiquement.
 
-Le schéma prépare multi-CPU/GPU, Exo et tâches agentiques, mais aucun orchestrateur distribué ni exécuteur de tâches fichiers n’est intégré. [État et prochaines étapes](innovation.md).
+Le premier scénario agentique de fichiers est intégré. Le schéma prépare aussi multi-CPU/GPU et Exo ; aucun orchestrateur distribué n’est intégré. [État et prochaines étapes](innovation.md).
 
 ## Dépannage
 

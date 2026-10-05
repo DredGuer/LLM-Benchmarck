@@ -43,6 +43,8 @@ node backend/protocol-statistics.test.cjs
 node backend/reliability-analysis.test.cjs
 node backend/analysis-history.test.cjs
 node backend/statistics-selection.test.cjs
+node backend/agentic-harness.test.cjs
+node backend/agentic-integration.test.cjs
 node schemas/test.cjs
 ```
 
@@ -65,3 +67,5 @@ Séparer données brutes locales et profil communautaire autorisé. Ne pas expor
 ## Captures d’écran
 
 Utiliser des données de démonstration sans secrets, stocker les images dans un dossier du dépôt et les référencer avec des chemins relatifs dans le README. Ajouter un texte alternatif décrivant l’écran. Les captures complètent les instructions ; elles ne remplacent pas les commandes ni les descriptions accessibles.
+
+Pour les tâches agentiques, conserver un scénario versionné, des outils explicitement limités, des budgets et une vérification backend indépendante des déclarations du modèle. Documenter toute évolution des capacités fichiers/réseau/shell. Le taux de réussite inclut les tentatives évaluées en échec ; ne pas mélanger ces essais aux courbes de génération.

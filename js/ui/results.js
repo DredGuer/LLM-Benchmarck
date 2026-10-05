@@ -2,6 +2,7 @@
 function benchmarkHelp(label) {
   var value = label.toLowerCase();
   var rules = [
+    ['type de benchmark', 'Génération mesure une réponse de texte. Agentique teste un enchaînement d’appels d’outils réels, avec budgets et vérification backend. Les réussites agentiques sont comparées séparément.'],
     ['ttft', 'Temps entre l’envoi de la requête et le premier segment reçu. Avec un modèle qui réfléchit, ce segment peut appartenir au thinking. Le chargement et le traitement du prompt peuvent augmenter ce délai.'],
     ['premier segment de réponse finale', 'Temps avant le premier texte de réponse, après une éventuelle réflexion. Il peut être plus long que le TTFT.'],
     ['tokens générés', 'Unités de texte comptées par le fournisseur lorsqu’il les rapporte. Elles peuvent inclure la réflexion. Un token n’est pas toujours un mot ; les tokenizers diffèrent selon les modèles.'],
@@ -237,9 +238,12 @@ function renderResultCard(result) {
     html += '<div class="prompt-echo"><strong>Prompt :</strong> ' + escapeHtml(result.promptText.substring(0, 180)) + (result.promptText.length > 180 ? '…' : '') + '</div>';
     html += '<div class="response-block">' + escapeHtml(result.response) + '</div>';
   }
+  if (result.kind === 'agentic') html += agenticResultHTML(result);
   html += '</div>';
   
   card.innerHTML = html;
+  var download = card.querySelector?.('[data-agentic-download]');
+  if (download) download.addEventListener('click',function(){downloadAgenticArtifact(result.id);});
   if (list) {
     list.insertBefore(card, list.firstChild);
   }
@@ -362,6 +366,7 @@ function exportMarkdown() {
       md += '#### Réponse\n\n';
       md += '```\n' + r.response + '\n```\n\n';
     }
+    if (r.kind === 'agentic') md += agenticMarkdown(r);
     md += '---\n\n';
   }
   
@@ -382,4 +387,24 @@ function exportMarkdown() {
   a.click();
   URL.revokeObjectURL(url);
   showToast('Exporté : ' + filename, 'success');
+}
+
+function agenticResultHTML(r) {
+  var a=r.agentic,e=a.evaluation;
+  var html='<section style="padding:16px"><strong>Scénario agentique · fichiers v1 : '+(e.taskSuccess?'réussi':'échoué')+'</strong>';
+  html+='<p>'+e.toolCallCount+' appels d’outils · '+e.retryCount+' reprises après rejet · '+(r.metrics.totalTime/1000).toFixed(2)+' s pour la tâche entière. TTFT non mesuré (chat non streaming). Le débit cumulé ne mesure pas la réussite.</p>';
+  html+='<details><summary>Vérifications et étapes ('+a.steps.length+')</summary><table><thead><tr><th>Étape</th><th>Action</th><th>Statut</th><th>Durée</th></tr></thead><tbody>';
+  a.steps.forEach(s=>{html+='<tr><td>'+s.order+'</td><td>'+escapeHtml(s.toolId||s.action)+'</td><td>'+escapeHtml(s.status)+'</td><td>'+(s.duration?.value??'N/A')+' ms</td></tr>';});
+  html+='</tbody></table></details>';
+  if(r.agenticArtifactText)html+='<button class="btn btn-ghost btn-sm" data-agentic-download>↓ Télécharger le Markdown créé</button>';
+  return html+'</section>';
+}
+function agenticMarkdown(r) {
+  var a=r.agentic,e=a.evaluation;
+  var text='\n#### Scénario agentique · fichiers v1\n\n'+(e.taskSuccess?'Réussi':'Échoué')+' · '+e.toolCallCount+' appels d’outils · '+e.retryCount+' reprises après rejet.\n\n';
+  text+='| Étape | Action | Statut | Durée (ms) |\n|---|---|---|---|\n';
+  a.steps.forEach(s=>{text+='| '+[s.order,s.toolId||s.action,s.status,s.duration?.value??'N/A'].map(markdownCell).join(' | ')+' |\n';});
+  text+='\nTTFT non mesuré. Durée totale : orchestration, requêtes modèle, outils et vérification ; finalisation télémétrie exclue. Les fichiers temporaires sont supprimés après vérification. Seul le contenu retourné est conservé dans l’historique local.\n';
+  a.artifacts.forEach(f=>{text+='\nArtefact : '+markdownCell(f.relativePath)+(f.digest?' · '+markdownCell(f.digest):'')+'\n';});
+  return text;
 }

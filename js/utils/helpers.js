@@ -8,13 +8,16 @@ function fetchWithTimeout(url, options, timeout) {
   if (options === undefined) options = {};
   if (timeout === undefined) timeout = 30000;
   var controller = new AbortController();
+  var external = options.signal;
+  function cancel() { controller.abort(); }
+  if (external) { if (external.aborted) cancel(); else external.addEventListener('abort', cancel, {once:true}); }
   var id = setTimeout(function() { controller.abort(); }, timeout);
   return fetch(url, { 
     method: options.method || 'GET',
     headers: options.headers || {},
     body: options.body || null,
     signal: controller.signal 
-  }).finally(function() { clearTimeout(id); });
+  }).finally(function() { clearTimeout(id); if (external) external.removeEventListener('abort', cancel); });
 }
 
 // Estimate token count from text
