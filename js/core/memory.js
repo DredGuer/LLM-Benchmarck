@@ -124,6 +124,10 @@ ollamaMemoryMonitor = {
     var self = this;
     var generation = this.generation;
     this._fetchLoadedModel(generation);
+    if (!this.resourcesPending && Date.now() - (this.lastResourcePoll || 0) >= 1000) {
+      this.lastResourcePoll = Date.now();
+      this.resourcesPending = this.pollResources(false).finally(() => { this.resourcesPending = null; });
+    }
     
     addDebugLog('[MEMORY] Fetching from backend: ' + this._getBackendUrl('/api/memory'), 'info');
     
@@ -175,20 +179,22 @@ ollamaMemoryMonitor = {
   /**
    * Monitor using browser performance.memory API
    */
-  _fetchLoadedModel: async function(generation) {
+  _fetchLoadedModel: async function(generation, finalSample) {
     var controller = new AbortController();
     var timeout = setTimeout(function() { controller.abort(); }, 2500);
     try {
       var response = await fetch(this._getBackendUrl('/api/ollama/models'), { signal: controller.signal });
       if (!response.ok) return;
       var data = await response.json();
-      if (!this.isActive || generation !== this.generation || !Array.isArray(data.models)) return;
+      if ((!this.isActive && !finalSample) || generation !== this.generation || !Array.isArray(data.models)) return;
       var model = data.models.find(function(item) {
         return item.name === this.model || item.model === this.model;
       }, this);
       if (model && Number.isFinite(model.size) && model.size >= 0) {
         this.loadedModel = {
           model: model.name, sizeBytes: model.size,
+          digest: typeof model.digest === 'string' && /^[a-f0-9]{64}$/i.test(model.digest) ? model.digest : null,
+          contextTokens: Number.isSafeInteger(model.context_length) && model.context_length > 0 ? model.context_length : null,
           sizeVramBytes: Number.isFinite(model.size_vram) ? model.size_vram : null,
           source: 'ollama-api-ps', unit: 'bytes', observedAt: Date.now()
         };
@@ -196,6 +202,37 @@ ollamaMemoryMonitor = {
     } catch (err) {
       // Unavailable is unknown, never substitute RSS or another loaded model.
     } finally { clearTimeout(timeout); }
+  },
+
+  startResources: async function() {
+    this.resourceSession = null;
+    this.resources = null;
+    if (!this.backendAvailable) return;
+    try {
+      var res = await fetchWithTimeout(this._getBackendUrl('/api/telemetry/start'), { method: 'POST' }, 5000);
+      if (!res.ok) return;
+      var data = await res.json();
+      if (data.success && typeof data.id === 'string') this.resourceSession = data.id;
+    } catch (_) {}
+  },
+
+  pollResources: async function(finish) {
+    var id = this.resourceSession;
+    if (!id) return null;
+    try {
+      var res = await fetchWithTimeout(this._getBackendUrl('/api/telemetry/' + encodeURIComponent(id) + (finish ? '?finish=1' : '')), {}, 5000);
+      if (!res.ok) return null;
+      var data = await res.json();
+      if (id === this.resourceSession && data.success) { this.resources = data; return data; }
+    } catch (_) {}
+    return null;
+  },
+
+  cancelResources: async function() {
+    var id = this.resourceSession;
+    this.resourceSession = null;
+    if (!id) return;
+    try { await fetchWithTimeout(this._getBackendUrl('/api/telemetry/' + encodeURIComponent(id)), { method: 'DELETE' }, 2000); } catch (_) {}
   },
 
   _startBrowserMonitoring: function() {
@@ -232,7 +269,8 @@ ollamaMemoryMonitor = {
       readings: this.memoryReadings,
       backendAvailable: this.backendAvailable,
       source: this.source,
-      loadedModel: this.loadedModel
+      loadedModel: this.loadedModel,
+      resources: this.resources
     };
     
     addDebugLog('[MEMORY] Final stats: peak=' + result.peakMemory + ' MB, avg=' + result.averageMemory + ' MB', 'info');
