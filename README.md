@@ -2,9 +2,9 @@
 
 Benchmarkez vos modèles locaux ou vos API, conservez les campagnes dans votre navigateur et comparez leurs performances sur votre machine.
 
-**Interface v0.06 · protocole de mesure 0.08 · export communautaire v2.** Documentation vérifiée le 5 octobre 2026. Ces versions désignent des éléments différents ; la version 1.0.0 de `package.json` concerne le backend.
+**Interface v0.06 · protocole de mesure 0.08 · export communautaire v2 (2.1 pour les nouvelles épreuves agentiques).** Documentation vérifiée le 5 octobre 2026. Ces versions désignent des éléments différents ; la version 1.0.0 de `package.json` concerne le backend.
 
-Fonctions actuelles : chauffe séparée, contexte Auto, identification Dense/MoE lorsqu’elle est disponible, inventaire Apple Silicon, suivi RSS/swap/MLX, exports Markdown/JSON, statistiques interactives, premier scénario agentique de fichiers et assistant d’analyse au choix. Les bulles **!** expliquent les réglages et mesures au clic, au clavier ou sur mobile.
+Fonctions actuelles : chauffe séparée, contexte Auto, identification Dense/MoE lorsqu’elle est disponible, inventaire Apple Silicon, suivi RSS/swap/MLX, exports Markdown/JSON, statistiques interactives, batterie de capacités agentiques et assistant d’analyse au choix. Les bulles **!** expliquent les réglages et mesures au clic, au clavier ou sur mobile.
 
 ## Premier lancement avec Ollama
 
@@ -92,17 +92,17 @@ La chauffe utilise un prompt court fixe, une température nulle et au plus 32 to
 
 Le cache est géré par le runner et n’est pas vidé automatiquement. Des tokens réutilisés ne prouvent pas que tout le prompt est en cache. Le contexte observé du runner chargé est distinct du maximum théorique du modèle.
 
-## Benchmark agentique · fichiers
+## Capacités agentiques dans la même campagne
 
-Choisissez **Type de benchmark → Agentique · fichiers (v1)**, puis un modèle local avec appels d’outils natifs (**Ollama**, **LM Studio** ou **llama.cpp**). Le backend `npm start` doit être à jour et lancé. Les API externes et Exo restent pour une étape ultérieure.
+Cochez **Ajouter les capacités agentiques à cette campagne**. Gardez les catégories de texte souhaitées, puis sélectionnez les épreuves agentiques : le même lancement peut tester les deux, avec une chauffe séparée. Le backend à jour est requis, ainsi qu’un modèle/template compatible avec les appels d’outils natifs sur **Ollama**, **LM Studio** ou **llama.cpp** local.
 
-Après une chauffe séparée, le modèle doit calculer, créer un dossier, écrire un Markdown et le relire dans un répertoire temporaire dédié. Le backend contrôle les actions et le fichier réel : déclarer « fichier créé » ne suffit pas. Aucun shell ni accès aux documents personnels n’est proposé par les outils.
+La batterie comporte six épreuves : choix/format des outils, création d’un rapport depuis des données, reprise après panne, clarification avant écriture, objectif modifié sur plusieurs tours et abstention lorsqu’aucun outil n’est nécessaire. Le modèle reçoit un **cadre système**, les schémas JSON et un objectif ; il choisit les actions. Le backend vérifie données, dépendances, états et fichiers réels.
 
-Gardez **1 répétition** pour démarrer ; **3 répétitions** permettent de mieux voir la variabilité. Chaque tentative a ses propres fichiers et un budget de **8 tours modèle, 12 appels d’outils et 3 minutes**. Dans ce mode, **Tokens max** est le plafond cumulé des sorties, avec un comptage estimé si le runner ne fournit pas de compteur. Le bouton **Arrêter le test agentique** permet d’interrompre la campagne.
+Le suivi en direct montre attente, messages, appels, arguments, retours et vérifications. La réflexion apparaît uniquement lorsqu’elle est rapportée par le runner. Les cartes distinguent **objectif atteint**, **exécution conforme** et critères par capacité, avec traces locales repliables et téléchargement des fichiers. Les statistiques agentiques restent distinctes des courbes de génération ; tous les essais évalués comptent, échecs compris.
 
-Les cartes montrent réussite/échec, étapes repliables et reprises après rejet. Téléchargez le Markdown créé depuis la carte avant de quitter si vous souhaitez le conserver ; son texte est aussi sauvegardé dans l’historique local. Le dossier temporaire est supprimé après vérification. Les statistiques agentiques sont séparées des courbes de génération, avec les échecs dans le taux de réussite. **TTFT non mesuré** dans ce scénario non streaming ; le temps total couvre la tâche complète, outils compris. Un seul scénario de fichiers ne suffit pas à évaluer toutes les capacités agentiques.
+Gardez **1 répétition** pour vérifier le parcours, puis **3** aux mêmes réglages pour observer la variabilité. Par épreuve : **12 tours modèle, 24 appels, 4 minutes**. **Tokens max** est le budget cumulé de sortie de l’épreuve. Les seuls fichiers accessibles aux outils sont des entrées synthétiques et des sorties temporaires autorisées ; aucun shell ou document personnel. Le dialogue de clarification/changement d’objectif est scripté.
 
-[Scénario, isolation, mesures et tests détaillés](backend/AGENTIC_BENCHMARK.md). L’export **JSON v2** inclut étapes, budgets, scores et empreinte du fichier, sans son contenu ni arguments bruts. Aucun envoi automatique n’est activé.
+[Guide détaillé, scores et isolation](backend/AGENTIC_BENCHMARK.md) · [Recherche et limites de la méthodologie](backend/AGENTIC_METHODOLOGY.md). Ces tâches originales LLMB ne sont pas des scores officiels BFCL ou τ-bench et ne prouvent pas une autonomie générale. L’export communautaire **2.1.0** ajoute scénarios et critères, sans réflexion, arguments bruts ou contenu des fichiers ; les rapports 2.0.0 restent acceptés. Aucun envoi automatique n’est activé. **Exo reste reporté.**
 
 ## Lire les résultats
 
@@ -180,7 +180,7 @@ Les benchmarks de génération proposent Ollama, LM Studio, llama.cpp, OpenAI, M
 
 L’inventaire général Windows/Linux peut détecter CPU/GPU selon les commandes disponibles. L’inventaire structuré Apple et la télémétrie swap/disques/MLX décrite ci-dessus sont réservés à macOS. Une liste de GPU détectés ne prouve pas leur utilisation simultanée. Le sélecteur GPU affiche une consigne de redémarrage manuel ; il ne reconfigure pas Ollama automatiquement.
 
-Le premier scénario agentique de fichiers est intégré. Le schéma prépare aussi multi-CPU/GPU et Exo ; aucun orchestrateur distribué n’est intégré. [État et prochaines étapes](innovation.md).
+Le batterie de capacités agentiques est intégré. Le schéma prépare aussi multi-CPU/GPU et Exo ; aucun orchestrateur distribué n’est intégré. [État et prochaines étapes](innovation.md).
 
 ## Dépannage
 

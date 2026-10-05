@@ -45,6 +45,7 @@ async function consumeOllamaStream(response, signal, onFrame) {
 
 function resetCampaignResults() {
   state.results = [];
+  var agenticLivePanel = document.getElementById('agenticLive'); if (agenticLivePanel) agenticLivePanel.hidden = true;
   var list = document.getElementById('resultsList');
   if (list) list.textContent = '';
   showResultsArea(false);
@@ -53,7 +54,7 @@ function resetCampaignResults() {
 }
 
 function lockCampaignControls(lock) {
-  var elements = Array.from(document.querySelectorAll('.runner-btn, #benchmarkMode, #modelSelect, #modelCustom, #manualModeToggle, #temperature, #maxTokens, #repetitions, #customPromptText'));
+  var elements = Array.from(document.querySelectorAll('.runner-btn, #agenticEnabled, #agenticScenarios input, #modelSelect, #modelCustom, #manualModeToggle, #temperature, #maxTokens, #repetitions, #customPromptText'));
   if (lock) {
     window.campaignControls = elements.map(el => [el, el.disabled]);
     elements.forEach(el => { el.disabled = true; });
@@ -81,8 +82,8 @@ async function loadedModelSnapshot(model) {
 }
 function updateCampaignPlan() {
   var el = document.getElementById('campaignPlan');if(!el)return;
-  var agentic = document.getElementById('benchmarkMode')?.value === 'agentic';
-  var count = agentic ? 1 : state.selectedPrompts.size, reps = getRepetitions();
-  if (agentic) { el.textContent = reps+' tentative(s) agentique(s) + chauffe séparée. Par tentative : 8 tours modèle, 12 appels d’outils, 3 minutes ; '+getMaxTokens()+' tokens de sortie cumulés (comptage estimé si absent).'; return; }
+  var agentic = typeof agenticEnabled === 'function' && agenticEnabled();
+  var count = state.selectedPrompts.size, reps = getRepetitions();
+  if (agentic) { var tasks=selectedAgenticScenarios().length; el.textContent = count+' catégorie(s) de génération + '+tasks+' épreuve(s) agentique(s) × '+reps+' répétition(s) = '+(count+tasks)*reps+' mesures + chauffe séparée. Chaque épreuve : 12 tours, 24 appels, 4 minutes ; '+getMaxTokens()+' tokens de sortie cumulés. Plusieurs répétitions fiabilisent les taux.'; return; }
   el.textContent = count+' catégorie(s) × '+reps+' répétition(s) = '+count*reps+' mesure(s)'+(RUNNERS[state.runner]?.type === 'local' ? ' + chauffe séparée' : '')+'. Limite : '+getMaxTokens()+' tokens par réponse.';
 }

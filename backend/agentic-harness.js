@@ -82,14 +82,16 @@ function createAgenticHarness({now=Date.now,parent=os.tmpdir()}={}){
  async function cancel(id,token){const s=get(id,token);if(s.busy)throw fault('session-busy',409);await cleanup(s);sessions.delete(id);}
  return {start,tool,finish,cancel};
 }
-function mountAgenticRoutes(app,harness=createAgenticHarness()){
+function mountAgenticRoutes(app,harness=createAgenticHarness(),suite=require('./agentic-suite').createSuiteHarness()){
+ const catalog=require('./agentic-suite');
+ const selected=req=>req.params.id.startsWith('v2-')?suite:harness;
  function guard(req,res,next){if(!localRequest(req)||req.headers['x-llmb-agentic']!=='1')return res.status(403).json({error:'local-origin-required'});next();}
  const auth=req=>String(req.headers.authorization||'').replace(/^Bearer /,'');
  function route(fn){return async(req,res)=>{try{res.json(await fn(req));}catch(e){res.status(e.status||500).json({error:e.code||'agentic-unavailable'});}};}
- app.get('/api/agentic/info',guard,route(async()=>({version:VERSION,budget:BUDGET,scenario:'files-v1'})));
- app.post('/api/agentic/start',guard,route(()=>harness.start()));
- app.post('/api/agentic/:id/tool',guard,route(req=>harness.tool(req.params.id,auth(req),req.body.name,req.body.arguments)));
- app.post('/api/agentic/:id/finish',guard,route(req=>harness.finish(req.params.id,auth(req),req.body.reason?true:false)));
- app.delete('/api/agentic/:id',guard,route(async req=>{await harness.cancel(req.params.id,auth(req));return {success:true};}));
+ app.get('/api/agentic/info',guard,route(async()=>({version:catalog.VERSION,budget:catalog.BUDGET,maxModelTurns:12,scenarios:catalog.SCENARIOS})));
+ app.post('/api/agentic/start',guard,route(req=>req.body?.scenario?suite.start(req.body.scenario):harness.start()));
+ app.post('/api/agentic/:id/tool',guard,route(req=>selected(req).tool(req.params.id,auth(req),req.body.name,req.body.arguments)));
+ app.post('/api/agentic/:id/finish',guard,route(req=>selected(req).finish(req.params.id,auth(req),req.body.reason?true:false,req.body.finalAnswer)));
+ app.delete('/api/agentic/:id',guard,route(async req=>{await selected(req).cancel(req.params.id,auth(req));return {success:true};}));
 }
 module.exports={createAgenticHarness,mountAgenticRoutes,localRequest,TOOL_DEFINITIONS,PROMPT,VERSION,BUDGET};

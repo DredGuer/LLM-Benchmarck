@@ -81,7 +81,14 @@ function validateReport(report) {
       if (r.deviceId && ![...n.cpus, ...n.gpus, ...n.storage].some(d => d.id === r.deviceId)) throw new Error('Unknown resource device');
     }
     if (!t.agentic) continue;
-    const a = t.agentic, tools = unique(a.tools, 'tool'), artifacts = unique(a.artifacts, 'artifact');
+    const a = t.agentic;
+    if (a.scenario) {
+      if (report.schemaVersion !== '2.1.0') throw new Error('Agentic scenario metadata requires 2.1.0');
+      if (!Array.isArray(a.evaluation.criteria) || !a.evaluation.criteria.length || typeof a.evaluation.goalCompleted !== 'boolean') throw new Error('Scenario requires criteria and functional outcome');
+      unique(a.evaluation.criteria, 'criterion');
+      if (a.evaluation.taskSuccess !== a.evaluation.criteria.every(c => c.passed !== false)) throw new Error('Task conformity disagrees with criteria');
+    }
+    const tools = unique(a.tools, 'tool'), artifacts = unique(a.artifacts, 'artifact');
     unique(a.steps, 'step');
     const seen = new Set(); let order = 0;
     for (const step of a.steps) {

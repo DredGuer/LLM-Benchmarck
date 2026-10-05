@@ -195,7 +195,7 @@ function buildAgenticStatistics(sessions) {
   var groups=new Map(),seen=new Set();
   (sessions||[]).forEach(session=>(session.results||[]).forEach(r=>{
     if(r.kind!=='agentic'||!r.agentic||seen.has(r.id))return;if(r.id)seen.add(r.id);
-    var key=JSON.stringify([r.model,r.runner,r.runnerVersion,r.protocol?.version,r.protocol?.promptDigest,
+    var key=JSON.stringify([r.model,r.runner,r.runnerVersion,r.protocol?.version,r.agentic.scenario?.id,r.agentic.scenario?.version,r.protocol?.promptDigest,
       statisticsHardware(r.env),r.modelMetadata?.quantization,r.metrics?.temperature,r.metrics?.maxTokens,
       r.metrics?.contextObservedTokens,r.protocol?.loadState,r.protocol?.cacheState,r.agentic.budget]);
     if(!groups.has(key))groups.set(key,{model:r.model,runner:r.runner,scenario:r.protocol?.version||'unknown',rows:[]});
@@ -205,12 +205,17 @@ function buildAgenticStatistics(sessions) {
     meanDurationMs:g.rows.reduce((n,r)=>n+(r.metrics?.totalTime||0),0)/g.rows.length,
     meanToolCalls:g.rows.reduce((n,r)=>n+r.agentic.evaluation.toolCallCount,0)/g.rows.length}));
 }
+function agenticDimensionLabel(d){return ({'tool-selection':'Choix des outils','argument-format':'Formats et arguments','dependencies':'Dépendances et données','files':'Fichiers et livrables','verification':'Vérification des fichiers','error-recovery':'Reprise après erreur','clarification':'Clarification','multi-turn':'Mémoire et adaptation','policy':'Respect du périmètre','completion':'Fin et budgets'})[d]||d;}
+function agenticDimensionScores(rows){var dims=new Map();rows.forEach(r=>(r.agentic.evaluation.criteria||[]).forEach(c=>{if(c.passed===null)return;if(!dims.has(c.dimension))dims.set(c.dimension,{passed:0,total:0});var d=dims.get(c.dimension);d.total++;if(c.passed)d.passed++;}));return Array.from(dims,([dimension,s])=>({dimension,...s,rate:s.passed/s.total}));}
 function renderAgenticStatistics(history,panel) {
   var groups=buildAgenticStatistics(history);if(!groups.length)return;
-  var section=statisticsDetails(panel,'agentic-results','Agentique · réussite des scénarios ('+groups.reduce((n,g)=>n+g.attempts,0)+' tentatives)');
-  statisticsElement('p','Chaque ligne conserve les mêmes conditions, matériel et version du scénario. Les échecs comptent dans le taux de réussite. Un petit scénario de fichiers ne représente pas toutes les capacités agentiques.',section);
-  statisticsTable(section,['Modèle','Runner','Scénario','Réussites / tentatives','Taux','Durée moyenne, tous essais (s)','Appels moyens'],groups.map(g=>[
-    g.model,g.runner,g.scenario,g.successes+' / '+g.attempts,(100*g.successes/g.attempts).toFixed(1)+'%',(g.meanDurationMs/1000).toFixed(2),g.meanToolCalls.toFixed(1)]));
-  groups.forEach((g,i)=>{var detail=statisticsDetails(section,'agentic-group-'+i,g.model+' · détail des tentatives');
-    statisticsTable(detail,['Passe','Réussite','Temps (s)','Appels','Reprises'],g.rows.map(r=>[r.rep,!r.error&&r.agentic.evaluation.taskSuccess===true?'Oui':'Non',(r.metrics.totalTime/1000).toFixed(2),r.agentic.evaluation.toolCallCount,r.agentic.evaluation.retryCount]));});
+  var section=statisticsDetails(panel,'agentic-results','Capacités agentiques · '+groups.reduce((n,g)=>n+g.attempts,0)+' épreuves évaluées');
+  statisticsElement('p','Les tâches, versions et conditions sont séparées. Objectif atteint et conformité complète diffèrent ; un critère non sollicité n’entre pas dans son taux. Les scores sont ceux de la batterie LLMB, pas de BFCL/τ-bench. Les échecs restent au dénominateur.',section);
+  statisticsTable(section,['Modèle','Runner','Épreuve / version','Conformes / essais','Taux','Durée moyenne (s)','Appels moyens'],groups.map(g=>[
+    g.model,g.runner,g.rows[0].agentic.scenario?.title||g.scenario,g.successes+' / '+g.attempts,(100*g.successes/g.attempts).toFixed(1)+'%',(g.meanDurationMs/1000).toFixed(2),g.meanToolCalls.toFixed(1)]));
+  var profileRows=new Map();groups.forEach(g=>{var r=g.rows[0],key=JSON.stringify([r.model,r.runner,r.runnerVersion,statisticsHardware(r.env),r.modelMetadata?.quantization,r.metrics?.temperature,r.metrics?.maxTokens,r.metrics?.contextObservedTokens,r.protocol?.version,r.protocol?.loadState,r.protocol?.cacheState]);if(!profileRows.has(key))profileRows.set(key,[]);profileRows.get(key).push(...g.rows);});
+  profileRows.forEach(rows=>{var detail=statisticsDetails(section,'agentic-profile-'+rows[0].id,'Profil de capacités · '+rows[0].model+' · '+rows.length+' essais aux mêmes réglages');statisticsTable(detail,['Capacité','Critères réussis / évalués','Taux'],agenticDimensionScores(rows).map(d=>[agenticDimensionLabel(d.dimension),d.passed+' / '+d.total,(100*d.rate).toFixed(1)+'%']));});
+  groups.forEach((g,i)=>{var detail=statisticsDetails(section,'agentic-group-'+i,g.model+' · '+(g.rows[0].agentic.scenario?.title||g.scenario));
+    statisticsTable(detail,['Capacité','Critères réussis / évalués','Taux'],agenticDimensionScores(g.rows).map(d=>[agenticDimensionLabel(d.dimension),d.passed+' / '+d.total,(100*d.rate).toFixed(1)+'%']));
+    statisticsTable(detail,['Passe','Objectif atteint','Conforme','Temps (s)','Appels','Reprises'],g.rows.map(r=>[r.rep,r.agentic.evaluation.goalCompleted===undefined?'N/A':r.agentic.evaluation.goalCompleted?'Oui':'Non',!r.error&&r.agentic.evaluation.taskSuccess===true?'Oui':'Non',(r.metrics.totalTime/1000).toFixed(2),r.agentic.evaluation.toolCallCount,r.agentic.evaluation.retryCount]));});
 }

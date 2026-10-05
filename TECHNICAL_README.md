@@ -2,7 +2,7 @@
 
 [Prise en main](README.md) · [Backend](BACKEND_README.md) · [Contrat communautaire](schemas/README.md)
 
-État documenté le 5 octobre 2026 : interface v0.06, protocole de génération 0.08, export 2.0.0 et bundle 1.0.0. Le scénario agentique fichiers `agentic-files-1.0.0` est exécuté ; les fixtures de schéma agentiques/Exo restent synthétiques. Exo n’est pas exécuté.
+État documenté le 5 octobre 2026 : interface v0.06, protocole de génération 0.08, exports 2.0.0/2.1.0 et bundle 1.0.0. La batterie `agentic-suite-2.0.0` est exécutée ; les fixtures de schéma agentiques/Exo restent synthétiques. Exo n’est pas exécuté.
 
 ## Organisation
 
@@ -17,7 +17,7 @@ L’application charge des scripts classiques dans l’ordre déclaré dans `llm
 | `js/core/runners.js` | Modèles, métadonnées autorisées et contexte Auto |
 | `js/core/advancedConfig.js` | Mode Manuel/Auto, températures, répétitions et plafond de tokens |
 | `js/core/protocol.js` | Observation du chargement, empreinte du prompt, flux NDJSON, contrôles et arrêt de génération |
-| `js/core/agentic.js`, `backend/agentic-harness.js` | Boucle native d’outils locale, budgets, fichiers restreints et vérification réelle |
+| `js/core/agentic.js`, `agentic-stream.js`, `backend/agentic-suite.js` | Boucle native d’outils locale, budgets, fichiers restreints et vérification réelle |
 | `js/core/benchmark.js` | Campagne, chauffe, mesures, requêtes fournisseurs et finalisation |
 | `js/core/memory.js` | RSS, taille déclarée du modèle et sessions de télémétrie |
 | `js/core/history.js` | Sauvegarde, quota, restauration et liste des campagnes |
@@ -68,12 +68,16 @@ Les synthèses couvrent toutes les passes du périmètre et les conditions, avec
 
 Le schéma communautaire, ses contraintes et ses limites de validation sont décrits dans [schemas/README.md](schemas/README.md). La documentation doit évoluer avec le code selon [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Parcours agentique
+## Parcours agentique intégré
 
-[Contrat du scénario fichiers](backend/AGENTIC_BENCHMARK.md). La sélection du mode dispatch depuis `runBenchmark` vers `runAgenticBenchmark` ; chauffe, verrouillage, remplacement de campagne et historique restent explicites. `executeAgenticTest` utilise le chat natif Ollama ou compatible, garde les messages structurés et ajoute chaque retour d’outil. Un plafond de tours évite les boucles ; les budgets temps/tokens/appels sont distincts. Le backend ne reçoit jamais de code à exécuter ni de chemin libre.
+[Guide de la batterie](backend/AGENTIC_BENCHMARK.md) · [Méthodologie et sources](backend/AGENTIC_METHODOLOGY.md). Une case ajoute les épreuves aux catégories de génération. `runBenchmark` dispatch vers la campagne mixte lorsqu’elle est cochée : une chauffe, puis catégories et tâches par répétition, nouveaux dossiers/conversations pour chaque épreuve, historique commun et déverrouillage en `finally`. Un déchargement Ollama observé déclenche une nouvelle chauffe.
 
-Le résultat ajoute `kind`, `agentic` et le texte local de l’artefact. L’export v2 construit une liste explicite de champs agentiques et exclut ce texte. Les statistiques de génération excluent ce type ; les scores agentiques comptent tous les essais évalués, échecs compris. L’assistant reçoit un résumé séparé. Les erreurs de prérequis avant session sont affichées sans inventer un score backend.
+Le backend fournit objectif, message système et schémas JSON. `agentic-stream.js` assemble NDJSON/SSE fragmentés, réflexion rapportée et appels indexés ; la confirmation finale est exigée avant exécution des outils. Messages assistant et retours natifs sont préservés. Le changement d’objectif est ajouté comme message utilisateur après les réponses d’outils. Le modèle décide de la séquence ; les évaluateurs vérifient l’évidence observable, pas un raisonnement caché.
 
-`fetchWithTimeout` propage maintenant le signal d’annulation externe vers sa propre requête. Le scénario garde en plus un contrôleur de durée de tâche couvrant la lecture du corps de réponse et les échanges d’outils. Les jetons de session ne sont pas persistés ; nettoyage en fin/abandon/expiration. Les restrictions de fichiers sont applicatives, sans sandbox OS ; une interruption brutale du backend peut laisser un dossier temporaire.
+`agentic-suite.js` protège des chemins fixes, entrées en lecture seule, taille des sorties, types/arguments et budgets. Il enregistre l’évidence existant à l’écriture/soumission : une lecture après une supposition ne valide pas la dépendance. L’objectif atteint et la conformité peuvent différer. Les états locaux sont supprimés après vérification ; des traces bornées et contenus de fichiers restent dans l’historique navigateur, sans jetons/chemins temporaires.
 
-Tests : `node backend/agentic-harness.test.cjs` et `node backend/agentic-integration.test.cjs`, plus les suites génération/export existantes. Les adaptateurs sont testés avec réponses simulées ; validation réelle sur modèles Apple Silicon à réaliser avant de généraliser les comparaisons.
+L’export 2.1.0 ajoute scénario, critères, objectif atteint, premier outil et nombre de tours. L’exporteur et l’assistant utilisent des listes de champs, sans traces, réflexions, paramètres d’outils bruts ni contenu d’artefact. Les statistiques agentiques regroupent les mêmes conditions et affichent les taux de critères évalués ; les courbes de débit de génération excluent ces essais. Les contrats 2.0.0 et les anciennes cartes fichiers v1 restent lus.
+
+`fetchWithTimeout` propage le signal externe ; le contrôleur global de l’épreuve couvre aussi la lecture du flux. Annulation et tour incomplet n’exécutent pas les appels non confirmés. Le compteur total de tokens reste inconnu si le dernier tour n’a pas fourni son compteur final.
+
+Tests : `agentic-harness.test.cjs` (compatibilité v1), `agentic-suite.test.cjs` (états réels), `agentic-stream.test.cjs` (assemblage/fin de flux), `agentic-integration.test.cjs` (campagne mixte/export/AI), puis suites existantes. Réponses modèle simulées ; validation modèles/runner réels encore requise. Les restrictions fichiers sont applicatives, pas une sandbox OS. Aucun Exo n’est intégré.

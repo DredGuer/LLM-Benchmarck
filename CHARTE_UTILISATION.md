@@ -69,12 +69,13 @@ les obligations propres à une organisation.
 
 ## Tâches agentiques et fonctions prévues
 
-Le premier scénario agentique de fichiers utilise des outils fixes dans un dossier
+La batterie agentique utilise des outils déclarés dans un dossier
 temporaire dédié, sans shell, accès aux documents personnels ni réseau depuis les outils.
 Le modèle est appelé sur le runner local. Les chemins et budgets sont contrôlés par
-l’application ; ce n’est pas une sandbox du système d’exploitation. Le fichier créé
-est supprimé après vérification, mais son contenu retourné reste dans l’historique local
-et peut être téléchargé. Un arrêt brutal du backend peut laisser un dossier temporaire.
+l’application ; ce n’est pas une sandbox du système d’exploitation. Les fichiers créés
+sont supprimés après vérification, mais leurs contenus retournés et les traces de messages,
+réflexion rapportée et appels restent dans l’historique local. Les fichiers peuvent être téléchargés.
+Ces traces et contenus sont exclus du profil JSON communautaire et du contexte d’analyse IA. Un arrêt brutal du backend peut laisser un dossier temporaire.
 Voir [le scénario et ses limites](backend/AGENTIC_BENCHMARK.md). Les futures tâches
 plus larges nécessiteront leurs propres protections.
 

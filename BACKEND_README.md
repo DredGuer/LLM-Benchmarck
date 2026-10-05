@@ -2,7 +2,7 @@
 
 [Guide de démarrage](README.md) · [Architecture](TECHNICAL_README.md)
 
-Le backend Node.js fournit à l’interface des mesures Ollama et des informations sur la machine où il s’exécute. Il exécute également les outils restreints du premier scénario agentique. Il ne sert pas la page HTML et n’exécute pas les modèles. La version `package.json` 1.0.0 est distincte de l’interface v0.06 et du protocole 0.08.
+Le backend Node.js fournit à l’interface des mesures Ollama et des informations sur la machine où il s’exécute. Il exécute également les outils restreints de la batterie agentique. Il ne sert pas la page HTML et n’exécute pas les modèles. La version `package.json` 1.0.0 est distincte de l’interface v0.06 et du protocole 0.08.
 
 ## Lancement
 
@@ -46,13 +46,13 @@ Ce changement n’adapte pas automatiquement les URLs utilisées par l’interfa
 | GET | `/api/telemetry/:id?finish=1` | Dernier échantillon, séries et fermeture de session |
 | DELETE | `/api/telemetry/:id` | Abandon et nettoyage de session |
 
-| GET | `/api/agentic/info` | Version et budgets du scénario (en-tête local requis) |
-| POST | `/api/agentic/start` | Nouveau dossier et jeton de session |
-| POST | `/api/agentic/:id/tool` | Appel d’un outil fixe, arguments contrôlés |
+| GET | `/api/agentic/info` | Version, catalogue des six épreuves et budgets (en-tête local requis) |
+| POST | `/api/agentic/start` | Nouveau dossier, cadre système, schémas et jeton ; corps `{scenario: id}` |
+| POST | `/api/agentic/:id/tool` | Appel d’un outil natif déclaré, arguments JSON contrôlés |
 | POST | `/api/agentic/:id/finish` | Vérification réelle, résultat et suppression du dossier |
 | DELETE | `/api/agentic/:id` | Abandon et nettoyage |
 
-Les routes agentiques exigent une connexion loopback, une origine locale si présente et `X-LLMB-Agentic: 1`. Les opérations sur une session demandent `Authorization: Bearer JETON_DE_SESSION`. Les jetons restent en mémoire pendant la tentative. Les protections ne s’appliquent pas rétroactivement aux anciennes routes. Voir [scénario et limites d’isolation](backend/AGENTIC_BENCHMARK.md).
+Les routes agentiques exigent une connexion loopback, une origine locale si présente et `X-LLMB-Agentic: 1`. Les opérations sur une session demandent `Authorization: Bearer JETON_DE_SESSION`. Les jetons restent en mémoire pendant la tentative. Les protections ne s’appliquent pas rétroactivement aux anciennes routes. Voir [batterie et limites d’isolation](backend/AGENTIC_BENCHMARK.md).
 
 ```bash
 curl -fsS -H 'X-LLMB-Agentic: 1' http://localhost:3001/api/agentic/info
@@ -108,3 +108,16 @@ node backend/agentic-integration.test.cjs
 ```
 
 Les opérations fichiers sont réellement exécutées en test ; les réponses des modèles sont simulées. La réussite sur modèles réels reste à vérifier.
+
+## Batterie agentique 2.0
+
+`backend/agentic-suite.js` contient six tâches versionnées, le cadre système, les outils restreints et les évaluateurs d’état. `POST /api/agentic/start` reçoit par exemple `{"scenario":"tool-selection"}` ; la session v2 possède son propre jeton et expire après quatre minutes. `finish` reçoit `finalAnswer` pour les contrôles de réponse et `reason` en cas d’interruption. Il retourne critères, objectif atteint, conformité, étapes et contenus locaux de fichiers avant nettoyage. L’interface exclut ces contenus des exports communautaires.
+
+Le chemin fichiers v1 reste compatible pour les sessions démarrées sans scénario ; il n’est plus proposé par l’interface. Les sessions v1 et v2 sont routées vers leurs harness respectifs. Ne pas confondre la version de paquet backend 1.0.0 et le protocole agentique 2.0.0.
+
+```bash
+node backend/agentic-suite.test.cjs
+node backend/agentic-stream.test.cjs
+```
+
+[Principes et sources de la méthodologie](backend/AGENTIC_METHODOLOGY.md). Les entrées sont synthétiques, les conversations utilisateur scriptées, le périmètre applicatif restreint ; aucun shell réseau ou Exo n’est ajouté.

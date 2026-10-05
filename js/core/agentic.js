@@ -1,154 +1,153 @@
-// A fixed, versioned task using native tool calls. No text-to-command execution.
-function updateBenchmarkMode() {
-  var active = document.getElementById('benchmarkMode')?.value === 'agentic';
-  document.getElementById('promptCategoryCard').hidden = active;
-  document.getElementById('agenticDescription').hidden = !active;
+// Integrated generation + agentic campaign, independent task evaluation and local-only traces.
+var AGENTIC_SCENARIOS=[
+ {id:'tool-selection',title:'Choix des outils et arguments JSON',detail:'Sélectionner les bons outils et transmettre des valeurs typées.'},
+ {id:'files-report',title:'Données → fichiers → vérification',detail:'Lire des données, calculer et contrôler un rapport réel.'},
+ {id:'error-recovery',title:'Erreur temporaire et reprise',detail:'Réagir à un échec explicite et poursuivre sans boucler.'},
+ {id:'clarification',title:'Clarification avant écriture',detail:'Demander une information manquante au lieu de l’inventer.'},
+ {id:'goal-revision',title:'Plusieurs tours et objectif modifié',detail:'Tenir compte d’une nouvelle instruction, sans réutiliser l’ancien résultat.'},
+ {id:'no-tool',title:'Abstention : aucun outil nécessaire',detail:'Respecter une consigne textuelle sans action inutile.'}
+];
+function agenticEnabled(){return document.getElementById('agenticEnabled')?.checked===true;}
+function selectedAgenticScenarios(){return AGENTIC_SCENARIOS.filter(s=>document.getElementById('agentic-'+s.id)?.checked!==false);}
+function updateBenchmarkMode(){
+  var panel=document.getElementById('agenticDescription');if(panel)panel.hidden=!agenticEnabled();
+  // Generation categories remain available: both capabilities can share one campaign.
+  var category=document.getElementById('promptCategoryCard');if(category)category.hidden=false;
   updateCampaignPlan();
 }
-async function agenticRequest(route, body, session, signal, method) {
-  var base = window.MEMORY_MONITOR_CONFIG.backendUrl.replace(/\/$/, '');
-  var url = new URL(base);
-  if (!['localhost','127.0.0.1','[::1]'].includes(url.hostname)) throw new Error('Le backend agentique doit être local.');
-  var response = await fetchWithTimeout(base+'/api/agentic'+route, {
-    method: method || (body ? 'POST' : 'GET'), signal,
-    headers: {'Content-Type':'application/json','X-LLMB-Agentic':'1',...(session ? {Authorization:'Bearer '+session.token} : {})},
-    body: body ? JSON.stringify(body) : null
-  }, 10000);
-  if (!response.ok) throw new Error('Backend agentique indisponible ou budget atteint (HTTP '+response.status+'). Relancez npm start.');
-  return response.json();
+function initAgenticUI(){
+  var list=document.getElementById('agenticScenarios');if(!list)return;list.textContent='';
+  AGENTIC_SCENARIOS.forEach(s=>{var label=document.createElement('label');label.style.display='block';label.style.margin='10px 0';
+    var checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.id='agentic-'+s.id;checkbox.checked=true;checkbox.addEventListener('change',updateCampaignPlan);
+    label.appendChild(checkbox);label.appendChild(document.createTextNode(' '+s.title+' — '+s.detail));list.appendChild(label);});updateBenchmarkMode();
 }
-async function executeAgenticTest(model, rep, signal, warmupRuns) {
-  var runner=state.runner, session=null, outcome=null, memory=null, loadedBefore=null;
-  var startedAt=new Date().toISOString(), started=performance.now(), finishedAt, elapsed=0;
-  var tokens=0, declared=true, turns=0, text='', failure=null, genMs=0, prefillMs=0, timingKnown=true, timingReports=0, thinking=false;
-  var maximum=getMaxTokens(), temperature=getTemperatureForPromptType('agentic-files');
-  var taskController=new AbortController(), externalSignal=signal, deadlineTimer;
-  function cancelTask(){taskController.abort();}
-  if(externalSignal.aborted)cancelTask();else externalSignal.addEventListener('abort',cancelTask,{once:true});
-  signal=taskController.signal;
+function agenticLiveStart(title){var panel=document.getElementById('agenticLive');if(!panel)return;
+  panel.hidden=false;document.getElementById('agenticLiveTitle').textContent=title;document.getElementById('agenticLiveStatus').textContent='Préparation…';
+  document.getElementById('agenticLiveTrace').textContent='';
+}
+function agenticLive(type,text){var status=document.getElementById('agenticLiveStatus'),trace=document.getElementById('agenticLiveTrace');if(!trace||!status)return;
+  var labels={'tool-pending':'Appel natif en préparation','tool-name':'Outil choisi','tool-arguments':'Arguments préparés',thinking:'Réflexion rapportée par le runner',content:'Message du modèle',request:'Requête modèle en cours',tool:'Exécution outil',result:'Retour d’outil',verification:'Vérification indépendante',user:'Nouvelle instruction utilisateur',warmup:'Chargement / chauffe'};
+  status.textContent=labels[type]||'Appel d’outil en préparation';
+  var entry=trace.lastElementChild;
+  if(!entry||entry.dataset.type!==type||!['thinking','content'].includes(type)){entry=document.createElement('p');entry.dataset.type=type;entry.style.whiteSpace='pre-wrap';entry.textContent=(labels[type]||type)+' : ';trace.appendChild(entry);}
+  entry.textContent=(entry.textContent+String(text)).slice(0,16000);
+  while(trace.children.length>160||trace.textContent.length>128000)trace.removeChild(trace.firstElementChild);trace.scrollTop=trace.scrollHeight;
+}
+async function agenticRequest(route,body,session,signal,method){
+  var base=window.MEMORY_MONITOR_CONFIG.backendUrl.replace(/\/$/,''),url=new URL(base);
+  if(!['localhost','127.0.0.1','[::1]'].includes(url.hostname))throw new Error('Le backend agentique doit être local.');
+  var response=await fetchWithTimeout(base+'/api/agentic'+route,{method:method||(body?'POST':'GET'),signal,
+    headers:{'Content-Type':'application/json','X-LLMB-Agentic':'1',...(session?{Authorization:'Bearer '+session.token}:{})},body:body?JSON.stringify(body):null},10000);
+  if(!response.ok)throw new Error('Backend agentique indisponible ou budget atteint (HTTP '+response.status+'). Vérifiez npm start.');return response.json();
+}
+async function executeAgenticTest(model,rep,externalSignal,warmupRuns,scenario){
+  var runner=state.runner,session=null,outcome=null,memory=null,loadedBefore=null,trace=[],traceBudget=65536,traceLimited=false,turns=0,tokens=0,declared=true,firstSegment=null,firstAnswer=null,firstTool=null,turnFirstContent=null,thinkingSeen=false,turnOpen=false;
+  var genMs=0,prefillMs=0,timingKnown=true,timingReports=0,text='',failure=null,started=performance.now(),startedAt=new Date().toISOString(),finishedAt,elapsed=0;
+  var maxTokens=getMaxTokens(),temperature=getTemperatureForPromptType('agentic'),controller=new AbortController(),deadlineTimer;
+  var signal=controller.signal;function cancel(){controller.abort();}if(externalSignal.aborted)cancel();else externalSignal.addEventListener('abort',cancel,{once:true});
   var load=await observeLoadedModel(model,signal);
-  try {
-    loadedBefore=await loadedModelSnapshot(model);
-    if(runner==='ollama'){await ollamaMemoryMonitor.startResources();ollamaMemoryMonitor.start(model);}
-    session=await agenticRequest('/start',{},null,signal);
-    // Budget starts when the workspace is created, after loading and telemetry setup.
-    started=performance.now();startedAt=new Date().toISOString();
-    deadlineTimer=setTimeout(cancelTask,session.budget.timeoutMs);
-    var messages=[{role:'user',content:session.prompt}], done=false;
-    while(turns<8 && !done){
-      if(signal.aborted)throw new Error('Test agentique annulé.');
-      var remaining=session.budget.timeoutMs-(performance.now()-started);
-      if(remaining<=0)throw new Error('Limite de 3 minutes atteinte.');
-      if(tokens>=maximum)throw new Error('Budget total de tokens atteint.');
-      turns++;setProgress((turns-1)/8*100,'Agentique · tentative '+rep+' · tour '+turns+'/8');
-      var body={model,messages,tools:session.tools,stream:false};
-      if(runner==='ollama')body.options=buildOllamaOptions(temperature,Math.min(1024,maximum-tokens),null);
-      else {body.temperature=temperature;body.max_tokens=Math.min(1024,maximum-tokens);}
-      var response=await fetchWithTimeout(RUNNERS[runner].base+(runner==='ollama'?'/api/chat':'/v1/chat/completions'),
-        {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal},remaining);
-      if(!response.ok)throw new Error('Le runner a refusé les appels d’outils (HTTP '+response.status+'). Vérifiez le support natif du modèle.');
-      var data=await response.json(), message=runner==='ollama'?data.message:data.choices?.[0]?.message;
-      if(data.error || !message || message.role!=='assistant')throw new Error('Réponse structurée du modèle absente.');
-      var reported=runner==='ollama'?data.eval_count:data.usage?.completion_tokens;
-      if(Number.isSafeInteger(reported)&&reported>=0)tokens+=reported;
-      else {declared=false;tokens+=estimateTokens(JSON.stringify(message));}
-      if(runner==='ollama' && Number.isFinite(data.eval_duration)&&Number.isFinite(data.prompt_eval_duration)){timingReports++;genMs+=data.eval_duration/1e6;prefillMs+=data.prompt_eval_duration/1e6;}else timingKnown=false;
-      thinking=thinking||!!message.thinking||String(message.content||'').includes('<think>');
-      text=typeof message.content==='string'?message.content:'';
-      var calls=message.tool_calls || [];
-      if(!Array.isArray(calls))throw new Error('Appels d’outils invalides.');
-      messages.push(message);
-      var stopReason=runner==='ollama'?data.done_reason:data.choices?.[0]?.finish_reason;
-      if(['length','max_tokens'].includes(stopReason)||tokens>maximum)throw new Error('Réponse tronquée ou budget de tokens dépassé.');
-      if(!calls.length){done=true;break;}
-      for(var call of calls){
-        if(signal.aborted)throw new Error('Test agentique annulé.');
-        if(performance.now()-started>session.budget.timeoutMs)throw new Error('Limite de 3 minutes atteinte.');
-        var name=call.function?.name,args=call.function?.arguments;
-        if(typeof args==='string'){try{args=JSON.parse(args);}catch(_){args=null;}}
-        if(runner!=='ollama' && (typeof call.id!=='string'||!call.id))throw new Error('Identifiant d’appel d’outil absent.');
-        var result=await agenticRequest('/'+session.id+'/tool',{name,arguments:args},session,signal);
-        addDebugLog('Agentique · '+name+' : '+(result.ok?'validé':'rejeté'),'info');
-        messages.push(runner==='ollama'?{role:'tool',tool_name:name,content:JSON.stringify(result)}:
-          {role:'tool',tool_call_id:call.id,content:JSON.stringify(result)});
-      }
-    }
-    if(!done)throw new Error('Limite de 8 tours modèle atteinte.');
-    outcome=await agenticRequest('/'+session.id+'/finish',{},session,signal);
-    if(!outcome.agentic.evaluation.taskSuccess)failure='Le scénario n’a pas passé toutes les vérifications : calcul, création, contenu Markdown et relecture.';
-  } catch(error) {
-    failure=signal.aborted?(externalSignal.aborted?'Test agentique annulé.':'Limite de 3 minutes atteinte.'):error.message;
-    if(session && !outcome){try{outcome=await agenticRequest('/'+session.id+'/finish',{reason:'failed'},session);}catch(_){
-      try{await agenticRequest('/'+session.id,null,session,null,'DELETE');}catch(_){}
-    }}
-  } finally {
-    clearTimeout(deadlineTimer);externalSignal.removeEventListener('abort',cancelTask);
-    elapsed=performance.now()-started;finishedAt=new Date().toISOString();
-    if(runner==='ollama'){
-      try{memory=ollamaMemoryMonitor.stop();await ollamaMemoryMonitor._fetchLoadedModel(ollamaMemoryMonitor.generation,true);
-        if(ollamaMemoryMonitor.resourcesPending)await ollamaMemoryMonitor.resourcesPending;
-        await ollamaMemoryMonitor.pollResources(true);
-        memory={peak:memory.peakMemory||null,average:memory.averageMemory||null,source:memory.source,unit:'MiB',
-          readings:memory.readings,sampleCount:memory.readings.length,intervalMs:window.MEMORY_MONITOR_CONFIG.pollInterval,
-          loadedModelBefore:loadedBefore,loadedModel:ollamaMemoryMonitor.loadedModel,resources:ollamaMemoryMonitor.resources};
-      }catch(_){}finally{await ollamaMemoryMonitor.cancelResources();}
-    }
+  function event(type,value){
+    agenticLive(type,value);if(type==='thinking')thinkingSeen=true;
+    if(['thinking','content','tool-name','tool-arguments'].includes(type)&&firstSegment===null)firstSegment=performance.now()-started;
+    if(type==='content'&&turnFirstContent===null)turnFirstContent=performance.now()-started;
+    value=String(value);if(traceBudget<=0){traceLimited=true;return;}if(value.length>traceBudget){value=value.slice(0,traceBudget);traceLimited=true;}traceBudget-=value.length;var last=trace.at(-1);
+    if(['thinking','content'].includes(type)&&last?.type===type){if(last.text.length+value.length>16000)traceLimited=true;last.text=(last.text+value).slice(0,16000);}
+    else if(trace.length<160){if(value.length>16000)traceLimited=true;trace.push({type,text:value.slice(0,16000),elapsedMs:Math.round(performance.now()-started)});}else traceLimited=true;
   }
-  // No session/evaluator means no valid agentic record: do not invent an evaluation.
-  if(!outcome)throw new Error(failure || 'Vérification backend indisponible ; aucun résultat agentique certifié.');
-  return {id:crypto.randomUUID(),kind:'agentic',agentic:outcome.agentic,agenticArtifactText:outcome.artifactText,
-    model,runner:RUNNERS[runner].name,runnerVersion:state.runnerVersion||null,modelMetadata:state.modelMetadata,
-    timestamp:finishedAt,startedAt,finishedAt,phase:'measurement',rep,promptType:'agentic-files',promptTypeName:'Agentique · fichiers',promptEmoji:'🤖',
-    promptText:session.prompt,response:text,error:failure,
-    protocol:{version:'agentic-files-1.0.0',promptDigest:await promptFingerprint(session.prompt),loadState:load,cacheState:'unknown',warmupRuns},
-    metrics:{totalTokens:tokens,tokensPerSec:elapsed>0?Math.round(tokens/(elapsed/1000)*10)/10:0,totalTime:Math.round(elapsed),ttft:null,
-      tokenCountKind:declared?'declared':'estimated',tokenCountSource:declared?'native-chat:sum-output-token-counts':'native-chat:mixed-estimates',
-      generationTimeMs:timingKnown&&timingReports?genMs:null,prefillTimeMs:timingKnown&&timingReports?prefillMs:null,generationTokensPerSec:timingKnown&&genMs>0?tokens/(genMs/1000):null,
-      temperature,maxTokens:maximum,thinkingObserved:thinking,contextMode:'auto',contextRequestedTokens:null,contextObservedTokens:memory?.loadedModel?.contextTokens??null},
-    env:JSON.parse(JSON.stringify(state.env)),...(memory?{memory}:{})};
-}
-async function runAgenticBenchmark() {
-  if(state.isRunning||state.analysisRunning)return;
-  if(!['ollama','lmstudio','llamacpp'].includes(state.runner)){showToast('Premier scénario : Ollama, LM Studio ou llama.cpp locaux, avec appels d’outils natifs.','error');return;}
-  var model=getSelectedModel(),repetitions=getRepetitions(), runner=state.runner;
-  if(!model||model==='unknown-model'||!Number.isInteger(repetitions)||repetitions<1||repetitions>20){showToast('Choisissez un modèle et 1 à 20 répétitions.','error');return;}
-  if(state.unsavedSession && saveSessionToHistory(state.unsavedSession)===false)return;
-  state.unsavedSession=null;state.isRunning=true;lockCampaignControls(true);
-  var results=[],button=document.getElementById('runBtn'),warmups=0;
-  var campaignController=new AbortController();currentAbortController=campaignController;
-  document.getElementById('agenticStop').hidden=false;button.disabled=true;
-  function remember(r){results.push(r);state.results.unshift(r);renderResultCard(r);}
   try{
-    await agenticRequest('/info',null,null,campaignController.signal);
-    resetCampaignResults();switchTab('results');document.getElementById('progressSection').style.display='block';
-    await refreshModelMetadata();state.runnerVersion=null;
-    if(runner==='ollama'){var version=await fetchWithTimeout(RUNNERS.ollama.base+'/api/version',{signal:campaignController.signal},5000);if(version.ok)state.runnerVersion=(await version.json()).version||null;}
-    button.textContent='Chargement / chauffe…';
-    var warm=await executeTest(model,{id:'warmup',name:'Chargement / chauffe',emoji:'🔥'},'Réponds uniquement par OK.',1,campaignController.signal,
-      {warmup:true,loadState:await observeLoadedModel(model,campaignController.signal),warmupRuns:0});
-    if(!warm.metrics.totalTokens&&!warm.response)throw new Error('Le modèle ne répond pas pendant la chauffe.');
-    remember(warm);warmups++;
-    showLiveSections(false);setControlButtons(false);
-    for(var rep=1;rep<=repetitions;rep++){
-      if(campaignController.signal.aborted)break;
-      if(runner==='ollama' && await observeLoadedModel(model,campaignController.signal)==='cold')throw new Error('Modèle déchargé : relancez après vérification du runner.');
-      button.textContent='Scénario agentique · '+rep+'/'+repetitions;
-      remember(await executeAgenticTest(model,rep,campaignController.signal,warmups));
+    if(runner==='ollama'){loadedBefore=await loadedModelSnapshot(model);await ollamaMemoryMonitor.startResources();ollamaMemoryMonitor.start(model);}
+    session=await agenticRequest('/start',{scenario:scenario.id},null,signal);
+    started=performance.now();startedAt=new Date().toISOString();deadlineTimer=setTimeout(cancel,session.budget.timeoutMs);
+    agenticLiveStart(session.scenario.title);event('request','Le modèle reçoit le cadre système, l’objectif et les schémas d’outils. Aucun flux de réflexion reçu à ce stade.');
+    var messages=[{role:'system',content:session.systemPrompt},{role:'user',content:session.prompt}],done=false;
+    while(turns<session.maxModelTurns&&!done){
+      if(signal.aborted)throw new Error('Test agentique interrompu.');var remaining=session.budget.timeoutMs-(performance.now()-started);
+      if(remaining<=0)throw new Error('Budget de temps atteint.');if(tokens>=maxTokens)throw new Error('Budget cumulé de tokens atteint.');
+      turns++;setProgress((turns-1)/session.maxModelTurns*100,session.scenario.title+' · passe '+rep+' · tour '+turns+'/'+session.maxModelTurns);
+      event('request','Tour '+turns+' : attente de la réponse ou des appels natifs.');
+      var body={model,messages,tools:session.tools,stream:true};
+      if(runner==='ollama')body.options=buildOllamaOptions(temperature,Math.min(2048,maxTokens-tokens),null);
+      else {body.temperature=temperature;body.max_tokens=Math.min(2048,maxTokens-tokens);body.stream_options={include_usage:true};}
+      turnFirstContent=null;turnOpen=true;var response=await fetchWithTimeout(RUNNERS[runner].base+(runner==='ollama'?'/api/chat':'/v1/chat/completions'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal},remaining);
+      var turn=await consumeAgenticChat(response,runner,signal,event),message=turn.message,calls=message.tool_calls||[];turnOpen=false;
+      var reported=turn.usage?.outputTokens;if(Number.isSafeInteger(reported)&&reported>=0)tokens+=reported;else{declared=false;tokens+=estimateTokens(JSON.stringify(message));}
+      if(Number.isFinite(turn.timing.generationMs)&&Number.isFinite(turn.timing.prefillMs)){genMs+=turn.timing.generationMs;prefillMs+=turn.timing.prefillMs;timingReports++;}else timingKnown=false;
+      text=message.content||'';messages.push(message);
+      if(['length','max_tokens'].includes(turn.finishReason)||tokens>maxTokens)throw new Error('Tour tronqué ou budget de tokens dépassé.');
+      if(!calls.length){firstAnswer=turnFirstContent;done=true;break;}
+      var nextUser=[];
+      for(var call of calls){if(signal.aborted)throw new Error('Test agentique interrompu.');
+        var name=call.function?.name,args=call.function?.arguments;if(typeof args==='string'){try{args=JSON.parse(args);}catch(_){args=null;}}
+        if(runner!=='ollama'&&(!call.id||typeof call.id!=='string'))throw new Error('Identifiant d’appel natif absent.');
+        if(firstTool===null)firstTool=performance.now()-started;
+        event('tool',name+' '+JSON.stringify(args));
+        var result=await agenticRequest('/'+session.id+'/tool',{name,arguments:args},session,signal);
+        event('result',JSON.stringify(result));
+        messages.push(runner==='ollama'?{role:'tool',tool_name:name,content:JSON.stringify(result)}:{role:'tool',tool_call_id:call.id,content:JSON.stringify(result)});
+        if(result.nextUserMessage)nextUser.push(result.nextUserMessage);
+      }
+      nextUser.forEach(content=>{messages.push({role:'user',content});event('user',content);});
     }
-    showToast('Campagne agentique terminée. Consultez les vérifications de chaque tentative.','success');
-  }catch(error){showToast(error.message,'error');}
-  finally{
-    if(results.length){var session={model,runner,results,env:JSON.parse(JSON.stringify(state.env)),repetitions,warmupRuns:warmups};
-      if(saveSessionToHistory(session)===false)state.unsavedSession=session;}
-    document.getElementById('exportBtn').disabled=!state.results.length;
-    document.getElementById('progressSection').style.display='none';document.getElementById('agenticStop').hidden=true;
-    currentAbortController=null;showLiveSections(false);setControlButtons(false);button.disabled=false;button.textContent='⚡ Lancer le benchmark';
-    state.isRunning=false;lockCampaignControls(false);renderStatistics();
+    if(!done)throw new Error('Limite de tours modèle atteinte.');event('verification','Contrôle des états, fichiers, dépendances et consignes par le backend.');
+    outcome=await agenticRequest('/'+session.id+'/finish',{finalAnswer:text},session,signal);
+    if(!outcome.agentic.evaluation.taskSuccess)failure='Épreuve non conforme : consultez les critères réussis et échoués ci-dessous.';
+  }catch(error){failure=signal.aborted?(externalSignal.aborted?'Test agentique annulé.':'Budget de temps atteint.'):error.message;
+    if(session&&!outcome){try{outcome=await agenticRequest('/'+session.id+'/finish',{reason:'failed',finalAnswer:text},session);}catch(_){try{await agenticRequest('/'+session.id,null,session,null,'DELETE');}catch(_){}}}
+    event('verification',failure);
+  }finally{
+    clearTimeout(deadlineTimer);externalSignal.removeEventListener('abort',cancel);elapsed=performance.now()-started;finishedAt=new Date().toISOString();
+    if(runner==='ollama'){try{var stats=ollamaMemoryMonitor.stop();await ollamaMemoryMonitor._fetchLoadedModel(ollamaMemoryMonitor.generation,true);if(ollamaMemoryMonitor.resourcesPending)await ollamaMemoryMonitor.resourcesPending;await ollamaMemoryMonitor.pollResources(true);
+      memory={peak:stats.peakMemory||null,average:stats.averageMemory||null,source:stats.source,unit:'MiB',readings:stats.readings,sampleCount:stats.readings.length,intervalMs:window.MEMORY_MONITOR_CONFIG.pollInterval,loadedModelBefore:loadedBefore,loadedModel:ollamaMemoryMonitor.loadedModel,resources:ollamaMemoryMonitor.resources};
+    }catch(_){}finally{await ollamaMemoryMonitor.cancelResources();}}
   }
+  if(!outcome)throw new Error(failure||'Aucune évaluation backend reçue.');
+  return {id:crypto.randomUUID(),kind:'agentic',agentic:outcome.agentic,agenticArtifacts:outcome.artifactTexts,agenticTrace:trace,agenticTraceLimited:traceLimited,agenticSystemPrompt:session.systemPrompt,agenticToolSchemas:session.tools,
+    model,runner:RUNNERS[runner].name,runnerVersion:state.runnerVersion||null,modelMetadata:state.modelMetadata,timestamp:finishedAt,startedAt,finishedAt,phase:'measurement',rep,
+    promptType:'agentic-'+scenario.id,promptTypeName:'Agentique · '+scenario.title,promptEmoji:'🤖',promptText:session.prompt,response:text,error:failure,
+    protocol:{version:'agentic-suite-2.0.0',promptDigest:await promptFingerprint(session.systemPrompt+'\n'+session.prompt),loadState:load,cacheState:'unknown',warmupRuns},
+    metrics:{totalTokens:turnOpen?null:tokens,tokensPerSec:turnOpen?null:elapsed>0?Math.round(tokens/(elapsed/1000)*10)/10:0,totalTime:Math.round(elapsed),ttft:firstSegment===null?null:Math.round(firstSegment),firstAnswerTimeMs:firstAnswer===null?null:Math.round(firstAnswer),firstToolTimeMs:firstTool===null?null:Math.round(firstTool),modelTurns:turns,
+      tokenCountKind:!turnOpen&&declared?'declared':'estimated',tokenCountSource:turnOpen?'native-chat:incomplete-token-total-unavailable':declared?'native-chat:sum-output-token-counts':'native-chat:mixed-estimates',generationTimeMs:!turnOpen&&timingKnown&&timingReports?genMs:null,prefillTimeMs:!turnOpen&&timingKnown&&timingReports?prefillMs:null,generationTokensPerSec:!turnOpen&&timingKnown&&genMs>0?tokens/(genMs/1000):null,
+      temperature,maxTokens,thinkingObserved:thinkingSeen,contextMode:'auto',contextRequestedTokens:null,contextObservedTokens:memory?.loadedModel?.contextTokens??null},env:JSON.parse(JSON.stringify(state.env)),...(memory?{memory}:{})};
+}
+async function runAgenticBenchmark(){
+  if(state.isRunning||state.analysisRunning)return;
+  if(!['ollama','lmstudio','llamacpp'].includes(state.runner)){showToast('La batterie agentique exige un runner local avec appels d’outils natifs.','error');return;}
+  var scenarios=selectedAgenticScenarios(),generation=PROMPT_TYPES.filter(pt=>state.selectedPrompts.has(pt.id)),model=getSelectedModel(),repetitions=getRepetitions(),runner=state.runner;
+  if(!scenarios.length){showToast('Sélectionnez au moins une épreuve agentique.','error');return;}
+  if(!model||model==='unknown-model'||!Number.isInteger(repetitions)||repetitions<1||repetitions>20){showToast('Choisissez un modèle et 1 à 20 répétitions.','error');return;}
+  if(state.unsavedSession&&saveSessionToHistory(state.unsavedSession)===false)return;
+  state.unsavedSession=null;state.isRunning=true;lockCampaignControls(true);var controller=new AbortController();currentAbortController=controller;
+  var results=[],warmups=0,button=document.getElementById('runBtn');button.disabled=true;document.getElementById('agenticStop').hidden=false;
+  function remember(r){results.push(r);state.results.unshift(r);renderResultCard(r);}
+  async function warmup(){agenticLiveStart('Chargement / chauffe');agenticLive('warmup','Le runner charge le modèle et vérifie sa réponse ; cette passe reste hors des scores.');
+    button.textContent='Chargement / chauffe…';var warm=await executeTest(model,{id:'warmup',name:'Chargement / chauffe',emoji:'🔥'},'Réponds uniquement par OK.',1,controller.signal,{warmup:true,loadState:await observeLoadedModel(model,controller.signal),warmupRuns:warmups});
+    if(controller.signal.aborted)throw new Error('Campagne annulée pendant la chauffe.');if(!warm.metrics.totalTokens&&!warm.response)throw new Error('Le modèle ne répond pas pendant la chauffe.');remember(warm);warmups++;showLiveSections(false);setControlButtons(false);
+  }
+  try{var info=await agenticRequest('/info',null,null,controller.signal);if(info.version!=='2.0.0'||!Array.isArray(info.scenarios))throw new Error('Redémarrez le backend mis à jour : batterie agentique v2 requise.');
+    resetCampaignResults();switchTab('results');document.getElementById('progressSection').style.display='block';await refreshModelMetadata();state.runnerVersion=null;
+    if(runner==='ollama'){var v=await fetchWithTimeout(RUNNERS.ollama.base+'/api/version',{signal:controller.signal},5000);if(v.ok)state.runnerVersion=(await v.json()).version||null;}
+    await warmup();
+    for(var rep=1;rep<=repetitions;rep++){
+      for(var pt of generation){if(controller.signal.aborted)break;
+        if(runner==='ollama'&&await observeLoadedModel(model,controller.signal)==='cold')await warmup();
+        var prompt=pt.id==='custom'?(document.getElementById('customPromptText').value.trim()||'Dis bonjour.'):pt.prompt;
+        agenticLiveStart('Génération · '+pt.name);agenticLive('request','Mesure de génération ; le suivi texte est affiché dans la zone en direct.');
+        button.textContent='Génération · '+pt.name+' · '+rep+'/'+repetitions;
+        try{remember(await executeTest(model,pt,prompt,rep,controller.signal,{loadState:await observeLoadedModel(model,controller.signal),warmupRuns:warmups}));}
+        catch(error){if(controller.signal.aborted)throw error;remember(buildErrorResult(model,pt,error.message,rep));}
+        showLiveSections(false);setControlButtons(false);
+      }
+      for(var scenario of scenarios){if(controller.signal.aborted)break;if(runner==='ollama'&&await observeLoadedModel(model,controller.signal)==='cold')await warmup();
+        button.textContent=scenario.title+' · '+rep+'/'+repetitions;remember(await executeAgenticTest(model,rep,controller.signal,warmups,scenario));}
+      if(controller.signal.aborted)break;
+    }
+    showToast(controller.signal.aborted?'Campagne interrompue ; résultats conservés.':'Campagne terminée : génération et capacités agentiques.','info');
+  }catch(error){showToast(error.message,'error');}
+  finally{if(results.length){var session={model,runner,results,env:JSON.parse(JSON.stringify(state.env)),repetitions,warmupRuns:warmups};if(saveSessionToHistory(session)===false)state.unsavedSession=session;}
+    document.getElementById('exportBtn').disabled=!state.results.length;document.getElementById('progressSection').style.display='none';document.getElementById('agenticStop').hidden=true;
+    currentAbortController=null;showLiveSections(false);setControlButtons(false);button.disabled=false;button.textContent='⚡ Lancer le benchmark';state.isRunning=false;lockCampaignControls(false);renderStatistics();}
 }
 function stopAgenticBenchmark(){currentAbortController?.abort();}
-function downloadAgenticArtifact(id){
-  var result=state.results.find(r=>r.id===id);if(!result?.agenticArtifactText)return;
-  var url=URL.createObjectURL(new Blob([result.agenticArtifactText],{type:'text/markdown;charset=utf-8'})),link=document.createElement('a');
-  link.href=url;link.download='LLMB-'+result.model.replace(/[^a-zA-Z0-9._-]/g,'-')+'-agentic-answer.md';link.click();URL.revokeObjectURL(url);
-}
+function downloadAgenticArtifact(id,relative){var result=state.results.find(r=>r.id===id),text=relative?result?.agenticArtifacts?.[relative]:result?.agenticArtifactText;if(typeof text!=='string')return;
+  var json=relative?.endsWith('.json'),url=URL.createObjectURL(new Blob([text],{type:json?'application/json':'text/markdown;charset=utf-8'})),link=document.createElement('a');
+  link.href=url;link.download='LLMB-'+result.model.replace(/[^a-zA-Z0-9._-]/g,'-')+'-'+(relative?relative.split('/').pop():'agentic-answer.md');link.click();URL.revokeObjectURL(url);}

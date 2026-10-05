@@ -1,66 +1,80 @@
-# Benchmark agentique · fichiers v1
+# Capacités agentiques — batterie LLMB 2.0
 
-[Prise en main](../README.md) · [API backend](../BACKEND_README.md) · [Export v2](../schemas/README.md)
+[Prise en main](../README.md) · [Méthodologie et références](AGENTIC_METHODOLOGY.md) · [API](../BACKEND_README.md) · [Export](../schemas/README.md)
 
-Ce premier scénario mesure **modèle + runner + orchestrateur + outils + évaluateur**, avec la version `agentic-files-1.0.0`. Il ne constitue pas une évaluation générale de toutes les capacités agentiques.
+L’agentique est une **capacité à ajouter à la campagne**, aux côtés des catégories de génération. Il n’y a plus de choix exclusif « type de benchmark ». Les scores agentiques restent distincts du débit, car ces deux mesures répondent à des questions différentes.
 
-## Lancer le scénario
+## Démarrage
 
-1. Mettre le dépôt à jour, installer les dépendances, puis **redémarrer** le backend avec `npm start`.
-2. Servir l’interface depuis ce même dépôt : `python3 -m http.server 8001 --bind 127.0.0.1`.
-3. Ouvrir `http://localhost:8001/llm-benchmarker.html`, choisir un runner local et un modèle capable d’appels d’outils natifs.
-4. Choisir **Type de benchmark → Agentique · fichiers (v1)**. Les catégories de génération sont remplacées par la description du scénario.
-5. Garder 1 répétition pour une première vérification ; utiliser 3 répétitions avec les mêmes réglages pour examiner la variabilité. Lancer la campagne.
+Après `git pull origin main`, arrêter l’ancien backend puis lancer `npm install` et `npm start`. Dans un second terminal à la racine :
 
-Le backend est obligatoire dans ce mode. Ollama utilise `/api/chat` ; LM Studio et llama.cpp utilisent `/v1/chat/completions`. Leur support dépend du modèle et du template de conversation du runner. Une chauffe de génération confirme que le modèle répond, puis le scénario teste réellement les appels d’outils ; une réponse textuelle simulant un appel ne les remplace pas. Un refus de l’API est enregistré comme échec si la session de vérification a été créée.
+```bash
+python3 -m http.server 8001 --bind 127.0.0.1
+```
 
-Références des formats : [Ollama](https://docs.ollama.com/capabilities/tool-calling), [LM Studio](https://lmstudio.ai/docs/developer/openai-compat/tools), [llama.cpp et templates](https://github.com/ggml-org/llama.cpp/blob/master/docs/function-calling.md). API externes, URL personnalisée et Exo ne sont pas activés pour ce premier scénario.
+Ouvrir `http://localhost:8001/llm-benchmarker.html`. Choisir Ollama, LM Studio ou llama.cpp local et un modèle/template prenant en charge les appels d’outils natifs. Cocher **Ajouter les capacités agentiques à cette campagne** et choisir les épreuves. Conserver ou désélectionner les catégories de texte : les deux peuvent être exécutées ensemble, avec une chauffe mesurée séparée.
 
-## Tâche et réussite
+Une répétition suffit pour vérifier le parcours. Trois répétitions aux mêmes conditions permettent de constater la variabilité ; elles ne suffisent pas à prouver une fiabilité générale. Chaque répétition reçoit un nouveau dossier et une conversation neuve par épreuve. Le cache du runner n’est pas remis à zéro ; son état agentique reste inconnu. Un modèle Ollama déchargé est réchauffé avant la mesure suivante.
 
-Le prompt fixe demande au modèle de :
+## Les six épreuves
 
-1. Calculer `17 + 25` et appeler `submit_answer` avec `42`.
-2. Créer `results` avec `create_directory`.
-3. Écrire `results/answer.md` avec `write_markdown` : titre Markdown, `17 + 25 = 42`, section `Vérification` suivie d’un texte explicatif.
-4. Relire le fichier avec `read_file`, puis fournir une confirmation finale.
+| Épreuve | Objectif donné au modèle | Vérifications indépendantes |
+|---|---|---|
+| Choix des outils | Retrouver une commande et soumettre son montant | Bon outil de recherche, multiplication fondée sur la commande récupérée, JSON typé exact, absence d’actions fichiers inutiles |
+| Données et rapport | Produire un Markdown depuis un CSV | Source lue avant la dernière écriture, titre/tableau/totaux corrects, fichier réellement présent et relu |
+| Reprise après erreur | Déterminer le stock disponible | Première lecture en panne temporaire scriptée, nouvelle lecture réussie, résultat structuré fondé sur les données lues |
+| Clarification | Produire une synthèse sans devise initiale | Demande de devise avec `ask_user`, réponse scriptée EUR, écriture après précision, JSON exact et relecture |
+| Changement d’objectif | Réussir un premier calcul puis adapter la tâche | Premier résultat validé, nouvelle instruction utilisateur injectée, nouvelle commande récupérée, remise calculée avant écriture, nouveau JSON exact et relu |
+| Abstention | Respecter une consigne de réponse simple | Aucun appel d’outil et réponse finale exactement conforme |
 
-Le backend inspecte le fichier réel, le résultat numérique et la relecture après la dernière écriture. Le contrôle Markdown est **structurel** : il exige titre, équation correcte et section de vérification avec du texte, sans juger la qualité sémantique de toute l’explication. Le modèle n’attribue pas son propre score. Une affirmation « fichier créé » sans ces actions échoue. Une erreur d’outil peut être corrigée avant la fin ; un arrêt, un dépassement de budget ou une boucle non terminée échoue même si un fichier existe.
+Les tâches et données sont originales au projet et versionnées, dans `backend/agentic-suite.js`. Ce n’est pas une exécution de BFCL, τ-bench ou ToolSandbox, et les scores ne sont pas comparables à leurs classements. La clarification et le second tour sont **scriptés**, pas produits par un utilisateur simulé par IA. Les outils incluent des possibilités inutiles pour certaines demandes : le modèle doit faire un choix.
 
-## Budgets et répétitions
+## Cadre système et protocole
 
-Par tentative : 8 tours de réponse du modèle, 12 appels d’outils maximum, 3 minutes à partir de la création de session. Le plafond de 16 étapes exportées inclut la vérification finale ; ce scénario produit au maximum 13 étapes avec ses 12 appels.
+Chaque épreuve commence par un message système fixe : appels natifs, schémas JSON stricts, dépendances à respecter, données à lire, entrées protégées, clarification des informations manquantes, reprise des erreurs explicitement temporaires, prise en compte des nouvelles instructions et absence d’outil inutile. Le message utilisateur décrit un objectif ; il ne fournit plus une recette imposant chaque appel.
 
-**Tokens max** limite le total des sorties des échanges, avec au maximum 1 024 tokens demandés à chaque tour et le solde du budget. Le compteur du runner est utilisé lorsqu’il est disponible ; sinon une estimation textuelle est explicitement marquée, donc ce plafond n’est pas une garantie de comptage exact. Les échanges accumulent les messages et réponses d’outils. Le thinking est conservé dans la conversation quand Ollama le rapporte ; ses tokens ne sont pas séparés sans compteur fiable.
+La carte permet de déplier **le cadre système et les schémas reçus**. Les outils offerts sont `lookup_order`, `calculate`, `list_directory`, `read_file`, `create_directory`, `write_file`, `ask_user` et `submit_result`. Types, paramètres requis, valeurs autorisées et champs supplémentaires sont vérifiés par le backend. `submit_result.result` doit être un objet, pas du JSON dans une chaîne ; sa structure est spécifique aux tâches qui le demandent.
 
-Une chauffe est mesurée séparément avant les tentatives. Ollama est vérifié avant chaque tentative ; un déchargement détecté interrompt la campagne et demande de relancer. Chaque répétition dispose d’un nouveau dossier, sans réutiliser les fichiers de la précédente. Cela ne réinitialise pas le cache du runner ; son état reste `unknown`. L’arrêt dédié interrompt la requête, demande la vérification en échec et le nettoyage.
+Ollama utilise `/api/chat` en NDJSON. LM Studio/llama.cpp utilisent `/v1/chat/completions` en SSE. Les champs de réflexion, texte et appels sont accumulés puis renvoyés dans la conversation avec les résultats d’outils. **Aucun outil n’est exécuté sur un tour tronqué ou sans confirmation de fin.** Les appels d’un tour complet sont exécutés séquentiellement. L’adaptateur conserve leurs identifiants pour les réponses compatibles.
 
-## Isolation et fichiers
+## Visibilité en direct
 
-`backend/agentic-harness.js` crée un répertoire temporaire aléatoire, privé lorsque les permissions Unix sont disponibles. Les seuls chemins admis sont `results` et `results/answer.md` ; taille Markdown limitée à 8 192 octets. Les arguments supplémentaires, chemins alternatifs et liens symboliques sont rejetés. Les outils n’ont ni shell, ni réseau, ni accès aux documents personnels. Les requêtes d’inférence continuent de joindre le runner local.
+Le panneau de suivi distingue préparation/chauffe, attente du modèle, réflexion rapportée, texte, préparation des appels, arguments, exécution, retours d’outils, nouvelle instruction utilisateur et vérification finale. Le code n’invente aucun raisonnement caché. Si le runner ne rapporte pas de réflexion, cette absence est indiquée ; elle ne signifie pas que le modèle ne raisonne pas.
 
-Il s’agit de restrictions applicatives pour ce scénario, **pas d’une sandbox du système d’exploitation** ni d’une protection contre un autre processus disposant des mêmes droits utilisateur. Les routes exigent une connexion loopback, une origine locale lorsqu’elle est présente, l’en-tête `X-LLMB-Agentic: 1` et un jeton de session pour outils/fin/suppression. Huit sessions simultanées maximum. Ces protections concernent les nouvelles routes agentiques ; elles ne modifient pas celles de télémétrie existantes.
+Les traces locales sont limitées à 160 événements et 65 536 caractères par résultat ; chaque entrée est plafonnée à 16 000 caractères. Une troncature est signalée. Les fichiers créés et le journal sont conservés dans l’historique local, soumis au quota navigateur, et les fichiers peuvent être téléchargés depuis la carte. Ni ces contenus ni les arguments/réflexions bruts ne sont inclus dans le JSON communautaire ou le contexte de l’assistant. Le rapport Markdown ajoute les critères et étapes mais pas ce journal.
 
-Les fichiers sont supprimés après vérification, abandon ou expiration. Un arrêt brutal du processus backend peut laisser un petit dossier `llmb-agentic-*` dans le répertoire temporaire système ; aucun effacement après crash n’est garanti. Le backend retourne le texte Markdown pour téléchargement et historique local avant suppression. La carte permet de télécharger ce fichier avec le nom du modèle. Les jetons et chemins temporaires ne sont pas enregistrés dans les résultats.
+## Scores et temps
 
-## Résultats, statistiques et partage
+**Objectif atteint** vérifie les états et livrables attendus. **Exécution conforme** exige en plus les critères de protocole, pertinence, périmètre et budgets. Un bon fichier après un appel mal typé peut donc avoir un objectif atteint et une conformité échouée. Chaque critère reste visible ; `null` signifie non sollicité, pas un échec ni une preuve de capacité. Les tâches qui n’utilisent aucun outil ne prouvent pas le respect d’un format d’appel natif.
 
-Chaque tentative conserve réussite/échec, étapes et vérifications, durées, appels d’outils, reprises après rejet et empreinte SHA-256 du fichier. Une reprise est un nouvel appel du même outil après un rejet ; un simple rejet n’est pas déjà une reprise.
+Les statistiques regroupent les mêmes modèles, tâches, versions et conditions. Elles présentent les taux de conformité, détails de passes et profils par capacité. Les taux par capacité portent sur les **critères évalués** ; une capacité peut avoir plusieurs critères. Les échecs restent dans le dénominateur. Les courbes de génération excluent les tâches agentiques. Une reprise est un nouvel appel du même outil après rejet, et non le rejet lui-même.
 
-Le temps total comprend orchestration, requêtes modèle, outils et vérification, mais exclut la finalisation de télémétrie. Le débit global cumule les sorties des échanges ; il ne mesure pas la réussite et ne doit pas être comparé au débit d’une génération unique. Le chat est non streaming : **TTFT inconnu**. Les durées de génération/prefill sont additionnées lorsqu’Ollama les rapporte. RSS et télémétrie restent disponibles avec Ollama ; elles ne sont pas collectées pour LM Studio/llama.cpp par ce scénario.
+Le temps total inclut orchestration, échanges modèle, outils et vérification, mais exclut la finalisation de télémétrie. Le premier segment peut être du texte, de la réflexion ou un appel ; le premier appel exécuté est mesuré séparément. Le TTFT agentique concerne le premier tour, pas chaque requête prise isolément. Le débit cumule les sorties de plusieurs échanges : il ne mesure pas la qualité agentique. Prefill et durée de génération sont additionnés lorsqu’Ollama les rapporte. Le comptage du runner est préféré à l’estimation. Si le dernier tour est incomplet, le total de tokens de la tâche reste inconnu, sans faire passer un compteur partiel pour un total.
 
-Dans **Statistiques**, un bloc agentique séparé regroupe les mêmes modèles/scénarios/conditions et montre réussite/tentatives, durée et appels moyens, avec détail repliable. Les échecs restent au dénominateur. Les courbes de génération excluent les essais agentiques. L’assistant IA reçoit les scores et mesures synthétiques, sans contenu des fichiers, arguments d’outils ou jetons.
+RSS et télémétrie existantes restent disponibles avec Ollama ; ce parcours ne collecte pas les ressources de LM Studio/llama.cpp. Thinking et réponse ne sont pas comptés séparément sans compteurs fiables.
 
-L’export communautaire v2 contient `kind: agentic`, orchestrateur, politique, outils, budgets, étapes, artefacts (chemins relatifs fixes et empreinte) et évaluation. Il exclut le contenu du Markdown créé et les arguments bruts. Le rapport Markdown ajoute le tableau des étapes et contient déjà les prompts/réponses : vérifier avant partage. Aucun envoi au futur site n’est activé.
+## Budgets et isolation
 
-## Validation
+Par épreuve : **12 tours modèle, 24 appels d’outils, 4 minutes**, 25 étapes backend avec la vérification finale. **Tokens max** est un budget cumulé de sortie, avec au plus 2 048 tokens demandés par tour et le solde restant. Si le comptage est estimé, ce plafond n’est pas une garantie exacte de tokens. Les entrées en contexte augmentent avec la conversation ; le runner conserve le contexte Auto.
+
+Les seuls chemins sont les entrées synthétiques `inputs/orders.csv`, `inputs/stock.json` et les sorties `outputs/report.md`, `outputs/summary.json`, `outputs/report.json`. Les entrées sont en lecture seule pour les outils. Sorties de 8 192 octets maximum ; liens symboliques, traversées de chemin, fichiers alternatifs et outils non déclarés sont rejetés. Aucun shell, réseau d’outil ni accès aux documents personnels. Le runner local est joint pour l’inférence.
+
+Les restrictions sont **applicatives**, sans sandbox OS ni protection contre un processus ayant les mêmes droits utilisateur. Les routes requièrent loopback, origine locale si présente, en-tête dédié et jeton de session. Huit sessions v2 maximum ; les routes historiques v1 conservent leur propre limite. Fin, abandon et expiration nettoient le dossier. Un crash backend peut laisser un petit dossier temporaire ; aucun effacement après crash n’est garanti. Le bouton d’arrêt interrompt la campagne et demande une évaluation en échec/nettoyage.
+
+## Exports, versions et validation
+
+Le protocole est `agentic-suite-2.0.0`, avec scénario/évaluateur 2.0.0 et export communautaire **2.1.0** pour les rapports contenant ces épreuves. Le validateur accepte encore 2.0.0 et les historiques restent lisibles. Les nouveaux champs sont scénario, critères, objectif atteint, premier appel et nombre de tours ; les empreintes de fichiers remplacent leur contenu dans l’export.
+
+Le parcours fichiers v1 est conservé côté backend pour compatibilité et dans les anciennes cartes ; il n’est plus proposé comme nouvelle campagne. Les nouvelles scores ne sont pas agrégés avec lui.
 
 ```bash
 node backend/agentic-harness.test.cjs
+node backend/agentic-suite.test.cjs
+node backend/agentic-stream.test.cjs
 node backend/agentic-integration.test.cjs
 node schemas/test.cjs
 ```
 
-Les tests exécutent de vraies opérations sur des dossiers temporaires et simulent les réponses structurées Ollama/compatibles. Ils couvrent réussite, déclaration sans action, reprises, boucles, limites, expiration, nettoyage, chemins/liens interdits, jetons, accès local, export v2, statistiques, assistant, chauffe/historique et propagation d’annulation. Ils ne prouvent pas la réussite d’un modèle réel : celle-ci est à vérifier sur votre Mac avec plusieurs modèles compatibles.
+Les tests utilisent de vrais dossiers/fichiers, avec réponses modèle simulées pour les adaptateurs. Ils vérifient les six tâches et leurs échecs, causalité observable, scores, annulation, flux fragmentés/incomplets, isolation, nettoyage, historique mixte et confidentialité des exports. Une validation avec des modèles réels sur votre machine reste indispensable. Ces tâches vérifient des comportements observables ; elles ne prouvent pas une capacité générale de raisonnement ou d’autonomie.
 
-Exo reste une étape distincte. Après validation de ce scénario et des exports réels, le site communautaire pourra commencer par l’import manuel v2 avant un envoi authentifié.
+Exo est reporté. Après validation de cette batterie, le site communautaire pourra importer les rapports, comparer les mêmes tâches/versions et distinguer réussite fonctionnelle, conformité et performances matérielles.

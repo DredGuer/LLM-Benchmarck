@@ -16,7 +16,7 @@ Mise à jour : **5 octobre 2026**. Ce document distingue les fonctions exécuté
 | Exports | Markdown et JSON communautaire v2 ; nom JSON comprenant le modèle |
 | Statistiques | Sélection des modèles/catégories/passes, moyennes/médianes, détails repliables, lignes/aires, lissage et prefill |
 | Assistant IA | Conclusion et questions à la demande ; modèle local ou API choisi indépendamment |
-| Agentique fichiers v1 | Appels d’outils natifs locaux, dossier temporaire, vérification réelle, budgets, export v2 et taux de réussite séparés ; validation modèles réels à poursuivre |
+| Capacités agentiques 2.0 | Six épreuves dans les campagnes, cadre système/outils, streaming observé, critères d’état, objectif/conformité séparés, export 2.1 ; modèles réels à valider |
 | Aide | Bulles ! au clic, au clavier et sur mobile |
 | Détection Windows/Linux | Collecteurs généraux existants ; couverture dépendante des commandes/pilotes, validation réelle à étendre |
 
@@ -38,7 +38,7 @@ La présence de mémoire conservée ne prouve pas une fuite. Une API externe ne 
 | Import communautaire manuel | Charger des exports v2, dédupliquer les ID de tests et comparer les conditions | Validation du schéma, limites de taille, unités et cohérence |
 | Site communautaire | Comparaison de machines/modèles équivalents et gestion des données partagées | Parcours de consultation/import et règles de données explicites |
 | Envoi automatique | Envoi à la demande avec aperçu et autorisation adaptée au futur service | Pas d’envoi implicite, authentification et protection côté serveur |
-| Extension agentique | Ajouter des tâches et évaluateurs après validation du scénario fichiers v1 | Versions de tâches, critères reproductibles et sécurité adaptée à chaque outil |
+| Extension agentique | Ajouter des tâches et évaluateurs après validation du batterie 2.0 | Versions de tâches, critères reproductibles et sécurité adaptée à chaque outil |
 | Exo / plusieurs Mac | Inventaire par nœud, modèle distribué, placements et liens observés | Adaptateur validé sur un cluster réel ; pas de somme naïve des débits |
 | Linux/Windows et multi-GPU | Inventaire structuré et VRAM/activité par appareil selon source | Tests sur matériel réel NVIDIA/AMD/Intel et sources explicites |
 | SSD/offload | Attribuer les lectures/placements lorsque le runner l’expose | L’activité disque seule ne suffit pas à conclure à un offload |
@@ -51,7 +51,7 @@ Chaque étape sera intégrée progressivement avec ses tests et sa documentation
 
 ## Ordre retenu
 
-1. Tester le premier [scénario agentique](backend/AGENTIC_BENCHMARK.md) sur le Mac avec des modèles compatibles, 1 passe puis 3 répétitions ; contrôler scores, étapes et export v2.
+1. Tester le [ensemble d’épreuves agentiques](backend/AGENTIC_BENCHMARK.md) sur le Mac avec des modèles compatibles, 1 passe puis 3 répétitions ; contrôler critères, traces réelles, étapes et export 2.1.
 2. Passer au site communautaire : import manuel v2, validation/déduplication, comparaisons à conditions équivalentes, scores agentiques séparés par tâche/version.
 3. Prévoir ensuite l’envoi explicite authentifié avec aperçu des données et règles du service.
 

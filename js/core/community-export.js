@@ -53,7 +53,7 @@ function buildCommunityV2(results, generatedAt) {
     var machines = [communityMachine(first.env, generatedAt, 'local')];
     if (!localRunner) machines.push(communityMachine({}, generatedAt, inferenceNode));
     var report = {
-      schema: 'llm-benchmarker.community', schemaVersion: '2.0.0',
+      schema: 'llm-benchmarker.community', schemaVersion: items.some(r=>r.agentic?.scenario) ? '2.1.0' : '2.0.0',
       reportId: crypto.randomUUID(), generatedAt: generatedAt,
       producer: { name: 'LLM Benchmarker', version: '0.06' }, synthetic: false,
       privacy: { profile: 'community-redacted', rawPromptsIncluded: false, rawResponsesIncluded: false, rawToolArgumentsIncluded: false },
@@ -132,7 +132,7 @@ function buildCommunityV2(results, generatedAt) {
           parameters: { temperature: communityNumber(m.temperature), maxOutputTokens: communityInteger(m.maxTokens),
             contextTokens: communityInteger(m.contextObservedTokens), contextSource: m.contextObservedTokens != null ? 'ollama-api-ps:context_length (observed loaded runner)' : null, concurrency: 1,
             thinking: { enabled: typeof m.thinkingEnabled === 'boolean' ? m.thinkingEnabled : null, observed: typeof m.thinkingObserved === 'boolean' ? m.thinkingObserved : null } },
-          protocol: { id: r.kind === 'agentic' ? 'llmb-agentic-files' : 'llmb-generation-' + (['conversation','factual','math','code','logic','creative','warmup'].includes(r.promptType) ? r.promptType : 'custom'),
+          protocol: { id: r.agentic?.scenario ? 'llmb-agentic-'+r.agentic.scenario.id : r.kind === 'agentic' ? 'llmb-agentic-files' : 'llmb-generation-' + (['conversation','factual','math','code','logic','creative','warmup'].includes(r.promptType) ? r.promptType : 'custom'),
             version: r.protocol?.version || '0.06', phase: r.phase || 'unknown', promptDigest: r.protocol?.promptDigest || null,
             warmupRuns: r.protocol?.warmupRuns || 0, loadState: r.protocol?.loadState || 'unknown', cacheState: r.protocol?.cacheState || 'unknown',
             cachePolicy: r.protocol?.cachePolicy || null, repetition: Math.max(1, communityInteger(r.rep) || 1) },
@@ -148,9 +148,10 @@ function buildCommunityV2(results, generatedAt) {
             totalOutputTokens: metric(m.totalTokens, 'tokens', m.tokenCountSource || 'legacy-unknown-token-count', tokenKind),
             thinkingTokens: metric(null, 'tokens', 'not-separated'), answerTokens: metric(null, 'tokens', 'not-separated'),
             averageThroughput: metric(m.tokensPerSec, 'tokens/s', 'generated-tokens/total-test-seconds', 'estimated'),
-            ttft: metric(runner === 'Ollama' ? m.ttft : null, 'ms', 'browser:first-response-segment', 'measured') },
+            ttft: metric(runner === 'Ollama' || r.agentic?.scenario ? m.ttft : null, 'ms', 'browser:first-response-segment', 'measured') },
           resourceSamples: samples.sort((a,b) => a.elapsedMs - b.elapsedMs), resourceSummaries: summaries
         };
+        if (r.agentic?.scenario) { test.metrics.firstToolTime = metric(m.firstToolTimeMs, 'ms', 'browser:first-executed-tool', 'measured'); test.metrics.modelTurns = metric(m.modelTurns, 'count', 'browser:chat-turn-count', 'measured'); }
         if (r.completion) test.completion = { reason: r.completion.reason || null, limitReached: !!r.completion.limitReached, state: r.completion.state || 'unknown' };
         if (r.kind === 'agentic' && r.agentic) test.agentic = communityAgentic(r.agentic);
         if (r.error) test.failureCode = r.kind === 'agentic' ? 'agentic-task-failed' : 'generation-error'; // Do not leak raw error text/URLs.
@@ -181,7 +182,7 @@ function exportCommunityJSON() {
 
 // Explicit field selection: generated files, tool arguments, session tokens and paths are excluded.
 function communityAgentic(a) {
-  return {orchestrator:{name:a.orchestrator.name,version:a.orchestrator.version,agentCount:a.orchestrator.agentCount},
+  return {...(a.scenario?{scenario:{id:a.scenario.id,version:a.scenario.version,title:a.scenario.title,dimensions:a.scenario.dimensions.slice()}}:{}),orchestrator:{name:a.orchestrator.name,version:a.orchestrator.version,agentCount:a.orchestrator.agentCount},
     workspacePolicy:{scope:a.workspacePolicy.scope,networkAllowed:a.workspacePolicy.networkAllowed,shellAllowed:a.workspacePolicy.shellAllowed,outsideWorkspaceAllowed:false},
     tools:a.tools.map(t=>({id:t.id,name:t.name,version:t.version,capabilities:t.capabilities.slice()})),
     budget:{maxSteps:a.budget.maxSteps,maxToolCalls:a.budget.maxToolCalls,timeoutMs:a.budget.timeoutMs},
@@ -191,6 +192,6 @@ function communityAgentic(a) {
       ...(s.duration?{duration:communityReading(s.duration.value,'ms',s.duration.source,s.duration.observedAt,'test','local')}: {})})),
     artifacts:a.artifacts.map(f=>({id:f.id,relativePath:f.relativePath,kind:f.kind,...(f.mediaType?{mediaType:f.mediaType}:{}),
       ...(f.sizeBytes!==undefined?{sizeBytes:f.sizeBytes}:{}),...(f.digest?{digest:f.digest}:{})})),
-    evaluation:{taskSuccess:a.evaluation.taskSuccess,evaluator:a.evaluation.evaluator,evaluatorVersion:a.evaluation.evaluatorVersion,
+    evaluation:{taskSuccess:a.evaluation.taskSuccess,...(typeof a.evaluation.goalCompleted==='boolean'?{goalCompleted:a.evaluation.goalCompleted}:{}),...(a.evaluation.criteria?{criteria:a.evaluation.criteria.map(c=>({id:c.id,dimension:c.dimension,label:c.label,passed:c.passed}))}:{}),evaluator:a.evaluation.evaluator,evaluatorVersion:a.evaluation.evaluatorVersion,
       successRate:a.evaluation.successRate,toolCallCount:a.evaluation.toolCallCount,retryCount:a.evaluation.retryCount}};
 }

@@ -2,7 +2,7 @@
 function benchmarkHelp(label) {
   var value = label.toLowerCase();
   var rules = [
-    ['type de benchmark', 'Génération mesure une réponse de texte. Agentique teste un enchaînement d’appels d’outils réels, avec budgets et vérification backend. Les réussites agentiques sont comparées séparément.'],
+    ['capacités agentiques', 'Génération mesure une réponse de texte. Agentique teste un enchaînement d’appels d’outils réels, avec budgets et vérification backend. Les réussites agentiques sont comparées séparément.'],
     ['ttft', 'Temps entre l’envoi de la requête et le premier segment reçu. Avec un modèle qui réfléchit, ce segment peut appartenir au thinking. Le chargement et le traitement du prompt peuvent augmenter ce délai.'],
     ['premier segment de réponse finale', 'Temps avant le premier texte de réponse, après une éventuelle réflexion. Il peut être plus long que le TTFT.'],
     ['tokens générés', 'Unités de texte comptées par le fournisseur lorsqu’il les rapporte. Elles peuvent inclure la réflexion. Un token n’est pas toujours un mot ; les tokenizers diffèrent selon les modèles.'],
@@ -242,8 +242,7 @@ function renderResultCard(result) {
   html += '</div>';
   
   card.innerHTML = html;
-  var download = card.querySelector?.('[data-agentic-download]');
-  if (download) download.addEventListener('click',function(){downloadAgenticArtifact(result.id);});
+  card.querySelectorAll?.('[data-agentic-download]').forEach(button=>button.addEventListener('click',function(){downloadAgenticArtifact(result.id,button.dataset.agenticDownload||undefined);}));
   if (list) {
     list.insertBefore(card, list.firstChild);
   }
@@ -390,21 +389,28 @@ function exportMarkdown() {
 }
 
 function agenticResultHTML(r) {
-  var a=r.agentic,e=a.evaluation;
-  var html='<section style="padding:16px"><strong>Scénario agentique · fichiers v1 : '+(e.taskSuccess?'réussi':'échoué')+'</strong>';
-  html+='<p>'+e.toolCallCount+' appels d’outils · '+e.retryCount+' reprises après rejet · '+(r.metrics.totalTime/1000).toFixed(2)+' s pour la tâche entière. TTFT non mesuré (chat non streaming). Le débit cumulé ne mesure pas la réussite.</p>';
-  html+='<details><summary>Vérifications et étapes ('+a.steps.length+')</summary><table><thead><tr><th>Étape</th><th>Action</th><th>Statut</th><th>Durée</th></tr></thead><tbody>';
-  a.steps.forEach(s=>{html+='<tr><td>'+s.order+'</td><td>'+escapeHtml(s.toolId||s.action)+'</td><td>'+escapeHtml(s.status)+'</td><td>'+(s.duration?.value??'N/A')+' ms</td></tr>';});
-  html+='</tbody></table></details>';
+  var a=r.agentic,e=a.evaluation,title=a.scenario?.title||'Fichiers v1';
+  var html='<section class="agentic-panel" style="padding:16px"><strong>'+escapeHtml(title)+' · '+(e.taskSuccess?'exécution conforme':'exécution non conforme')+'</strong>';
+  if(typeof e.goalCompleted==='boolean')html+='<p>Objectif atteint : <strong>'+(e.goalCompleted?'oui':'non')+'</strong> · conformité complète : <strong>'+(e.taskSuccess?'oui':'non')+'</strong></p>';
+  html+='<p>'+e.toolCallCount+' appels · '+e.retryCount+' reprises après rejet · '+(r.metrics.totalTime/1000).toFixed(2)+' s · '+(r.metrics.modelTurns??'N/A')+' tours modèle. Le débit cumulé ne mesure pas la réussite.</p>';
+  if(a.scenario)html+='<p>Premier appel : '+(r.metrics.firstToolTimeMs??'N/A')+' ms · premier segment : '+(r.metrics.ttft??'N/A')+' ms. Réflexion rapportée : '+(r.metrics.thinkingObserved?'oui':'non observée ; ne prouve pas l’absence de raisonnement')+'.</p>';
+  if(r.agenticSystemPrompt)html+='<details><summary>Cadre système et schémas d’outils reçus par le modèle</summary><pre style="white-space:pre-wrap">'+escapeHtml(r.agenticSystemPrompt)+'\n'+escapeHtml(JSON.stringify(r.agenticToolSchemas,null,2))+'</pre></details>';
+  if(e.criteria){html+='<table><thead><tr><th>Capacité / critère vérifié</th><th>Résultat</th></tr></thead><tbody>';
+    e.criteria.forEach(c=>{html+='<tr><td>'+escapeHtml(c.label)+'</td><td>'+(c.passed===null?'— Non sollicité':c.passed?'✅ Réussi':'❌ Échoué')+'</td></tr>';});html+='</tbody></table>';}
+  html+='<details><summary>Étapes et vérifications ('+a.steps.length+')</summary><table><thead><tr><th>Étape</th><th>Action</th><th>Statut</th><th>Durée</th></tr></thead><tbody>';
+  a.steps.forEach(s=>{html+='<tr><td>'+s.order+'</td><td>'+escapeHtml(s.toolId||s.action)+'</td><td>'+escapeHtml(s.status)+'</td><td>'+(s.duration?.value??'N/A')+' ms</td></tr>';});html+='</tbody></table></details>';
+  if(r.agenticTrace?.length){html+='<details><summary>Journal local : messages, réflexion rapportée et outils'+(r.agenticTraceLimited?' · extrait limité':'')+'</summary>';
+    r.agenticTrace.forEach(t=>{html+='<p style="white-space:pre-wrap"><strong>'+escapeHtml(t.type)+' · '+t.elapsedMs+' ms</strong> '+escapeHtml(t.text)+'</p>';});html+='</details>';}
   if(r.agenticArtifactText)html+='<button class="btn btn-ghost btn-sm" data-agentic-download>↓ Télécharger le Markdown créé</button>';
+  Object.keys(r.agenticArtifacts||{}).forEach(file=>{html+='<button class="btn btn-ghost btn-sm" data-agentic-download="'+escapeHtml(file)+'">↓ '+escapeHtml(file)+'</button>';});
   return html+'</section>';
 }
 function agenticMarkdown(r) {
   var a=r.agentic,e=a.evaluation;
-  var text='\n#### Scénario agentique · fichiers v1\n\n'+(e.taskSuccess?'Réussi':'Échoué')+' · '+e.toolCallCount+' appels d’outils · '+e.retryCount+' reprises après rejet.\n\n';
+  var text='\n#### Agentique · '+markdownCell(a.scenario?.title||'fichiers v1')+'\n\nConformité : '+(e.taskSuccess?'réussie':'échouée')+' · objectif atteint : '+(e.goalCompleted===undefined?'non distingué (v1)':e.goalCompleted?'oui':'non')+' · '+e.toolCallCount+' appels · '+e.retryCount+' reprises.\n\n';
+  if(e.criteria){text+='| Critère | Capacité | Résultat |\n|---|---|---|\n';e.criteria.forEach(c=>text+='| '+[c.label,c.dimension,c.passed===null?'Non sollicité':c.passed?'Réussi':'Échoué'].map(markdownCell).join(' | ')+' |\n');text+='\n';}
   text+='| Étape | Action | Statut | Durée (ms) |\n|---|---|---|---|\n';
-  a.steps.forEach(s=>{text+='| '+[s.order,s.toolId||s.action,s.status,s.duration?.value??'N/A'].map(markdownCell).join(' | ')+' |\n';});
-  text+='\nTTFT non mesuré. Durée totale : orchestration, requêtes modèle, outils et vérification ; finalisation télémétrie exclue. Les fichiers temporaires sont supprimés après vérification. Seul le contenu retourné est conservé dans l’historique local.\n';
-  a.artifacts.forEach(f=>{text+='\nArtefact : '+markdownCell(f.relativePath)+(f.digest?' · '+markdownCell(f.digest):'')+'\n';});
-  return text;
+  a.steps.forEach(s=>text+='| '+[s.order,s.toolId||s.action,s.status,s.duration?.value??'N/A'].map(markdownCell).join(' | ')+' |\n');
+  text+='\nDurée = tâche complète hors finalisation télémétrie. Le flux de réflexion, les arguments et contenus de fichiers restent locaux et ne sont pas ajoutés à ce rapport ni au JSON communautaire. Les prompts/réponses standards du rapport sont à vérifier avant partage.\n';
+  a.artifacts.forEach(f=>text+='\nArtefact : '+markdownCell(f.relativePath)+(f.digest?' · '+markdownCell(f.digest):'')+'\n');return text;
 }

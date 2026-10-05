@@ -7,7 +7,8 @@
   <link rel="stylesheet" href="css/styles.css">
 
 <style>
-#agenticStop[hidden],#agenticDescription[hidden],#promptCategoryCard[hidden]{display:none!important}
+.agentic-panel{overflow-x:auto;min-width:0}.agentic-panel table{width:100%;font-size:.85rem;border-collapse:collapse}.agentic-panel td,.agentic-panel th{padding:8px;text-align:left;border-bottom:1px solid var(--border);vertical-align:top}.agentic-panel pre,#agenticLiveTrace p{overflow-wrap:anywhere}
+#agenticLive[hidden],#agenticStop[hidden],#agenticDescription[hidden],#promptCategoryCard[hidden]{display:none!important}
 .benchmark-help{display:inline-block;position:relative;margin-left:6px;vertical-align:middle;text-transform:none;letter-spacing:normal;font-weight:normal}
 .benchmark-help>summary{display:inline-flex;align-items:center;justify-content:center;list-style:none;width:18px;height:18px;border:1px solid var(--accent2,#58a6ff);border-radius:50%;color:var(--accent2,#58a6ff);font-size:12px;font-weight:bold;cursor:pointer}
 .benchmark-help>summary::-webkit-details-marker{display:none}
@@ -127,13 +128,13 @@
     </div>
 
     <div class="card">
-      <label for="benchmarkMode">Type de benchmark</label>
-      <select id="benchmarkMode" onchange="updateBenchmarkMode()"><option value="generation">Génération de texte</option><option value="agentic">Agentique · fichiers (v1)</option></select>
+      <label><input id="agenticEnabled" type="checkbox" onchange="updateBenchmarkMode()"> Ajouter les capacités agentiques à cette campagne</label>
       <div id="agenticDescription" hidden>
-        <p>Un scénario vérifié : calculer, créer un dossier, écrire un Markdown, puis le relire avec des appels d’outils natifs. Ollama, LM Studio ou llama.cpp locaux ; modèle compatible tool calling requis.</p>
-        <p>Dossier temporaire dédié, aucun shell ni accès aux documents personnels. Par tentative : 8 tours modèle, 12 appels d’outils, 3 minutes. Tokens max = budget de sortie cumulé. La chauffe reste séparée. Un seul scénario ne mesure pas toutes les capacités agentiques.</p>
+        <p>Le même lancement peut mesurer génération et agentique. Gardez les catégories de texte souhaitées et choisissez les épreuves ci-dessous. Chaque épreuve utilise un cadre système, des outils natifs et un évaluateur indépendant.</p>
+        <div id="agenticScenarios"></div>
+        <p>Par épreuve : 12 tours modèle, 24 appels, 4 minutes, budget de sortie cumulé. Les fichiers restent dans un dossier temporaire dédié ; aucun shell, réseau d’outil ni document personnel. La clarification et le changement d’objectif utilisent un utilisateur scripté. Ces épreuves LLMB ne sont pas les benchmarks officiels BFCL ou τ-bench.</p>
       </div>
-      <button id="agenticStop" type="button" class="btn btn-ghost" hidden onclick="stopAgenticBenchmark()">Arrêter le test agentique</button>
+      <button id="agenticStop" type="button" class="btn btn-ghost" hidden onclick="stopAgenticBenchmark()">Arrêter la campagne</button>
     </div>
     <!-- TYPES DE PROMPTS -->
     <div class="card" id="promptCategoryCard">
@@ -241,6 +242,13 @@
 
   <!-- ── CONTENT AREA ─────────────────────────── -->
   <section class="content-area">
+    <section id="agenticLive" class="card" hidden>
+      <strong id="agenticLiveTitle">Suivi agentique</strong>
+      <p id="agenticLiveStatus" aria-live="polite"></p>
+      <small>Messages et outils observés en direct. La réflexion apparaît seulement si le runner la rapporte ; elle n’est pas un score de capacité.</small>
+      <details open><summary>Réponses, décisions d’outils et retours</summary><div id="agenticLiveTrace" style="max-height:360px;overflow:auto"></div></details>
+    </section>
+
 
     <!-- ZONE DE VISUALISATION EN DIRECT -->
     <div id="liveOutputSection" style="display:none; margin-bottom:24px;">
@@ -649,7 +657,7 @@ window.PROMPT_TYPES = [
 </script>
 
 <script src="js/core/state.js"></script>
-<script src="js/utils/helpers.js?v=agentic1"></script>
+<script src="js/utils/helpers.js?v=agentic2"></script>
 <script src="js/ui/toast.js"></script>
 <script src="js/ui/modals.js"></script>
 <script src="js/ui/tabs.js?v=0.08-reliability1"></script>
@@ -660,15 +668,16 @@ window.PROMPT_TYPES = [
 <script src="js/core/runners.js?v=0.06-apple-resources1"></script>
 <script src="js/core/prompts.js"></script>
 <script src="js/core/streaming.js"></script>
-<script src="js/core/community-export.js?v=agentic1"></script>
-<script src="js/ui/results.js?v=agentic1"></script>
-<script src="js/core/protocol.js?v=agentic1"></script>
-<script src="js/core/agentic.js?v=agentic1"></script>
-<script src="js/core/benchmark.js?v=agentic1"></script>
+<script src="js/core/community-export.js?v=agentic2"></script>
+<script src="js/ui/results.js?v=agentic2"></script>
+<script src="js/core/protocol.js?v=agentic2"></script>
+<script src="js/core/agentic-stream.js?v=agentic2"></script>
+<script src="js/core/agentic.js?v=agentic2"></script>
+<script src="js/core/benchmark.js?v=agentic2"></script>
 <script src="js/core/apiKeys.js"></script>
 <script src="js/core/connectivity.js"></script>
 <script src="js/core/history.js?v=0.08-reliability1"></script>
-<script src="js/ui/statistics.js?v=agentic1"></script>
+<script src="js/ui/statistics.js?v=agentic2"></script>
 
 <button class="btn btn-primary" onclick="toggleAnalysis()" style="position:fixed;bottom:20px;right:20px;z-index:1000">💬 Analyser les résultats</button>
 <section id="analysisPanel" hidden style="position:fixed;bottom:76px;right:16px;width:min(460px,calc(100vw - 32px));max-height:80vh;overflow:auto;background:var(--surface,#161b22);color:var(--text,#e6edf3);border:1px solid var(--border,#30363d);border-radius:12px;padding:16px;z-index:1001;box-shadow:0 8px 32px #0008" aria-label="Assistant d’analyse">
@@ -689,9 +698,9 @@ window.PROMPT_TYPES = [
   <div style="display:flex;gap:6px;flex-wrap:wrap"><button id="analysisSend" class="btn btn-primary btn-sm" onclick="askAnalysis(false)">Envoyer</button><button id="analysisConclusion" class="btn btn-ghost btn-sm" onclick="askAnalysis(true)">Écrire une conclusion</button><button class="btn btn-ghost btn-sm" onclick="cancelAnalysis()">Annuler</button><button class="btn btn-ghost btn-sm" onclick="clearAnalysis()">Effacer échanges et clé</button></div>
 </section>
 
-<script src="js/ui/analysis.js?v=agentic1"></script>
+<script src="js/ui/analysis.js?v=agentic2"></script>
 <script>document.addEventListener("click",function(){setTimeout(updateCampaignPlan,0);});document.addEventListener("input",updateCampaignPlan);document.addEventListener("change",updateCampaignPlan);document.addEventListener("DOMContentLoaded",updateCampaignPlan);</script>
 <script src="js/main.js?v=0.06-model-context1"></script>
-<script>updateBenchmarkMode();</script>
+<script>initAgenticUI();</script>
 </body>
 </html>
