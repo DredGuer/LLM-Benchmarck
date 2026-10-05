@@ -1,6 +1,8 @@
 # LLM Benchmarker - Backend de Monitoring Mémoire
 
-Ce backend optionnel permet de surveiller précisément la consommation RAM du processus **Ollama** pendant les benchmarks.
+Documentation de **LLM Benchmarker v0.06**. [Retour au guide de démarrage](README.md).
+
+Ce backend optionnel échantillonne la consommation RAM du processus **Ollama** sélectionné pendant les benchmarks. Les valeurs ne représentent pas la mémoire totale de tous les processus Ollama ni la VRAM ; le pic est le maximum des échantillons recueillis.
 
 ## 🚀 Installation
 
@@ -13,7 +15,7 @@ Ce backend optionnel permet de surveiller précisément la consommation RAM du p
 
 1. **Installer les dépendances** :
 ```bash
-cd /chemin/vers/LLM-Benchmarck
+# Depuis la racine du dépôt LLM-Benchmarck
 npm install
 ```
 
@@ -227,7 +229,7 @@ window.BACKEND_ENV_CONFIG = {
 Si vous ne voulez pas utiliser le backend, vous pouvez :
 
 1. **Utiliser Chrome avec le flag** `--enable-precision-memory-info`
-   - Mesure la mémoire JS du navigateur (moins précis)
+   - Mesure le tas JavaScript du navigateur, pas la RAM d'Ollama ni la VRAM ; cette mesure n'est pas un substitut au monitoring du modèle
    - Pas besoin de lancer le backend
 
 2. **Manuellement via outils système**
