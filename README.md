@@ -349,7 +349,7 @@ chauffes préalables, chargement, cache, temps de chargement/prefill/génératio
 Le cache est décrit comme sans réutilisation déclarée ou présent à couverture inconnue si Ollama fournit le compteur de tokens cachés.
 Il n'est ni vidé ni désactivé : son état peut changer entre répétitions et reste inconnu si non rapporté.
 
-L'onglet **Statistiques** exploite votre historique : barres comparatives, tendances chronologiques,
+L'onglet **Statistiques** exploite votre historique : graphiques en lignes ou en aires, tendances chronologiques,
 nombre de mesures, moyenne, médiane, écart-type et ratio tok/s par milliard de paramètres totaux.
 Les groupes séparent modèle/digest, matériel, runner, contexte, prompt, température, tokens maximum,
 quantification, Dense/MoE, version du protocole, chargement et cache.
@@ -548,6 +548,15 @@ L’analyse démarre uniquement sur **Envoyer** ou **Écrire une conclusion**, h
 Vérifications de cette étape : `node backend/reliability-analysis.test.cjs`, `node backend/protocol-statistics.test.cjs`, `node backend/apple-resources.test.cjs`, `node backend/community-export.test.cjs` et `node schemas/test.cjs`.
 
 ---
+
+### Sélection et graphiques des statistiques
+
+Dans **Statistiques**, choisissez les modèles, catégories et la mesure à comparer. Le graphique global affiche une moyenne ou une médiane par modèle et catégorie, en lignes ou en aires. Chaque modèle se déplie pour afficher la synthèse de toutes ses passes sélectionnées ; les sous-groupes par conditions donnent accès aux valeurs de chaque passe et à sa case d’inclusion. **Tout sélectionner** réinitialise les filtres sans modifier l’historique.
+
+Les graphiques repliables de chaque modèle affichent le débit moyen, le débit de génération et le temps de prefill sur des axes séparés. Un lissage optionnel utilise les 3, 5 ou 10 dernières passes sélectionnées. Les valeurs absentes restent inconnues. Les sélections sont conservées pendant l’utilisation de la page ; elles ne suppriment aucune mesure.
+
+Chaque passe a le même poids dans la moyenne. Une synthèse regroupant des conditions différentes est descriptive : elle ne constitue pas un classement de performance contrôlé. La durée de prefill n’est pas un débit en tokens/s. Les valeurs numériques des graphiques sont accessibles dans leurs tableaux repliables.
+
 
 ## 📞 Support
 
