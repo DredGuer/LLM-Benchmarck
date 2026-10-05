@@ -1,3 +1,8 @@
+function memoryLabel(memory) {
+  return memory.source === 'process-tree-rss' ? 'RSS cumulée' :
+    memory.source === 'browser-js-heap' ? 'Tas JS navigateur' : 'Mémoire (source inconnue)';
+}
+
 /**
  * LLM Benchmarker - Results Rendering & Export
  */
@@ -29,7 +34,7 @@ function renderResultCard(result) {
   html += '<span class="badge ' + (isError ? 'badge-red' : 'badge-green') + '">' + (isError ? '❌ Erreur' : '✅ OK') + '</span>';
   html += '<span class="badge badge-purple">' + escapeHtml(result.promptTypeName) + '</span>';
   if (result.memory && result.memory.peak > 0) {
-    html += '<span class="badge badge-orange">💾 ' + result.memory.peak + ' MB</span>';
+    html += '<span class="badge badge-orange">💾 ' + result.memory.peak + ' MiB · ' + memoryLabel(result.memory) + '</span>';
   }
   html += '<small style="color:var(--text3);font-size:0.75rem;margin-left:auto;">' + new Date(result.timestamp).toLocaleTimeString('fr-FR') + '</small>';
   html += '</div>';
@@ -45,8 +50,11 @@ function renderResultCard(result) {
     html += '<div class="metric-box highlight-orange"><div class="metric-value">' + ttftStr + '</div><div class="metric-label">1er token (TTFT)</div></div>';
     html += '<div class="metric-box"><div class="metric-value">' + (m.totalTime/1000).toFixed(2) + 's</div><div class="metric-label">Temps total</div></div>';
     if (result.memory && result.memory.peak > 0) {
-      html += '<div class="metric-box highlight-purple"><div class="metric-value">' + result.memory.peak + ' MB</div><div class="metric-label">RAM pic</div></div>';
-      html += '<div class="metric-box highlight-green"><div class="metric-value">' + result.memory.average + ' MB</div><div class="metric-label">RAM moyenne</div></div>';
+      html += '<div class="metric-box highlight-purple"><div class="metric-value">' + result.memory.peak + ' MiB</div><div class="metric-label">' + memoryLabel(result.memory) + ' pic</div></div>';
+      html += '<div class="metric-box highlight-green"><div class="metric-value">' + result.memory.average + ' MiB</div><div class="metric-label">' + memoryLabel(result.memory) + ' moyenne</div></div>';
+    }
+    if (result.memory && result.memory.loadedModel) {
+      html += '<div class="metric-box"><div class="metric-value">' + (result.memory.loadedModel.sizeBytes / Math.pow(1024, 3)).toFixed(2) + ' GiB</div><div class="metric-label">Modèle chargé · déclaré par Ollama (pas un pic RAM)</div></div>';
     }
     html += '</div>';
     html += '<div class="prompt-echo"><strong>Prompt :</strong> ' + escapeHtml(result.promptText.substring(0, 180)) + (result.promptText.length > 180 ? '…' : '') + '</div>';
@@ -80,15 +88,15 @@ function exportMarkdown() {
   md += '| GPU | ' + (env.gpu || 'N/A') + ' |\n\n';
   md += '---\n\n';
   md += '## 📈 Résumé des tests\n\n';
-  md += '| # | Modèle | Runner | Type | Tokens | Tok/s | TTFT | Temps total | RAM pic | RAM moy | Statut |\n';
+  md += '| # | Modèle | Runner | Type | Tokens | Tok/s | TTFT | Temps total | Mémoire pic (voir source) | Mémoire moyenne (voir source) | Statut |\n';
   md += '|---|--------|--------|------|--------|-------|------|-------------|---------|---------|--------|\n';
   
   for (var i = 0; i < state.results.length; i++) {
     var r = state.results[i];
     var m = r.metrics;
     var ttftStr = m.ttft !== null ? m.ttft + ' ms' : 'N/A';
-    var ramPeakStr = (r.memory && r.memory.peak > 0) ? r.memory.peak + ' MB' : 'N/A';
-    var ramAvgStr = (r.memory && r.memory.average > 0) ? r.memory.average + ' MB' : 'N/A';
+    var ramPeakStr = (r.memory && r.memory.peak > 0) ? r.memory.peak + ' MiB' : 'N/A';
+    var ramAvgStr = (r.memory && r.memory.average > 0) ? r.memory.average + ' MiB' : 'N/A';
     var status = r.error ? '❌ Erreur' : '✅ OK';
     md += '| ' + (i+1) + ' | `'+ r.model +'` | ' + r.runner + ' | ' + r.promptEmoji + ' ' + r.promptTypeName + ' | ' + m.totalTokens + ' | ' + m.tokensPerSec + ' | ' + ttftStr + ' | ' + (m.totalTime/1000).toFixed(2) + 's | ' + ramPeakStr + ' | ' + ramAvgStr + ' | ' + status + ' |\n';
   }
@@ -117,8 +125,14 @@ function exportMarkdown() {
       md += '| Température | ' + m.temperature + ' |\n';
       md += '| Tokens max | ' + m.maxTokens + ' |\n';
       if (r.memory && r.memory.peak > 0) {
-        md += '| RAM pic | ' + r.memory.peak + ' MB |\n';
-        md += '| RAM moyenne | ' + r.memory.average + ' MB |\n';
+        md += '| ' + memoryLabel(r.memory) + ' pic | ' + r.memory.peak + ' MB |\n';
+        md += '| ' + memoryLabel(r.memory) + ' moyenne | ' + r.memory.average + ' MB |\n';
+      }
+      if (r.memory && r.memory.loadedModel) {
+        md += '| Modèle chargé (déclaré par Ollama, pas un pic RAM) | ' + (r.memory.loadedModel.sizeBytes / Math.pow(1024, 3)).toFixed(2) + ' GiB |\n';
+        md += '| Source mémoire du modèle | ollama-api-ps |\n';
+        md += '| Taille modèle déclarée (octets) | ' + r.memory.loadedModel.sizeBytes + ' |\n';
+        md += '| size_vram déclaré (octets) | ' + (r.memory.loadedModel.sizeVramBytes === null ? 'N/A' : r.memory.loadedModel.sizeVramBytes) + ' |\n';
       }
       md += '\n';
       md += '#### Prompt\n\n';
