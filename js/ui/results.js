@@ -1,3 +1,35 @@
+function exportResourceSummary(resources) {
+  if (!resources) return null;
+  var result = { sampleCount: resources.sampleCount, startedAt: resources.startedAt,
+    scopeNote: resources.scopeNote, sampleLimitReached: !!resources.sampleLimitReached };
+  ['swapPeak', 'compressedPeak', 'swapReadDelta', 'swapWriteDelta', 'diskReadDelta', 'diskWriteDelta', 'mlxPeak'].forEach(function(key) {
+    var r = resources[key];
+    if (r) result[key] = Object.assign({}, r);
+  });
+  return result;
+}
+
+function resourceMetricItems(resources) {
+  if (!resources) return [];
+  return [
+    ['Pic MLX · logs serveur Ollama', resources.mlxPeak],
+    ['Swap système · pic échantillonné', resources.swapPeak],
+    ['Mémoire compressée système · pic', resources.compressedPeak],
+    ['Lectures disques · système', resources.diskReadDelta],
+    ['Écritures disques · système', resources.diskWriteDelta],
+    ['Swap lu · équivalent pages', resources.swapReadDelta],
+    ['Swap écrit · équivalent pages', resources.swapWriteDelta]
+  ];
+}
+
+function resourceValue(reading) {
+  if (reading?.status !== 'available' || !Number.isFinite(reading.value)) return 'Non disponible';
+  var bytes = reading.value;
+  return bytes >= 1024 ** 3 ? (bytes / 1024 ** 3).toFixed(2) + ' GiB' :
+    bytes >= 1024 ** 2 ? (bytes / 1024 ** 2).toFixed(2) + ' MiB' :
+    bytes >= 1024 ? (bytes / 1024).toFixed(1) + ' KiB' : bytes + ' B';
+}
+
 // Stable, allowlisted data for a future community importer. No keys, logs or responses.
 function buildCommunityExport(results, generatedAt) {
   function number(value) { return typeof value === 'number' && Number.isFinite(value) ? value : null; }
@@ -11,7 +43,7 @@ function buildCommunityExport(results, generatedAt) {
         model: r.model || null, modelMetadata: r.modelMetadata || null, runner: r.runner || null,
         promptType: r.promptType || null, repetition: number(r.rep),
         status: r.error ? 'error' : 'ok',
-        parameters: { temperature: number(m.temperature), maxTokens: number(m.maxTokens), contextRequestedTokens: number(m.contextRequestedTokens) },
+        parameters: { temperature: number(m.temperature), maxTokens: number(m.maxTokens), contextRequestedTokens: number(m.contextRequestedTokens), contextMode: m.contextMode || null, contextObservedTokens: number(m.contextObservedTokens) },
         metrics: {
           generatedTokens: number(m.totalTokens),
           averageTokensPerSecond: number(m.tokensPerSec),
@@ -23,9 +55,10 @@ function buildCommunityExport(results, generatedAt) {
         memory: {
           sampledSource: memory.source || null, sampledUnit: 'MiB',
           sampledPeak: number(memory.peak), sampledAverage: number(memory.average),
+          resources: exportResourceSummary(memory.resources),
           loadedModel: loaded.source ? {
             source: loaded.source, unit: 'bytes', sizeBytes: number(loaded.sizeBytes),
-            sizeVramBytes: number(loaded.sizeVramBytes), observedAt: number(loaded.observedAt)
+            sizeVramBytes: number(loaded.sizeVramBytes), contextTokens: number(loaded.contextTokens), observedAt: number(loaded.observedAt)
           } : null
         },
         environment: {
@@ -84,7 +117,7 @@ function renderResultCard(result) {
   html += '</div>';
   if (result.modelMetadata || m.contextRequestedTokens != null) {
     html += '<p style="padding:0 16px;font-size:0.8rem;">' + escapeHtml(modelArchitectureText(result.modelMetadata)) +
-      ' · Contexte demandé : ' + (m.contextRequestedTokens ?? 'réglage du runner') +
+      ' · Contexte Auto · runner chargé : ' + (m.contextObservedTokens ?? 'inconnu') + ' tokens' +
       ' · Maximum déclaré : ' + (result.modelMetadata?.contextMaxTokens ?? 'inconnu') + ' tokens</p>';
   }
 
@@ -105,7 +138,11 @@ function renderResultCard(result) {
     if (result.memory && result.memory.loadedModel) {
       html += '<div class="metric-box"><div class="metric-value">' + (result.memory.loadedModel.sizeBytes / Math.pow(1024, 3)).toFixed(2) + ' GiB</div><div class="metric-label">Modèle chargé · déclaré par Ollama (pas un pic RAM)</div></div>';
     }
+    resourceMetricItems(result.memory?.resources).forEach(function(item) {
+      html += '<div class="metric-box"><div class="metric-value">' + resourceValue(item[1]) + '</div><div class="metric-label">' + escapeHtml(item[0]) + '</div></div>';
+    });
     html += '</div>';
+    if (result.memory?.resources) html += '<p style="font-size:0.8rem;padding:0 16px">Swap et E/S : système entier. Pic MLX des logs serveur Ollama, attribution au modèle non vérifiée. Activité disque observée, pas vitesse maximale SSD.</p>';
     html += '<div class="prompt-echo"><strong>Prompt :</strong> ' + escapeHtml(result.promptText.substring(0, 180)) + (result.promptText.length > 180 ? '…' : '') + '</div>';
     html += '<div class="response-block">' + escapeHtml(result.response) + '</div>';
   }
@@ -155,7 +192,7 @@ function exportMarkdown() {
   }
   md += '---\n\n';
   md += '## 📈 Résumé des tests\n\n';
-  md += '| # | Modèle | Runner | Type | Tokens | Tok/s moyen | TTFT (ms) | Temps total (s) | Source mémoire échantillonnée | Pic (MiB) | Moyenne (MiB) | Modèle chargé (GiB) | Source modèle chargé | Architecture | Contexte demandé (tokens) | Contexte max déclaré (tokens) | Statut |\n';
+  md += '| # | Modèle | Runner | Type | Tokens | Tok/s moyen | TTFT (ms) | Temps total (s) | Source mémoire échantillonnée | Pic (MiB) | Moyenne (MiB) | Modèle chargé (GiB) | Source modèle chargé | Architecture | Contexte Auto · runner chargé (tokens) | Contexte max déclaré (tokens) | Statut |\n';
   md += '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|\n';
 
   for (var i = 0; i < state.results.length; i++) {
@@ -170,14 +207,14 @@ function exportMarkdown() {
       memory.average != null ? memory.average : 'N/A',
       loaded && Number.isFinite(loaded.sizeBytes) ? (loaded.sizeBytes / Math.pow(1024, 3)).toFixed(2) : 'N/A',
       loaded ? loaded.source : 'N/A', modelArchitectureText(r.modelMetadata),
-      m.contextRequestedTokens ?? 'Réglage du runner / non applicable', r.modelMetadata?.contextMaxTokens ?? 'N/A', r.error ? 'Erreur' : 'OK'
+      m.contextObservedTokens ?? 'Inconnu / non applicable', r.modelMetadata?.contextMaxTokens ?? 'N/A', r.error ? 'Erreur' : 'OK'
     ];
     md += '| ' + cells.map(markdownCell).join(' | ') + ' |\n';
   }
   md += '\nLe débit moyen inclut toute la durée du test. La mémoire échantillonnée dépend de sa source (RSS cumulée ou tas JS navigateur). La taille du modèle déclarée par Ollama est distincte du pic RAM ; ne pas additionner size et size_vram sur mémoire unifiée. N/A signifie inconnu.\n';
   md += '\n## Données structurées pour import communautaire\n\n';
-  md += 'Schéma llm-benchmarker.community, version 1.0.0. Bloc limité aux paramètres, mesures et environnement sélectionné ; sans clés API, logs, prompts ni réponses. Le reste du rapport contient les prompts et réponses : vérifier avant partage.\n\n';
-  md += '\x60\x60\x60json\n' + JSON.stringify(buildCommunityExport(state.results, now.toISOString()), null, 2).replace(/\x60/g, '\\u0060') + '\n\x60\x60\x60\n';
+  md += 'Schéma llm-benchmarker.community, version 2.0.0 (bundle de rapports si plusieurs runners/inventaires). Bloc limité aux paramètres, mesures et environnement sélectionné ; sans clés API, logs, prompts ni réponses. Le reste du rapport contient les prompts et réponses : vérifier avant partage.\n\n';
+  md += '\x60\x60\x60json\n' + JSON.stringify(buildCommunityV2(state.results, now.toISOString()), null, 2).replace(/\x60/g, '\\u0060') + '\n\x60\x60\x60\n';
   md += '\n---\n\n';
   md += '## 🔍 Détail des tests\n\n';
   
@@ -201,7 +238,7 @@ function exportMarkdown() {
       md += '| Temps total | ' + (m.totalTime/1000).toFixed(2) + ' s |\n';
       md += '| Température | ' + m.temperature + ' |\n';
       md += '| Tokens max | ' + m.maxTokens + ' |\n';
-      md += '| Contexte demandé (tokens, Ollama) | ' + (m.contextRequestedTokens ?? 'Réglage du runner / non applicable') + ' |\n';
+      md += '| Contexte Auto · runner chargé (tokens, Ollama) | ' + (m.contextObservedTokens ?? 'Inconnu / non applicable') + ' |\n';
       md += '| Architecture Dense / MoE | ' + markdownCell(modelArchitectureText(r.modelMetadata)) + ' |\n';
       md += '| Contexte maximal déclaré (tokens) | ' + (r.modelMetadata?.contextMaxTokens ?? 'N/A') + ' |\n';
       md += '| Source métadonnées modèle | ' + (r.modelMetadata?.source || 'N/A') + ' |\n';
@@ -215,6 +252,11 @@ function exportMarkdown() {
         md += '| Taille modèle déclarée (octets) | ' + r.memory.loadedModel.sizeBytes + ' |\n';
         md += '| size_vram déclaré (octets) | ' + (r.memory.loadedModel.sizeVramBytes === null ? 'N/A' : r.memory.loadedModel.sizeVramBytes) + ' |\n';
       }
+      resourceMetricItems(r.memory?.resources).forEach(function(item) {
+        md += '| ' + markdownCell(item[0]) + ' | ' + resourceValue(item[1]) + ' |\n';
+        md += '| Source ' + markdownCell(item[0]) + ' | ' + markdownCell(item[1]?.source || 'N/A') + ' |\n';
+      });
+      if (r.memory?.resources) md += '\nSwap et E/S : système entier. Le pic MLX est un événement des logs Ollama dont l’attribution au modèle est non vérifiée. Aucune vitesse maximale SSD n’est mesurée.\n';
       md += '\n';
       md += '#### Prompt\n\n';
       md += '```\n' + r.promptText + '\n```\n\n';
