@@ -55,3 +55,7 @@ Tous les modules sont chargés de manière séquentielle dans le HTML, garantiss
 
 ---
 
+
+## Schéma communautaire et prochaines étapes
+
+Voir [le contrat v2](schemas/README.md) : inventaire CPU/GPU/RAM/stockage, Apple Silicon, provenance des mesures, tâches agentiques et topologie multi-machine/Exo. Le contrat est accompagné d'exemples synthétiques et de tests. Les collecteurs et l'export courant restent inchangés (schéma v1.0.0) ; leur intégration suivra par étapes.
