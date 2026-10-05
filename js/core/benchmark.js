@@ -8,7 +8,9 @@ async function runBenchmark() {
   var model = getSelectedModel();
   if (!model || model === 'unknown-model') { showToast('Veuillez sélectionner un modèle', 'error'); return; }
 
+  try { getRequestedContextTokens(); } catch (error) { showToast(error.message, 'error'); return; }
   state.isRunning = true;
+  await refreshModelMetadata();
   var runBtn = document.getElementById('runBtn');
   runBtn.disabled = true;
   runBtn.innerHTML = '<div class="spinner"></div> Benchmark en cours…';
@@ -89,6 +91,8 @@ async function executeTest(model, promptType, promptText, rep, signal) {
   // Use advanced config functions to get settings based on mode
   var temperature = getTemperatureForPromptType(promptType.id);
   var maxTokens = getMaxTokens();
+  var contextTokens = getRequestedContextTokens();
+  var modelMetadata = state.modelMetadata && state.modelMetadata.model === model ? Object.assign({}, state.modelMetadata) : null;
   var t0 = performance.now();
   var firstTokenTime = null, fullText = '', tokensGenerated = 0;
   var memoryStats = null;
@@ -99,6 +103,9 @@ async function executeTest(model, promptType, promptText, rep, signal) {
   addDebugLog('Démarrage du test: ' + model + ' - ' + promptType.name, 'info');
   addDebugLog('Config: temp=' + temperature + ', max_tokens=' + maxTokens, 'info');
   
+  addDebugLog(modelArchitectureText(modelMetadata) + ' ; contexte demandé : ' + (contextTokens ?? 'réglage du runner') +
+    ' ; maximum déclaré : ' + (modelMetadata?.contextMaxTokens ?? 'inconnu'), 'info');
+
   // Start memory monitoring for local runners (Ollama)
   if (state.runner === 'ollama') {
     ollamaMemoryMonitor.start(model);
@@ -110,7 +117,7 @@ async function executeTest(model, promptType, promptText, rep, signal) {
       var res = await fetchWithTimeout(RUNNERS.ollama.base + '/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: model, prompt: promptText, stream: true, options: { temperature: temperature, num_predict: maxTokens } }),
+        body: JSON.stringify({ model: model, prompt: promptText, stream: true, options: buildOllamaOptions(temperature, maxTokens, contextTokens) }),
         signal: signal
       }, 180000); // 3 minutes pour les modèles lourds (>30B)
       var reader = res.body.getReader();
@@ -251,6 +258,7 @@ async function executeTest(model, promptType, promptText, rep, signal) {
     id: crypto.randomUUID(),
     timestamp: new Date().toISOString(),
     model: model,
+    modelMetadata: modelMetadata,
     runner: RUNNERS[state.runner].name,
     promptType: promptType.id,
     promptTypeName: promptType.name,
@@ -263,7 +271,8 @@ async function executeTest(model, promptType, promptText, rep, signal) {
       ttft: ttft !== null ? Math.round(ttft) : null,
       totalTime: Math.round(totalTime),
       temperature: temperature,
-      maxTokens: maxTokens
+      maxTokens: maxTokens,
+      contextRequestedTokens: contextTokens
     },
     env: state.env,
     rep: rep,
