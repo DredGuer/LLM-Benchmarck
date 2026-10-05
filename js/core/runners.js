@@ -119,12 +119,23 @@ function modelArchitectureText(metadata) {
 function renderModelMetadata(metadata) {
   var panel = document.getElementById('modelMetadata');
   if (!panel) return;
-  panel.textContent = metadata ?
-    modelArchitectureText(metadata) + '\nContexte maximal déclaré : ' + (metadata.contextMaxTokens ?? 'inconnu') + ' tokens' +
-    '\nParamètres totaux : ' + (metadata.parameterCount === null ? 'inconnus' : (metadata.parameterCount / 1e9).toFixed(2) + ' milliards') +
-    '\nQuantification : ' + (metadata.quantization || 'inconnue') +
-    '\nSource : /api/show Ollama. Le contexte maximal du modèle ne garantit pas le contexte alloué par le runner.' :
-    'Informations non disponibles pour ce modèle ou fournisseur.';
+  panel.textContent = '';
+  if (!metadata) { panel.textContent = 'Informations du modèle non disponibles.'; return; }
+  var cards = [
+    ['Architecture', modelArchitectureText(metadata)],
+    ['Paramètres totaux', metadata.parameterCount === null ? 'Inconnus' : (metadata.parameterCount / 1e9).toFixed(2) + ' milliards'],
+    ['Quantification', metadata.quantization || 'Inconnue'],
+    ['Contexte maximum', (metadata.contextMaxTokens ?? 'Inconnu') + ' tokens'],
+    ['Contexte du test', state.runner === 'ollama' ? 'Auto · réglage Ollama' : 'Géré par le fournisseur']
+  ];
+  cards.forEach(function(item) {
+    var box = document.createElement('div');
+    box.className = 'metric-box';
+    var title = document.createElement('div'), value = document.createElement('strong');
+    title.className = 'metric-label'; title.textContent = item[0];
+    value.textContent = item[1]; value.style.display = 'block'; value.style.marginTop = '6px';
+    box.appendChild(title); box.appendChild(value); panel.appendChild(box);
+  });
 }
 
 async function refreshModelMetadata() {
@@ -148,13 +159,8 @@ async function refreshModelMetadata() {
   }
 }
 
-function getRequestedContextTokens() {
-  var input = document.getElementById('contextTokens');
-  if (state.runner !== 'ollama' || !input || !input.value.trim()) return null;
-  var value = Number(input.value);
-  if (!Number.isSafeInteger(value) || value < 1) throw new Error('Le contexte doit être un nombre entier positif.');
-  return value;
-}
+// Auto delegates context allocation to the runner; never forces the model maximum.
+function getRequestedContextTokens() { return null; }
 
 function buildOllamaOptions(temperature, maxTokens, contextTokens) {
   var options = { temperature: temperature, num_predict: maxTokens };
