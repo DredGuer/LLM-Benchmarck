@@ -160,12 +160,19 @@ function buildCommunityV2(results, generatedAt) {
   return reports.length === 1 ? reports[0] : { schema: 'llm-benchmarker.community.bundle', schemaVersion: '1.0.0', reports: reports };
 }
 
+function communityFilename(results, at) {
+  var models = Array.from(new Set(results.map(r => r.model).filter(m => typeof m === 'string' && m.trim())));
+  var slug = (models.length ? models[0] : 'modele-inconnu').normalize('NFKD').replace(/[^a-zA-Z0-9._-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,140) || 'modele-inconnu';
+  if (models.length > 1) slug += '-et-'+(models.length-1)+'-autres-modeles';
+  return 'LLMB-'+slug+'-community-v2-'+at.toISOString().replace(/[:.]/g,'-')+'.json';
+}
+
 function exportCommunityJSON() {
   if (!state.results.length) { showToast('Aucun résultat à exporter', 'error'); return; }
   var report = buildCommunityV2(state.results, new Date().toISOString());
   var blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json;charset=utf-8' });
   var url = URL.createObjectURL(blob), link = document.createElement('a');
-  link.href = url; link.download = 'LLMB-community-v2-' + new Date().toISOString().replace(/[:.]/g, '-') + '.json';
+  link.href = url; link.download = communityFilename(state.results, new Date());
   link.click(); URL.revokeObjectURL(url);
   showToast('Export communautaire v2 téléchargé', 'success');
 }
