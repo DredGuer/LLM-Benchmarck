@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM Benchmarker community report bundle",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "llm-benchmarker.community.bundle"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "reports": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "community-v2.schema.json"
+      }
+    }
+  },
+  "required": [
+    "schema",
+    "schemaVersion",
+    "reports"
+  ]
+}
