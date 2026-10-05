@@ -521,8 +521,7 @@ function getMachineManufacturer() {
     const platform = os.platform();
     
     if (platform === 'darwin') {
-      const result = execSync('sysctl -n hw.manufacturer', { encoding: 'utf-8' });
-      return result.trim() || 'Unknown';
+      return 'Apple';
     } else if (platform === 'linux') {
       const result = execSync('cat /sys/class/dmi/id/sys_vendor 2>/dev/null || echo Unknown', { encoding: 'utf-8' });
       return result.trim() || 'Unknown';
@@ -536,6 +535,27 @@ function getMachineManufacturer() {
     return 'Unknown';
   }
 }
+
+// Report Ollama's declared loaded-model sizes separately from RSS.
+app.get('/api/ollama/models', (req, res) => {
+  const request = require('http').get('http://127.0.0.1:11434/api/ps', upstream => {
+    let body = '';
+    upstream.on('data', chunk => {
+      body += chunk;
+      if (body.length > 1024 * 1024) request.destroy(new Error('Response too large'));
+    });
+    upstream.on('end', () => {
+      try {
+        if (upstream.statusCode !== 200) throw new Error('Ollama status ' + upstream.statusCode);
+        const data = JSON.parse(body);
+        if (!Array.isArray(data.models)) throw new Error('Invalid models response');
+        res.json({ source: 'ollama-api-ps', unit: 'bytes', models: data.models });
+      } catch (err) { res.status(502).json({ error: err.message }); }
+    });
+  });
+  request.setTimeout(2000, () => request.destroy(new Error('Ollama timeout')));
+  request.on('error', err => { if (!res.headersSent) res.status(502).json({ error: err.message }); });
+});
 
 // API Endpoints
 
