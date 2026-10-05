@@ -324,8 +324,8 @@ reste nécessaire. Voir [les sources et limites de la télémétrie](backend/APP
 | Option | Description | Valeur par défaut |
 |--------|-------------|------------------|
 | Température | Paramètre d'échantillonnage (0 réduit l'aléatoire sans garantir la reproductibilité) | 0.7 |
-| Tokens max | Nombre maximum de tokens à générer | **4096** |
-| Répétitions | Nombre de mesures par type de prompt, hors chauffe | 3 |
+| Tokens max | Nombre maximum de tokens à générer | **8192** |
+| Répétitions | Nombre de mesures par type de prompt, hors chauffe | 1 |
 
 ## 🔥 Campagnes et statistiques
 
@@ -342,18 +342,18 @@ Un modèle déchargé déclenche une nouvelle chauffe. Aucun déchargement forc�
 la chauffe initiale n'est pas nécessairement à froid, et son état observé est indiqué.
 Les APIs externes ne reçoivent pas de requête de chauffe supplémentaire.
 
-Les modes Auto et Manuel proposent **3 répétitions** par défaut (Manuel : 1 à 20).
+Les modes Auto et Manuel proposent **1 répétition** par défaut (Manuel : 1 à 20).
 Les chauffes sont exclues des moyennes de l'historique et des statistiques.
-Le protocole d'exécution **0.07** est conservé dans les exports v2 : phase, empreinte SHA-256 du prompt,
+Le protocole d'exécution **0.08** est conservé dans les exports v2 : phase, empreinte SHA-256 du prompt,
 chauffes préalables, chargement, cache, temps de chargement/prefill/génération et débit de génération seule.
-Le cache est déclaré froid/chaud uniquement si Ollama fournit le compteur de tokens cachés.
+Le cache est décrit comme sans réutilisation déclarée ou présent à couverture inconnue si Ollama fournit le compteur de tokens cachés.
 Il n'est ni vidé ni désactivé : son état peut changer entre répétitions et reste inconnu si non rapporté.
 
 L'onglet **Statistiques** exploite votre historique : barres comparatives, tendances chronologiques,
 nombre de mesures, moyenne, médiane, écart-type et ratio tok/s par milliard de paramètres totaux.
 Les groupes séparent modèle/digest, matériel, runner, contexte, prompt, température, tokens maximum,
 quantification, Dense/MoE, version du protocole, chargement et cache.
-Une mesure isolée n'a pas d'écart-type ; les erreurs et chauffes sont exclues, les données manquantes
+Une mesure isolée n'a pas d'écart-type ; les erreurs, chauffes et réponses limitées en tokens sont exclues, les données manquantes
 ne deviennent pas zéro. Ce ratio ne normalise pas les paramètres actifs d'un MoE et n'évalue pas la qualité.
 
 Le parseur swap accepte points/virgules décimaux et différentes unités ; les commandes utilisent
@@ -530,6 +530,22 @@ ollama list
 **performance.memory non disponible** :
 - Utilisez Chrome avec le flag `--enable-precision-memory-info`
 - Pour suivre Ollama, lancez le backend Node.js ; le tas JavaScript de Chrome ne mesure pas la RAM du modèle.
+
+---
+
+### Répétitions et analyse des résultats
+
+Une campagne démarre avec **1 répétition par catégorie**, après une chauffe séparée. Pour estimer la variabilité et fiabiliser les résultats, choisissez plusieurs répétitions à conditions comparables. Avec une seule mesure, aucun écart-type ne peut être calculé. La limite par défaut en mode manuel est **8 192 tokens** (au lieu de 4 096) ; le mode Auto conserve sa limite de 32 768 tokens. Une limite reste un plafond, pas une longueur de réponse imposée.
+
+Le récapitulatif avant lancement indique le nombre de catégories, répétitions et mesures prévues.
+
+Les limites de génération sont signalées et les résultats concernés exclus des statistiques. Les exports v2 incluent la raison d’arrêt lorsqu’elle est disponible, les niveaux de swap/mémoire compressée avant et après, la version d’Ollama, le cache observé et le temps du premier segment de réponse finale. Le cache reste géré par le runner ; un préfixe réutilisé ne signifie pas que tout le prompt est en cache. Les versions internes de MLX ne sont pas déduites de celle d’Ollama.
+
+Le bouton **Analyser les résultats** ouvre un assistant flottant. Choisissez Ollama local (le modèle testé ou un autre), OpenAI, Mistral ou une API compatible OpenAI, y compris LM Studio. L’URL compatible doit inclure `/v1`. Le modèle peut être saisi ou choisi après récupération de la liste. La clé de ce panneau n’est pas enregistrée dans le navigateur ni exportée. Les accès directs dépendent des autorisations CORS du fournisseur ; aucun proxy de clés n’est ajouté.
+
+L’analyse démarre uniquement sur **Envoyer** ou **Écrire une conclusion**, hors campagne de mesure. Pour une API distante, cochez l’autorisation d’envoi. Le contexte envoyé comprend au plus 100 tests : mesures, réglages et matériel synthétique, plus vos questions et les échanges récents. Il exclut les prompts/réponses des tests, logs et clés du benchmark. Les conclusions sont consultatives et restent séparées des mesures et de l’export communautaire. Utiliser un autre modèle local peut modifier l’état du cache et la pression mémoire pour la campagne suivante.
+
+Vérifications de cette étape : `node backend/reliability-analysis.test.cjs`, `node backend/protocol-statistics.test.cjs`, `node backend/apple-resources.test.cjs`, `node backend/community-export.test.cjs` et `node schemas/test.cjs`.
 
 ---
 
