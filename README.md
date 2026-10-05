@@ -6,11 +6,29 @@
 >
 > **Nouveautés** : Support Gemini ✨ | Monitoring RAM Ollama 💾 | Backend optionnel | Fix timeout modèles lourds (>30B) ⏱️ | **Détection GPU intelligente** 🎮 | **Modes Auto/Manuel** ⚙️ | **Config par type de prompt** 📝 | **Fix bug RAM 0MB** 🐛 | **Détection backend améliorée** 🔄
 
-> **✅ Toutes les fonctionnalités validées** - Sélection des prompts, benchmark, export, historique, monitoring RAM
+> **Projet en version alpha** — Les fonctionnalités et mesures peuvent comporter des erreurs ; leur validation dépend du matériel et de l'environnement.
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Status: Alpha](https://img.shields.io/badge/Status-Alpha-orange.svg)]
 [![Browser: Chrome/Firefox/Safari](https://img.shields.io/badge/Browser-Chrome%20%7C%20Firefox%20%7C%20Safari-blue.svg)]
+
+---
+
+## Utilisation, données et garanties
+
+Le projet est mis à disposition gratuitement sous [licence Apache 2.0](LICENSE),
+**en l'état**, sans garantie dans les limites de la licence et du droit applicable.
+L'absence de bugs, de perte de données ou de fuite d'informations n'est pas garantie.
+
+Les utilisateurs doivent vérifier les données saisies et les rapports avant partage,
+sauvegarder leurs fichiers et disposer des droits nécessaires sur les données traitées.
+Les API externes reçoivent les prompts et les informations d'authentification nécessaires ;
+les exports Markdown peuvent contenir des prompts et réponses confidentiels.
+Un fonctionnement local ne garantit pas, à lui seul, la confidentialité.
+
+Lire la [charte d'utilisation et de gestion des données](CHARTE_UTILISATION.md).
+Elle complète l'information sur les risques sans modifier la licence ni écarter les
+obligations légales applicables. L'envoi automatique au futur site n'est pas encore activé.
 
 ---
 
@@ -25,6 +43,8 @@
 - [📊 Comprendre les mesures](#-comprendre-les-mesures)
 - [📝 Export des résultats](#-export-des-résultats)
 - [💾 Stockage](#-stockage)
+- [Utilisation, données et garanties](#utilisation-données-et-garanties)
+- [Charte d'utilisation](CHARTE_UTILISATION.md)
 - [📜 Licence](#-licence)
 - [🤝 Contribuer](#-contribuer)
 - [⚠️ Limitations connues](#️-limitations-connues)
