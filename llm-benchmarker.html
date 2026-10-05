@@ -12,6 +12,9 @@
 .benchmark-help>summary::-webkit-details-marker{display:none}
 .benchmark-help>summary:focus-visible{outline:2px solid var(--accent2,#58a6ff);outline-offset:3px}
 .benchmark-help-text{position:absolute;right:0;top:25px;z-index:1200;width:min(270px,65vw);padding:12px;background:var(--bg2,#161b22);color:var(--text,#eee);border:1px solid var(--accent2,#58a6ff);border-radius:8px;box-shadow:0 4px 16px #0006;font-size:13px;line-height:1.5;text-align:left;white-space:normal;text-transform:none;letter-spacing:normal}
+#analysisPanel{max-height:min(80vh,calc(100dvh - 100px))!important;isolation:isolate}
+#analysisPanel input:not([type="checkbox"]),#analysisPanel select,#analysisPanel textarea{width:100%;min-width:0;padding:8px 10px;background:var(--surface2,#21262d);color:var(--text,#e6edf3);border:1px solid var(--border,#30363d);border-radius:6px}
+#analysisPanel label{display:block;margin-top:8px}
 </style>
 </head>
 <body>
@@ -652,7 +655,7 @@ window.PROMPT_TYPES = [
 <script src="js/ui/statistics.js?v=0.08-reliability1"></script>
 
 <button class="btn btn-primary" onclick="toggleAnalysis()" style="position:fixed;bottom:20px;right:20px;z-index:1000">💬 Analyser les résultats</button>
-<section id="analysisPanel" hidden style="position:fixed;bottom:76px;right:16px;width:min(460px,calc(100vw - 32px));max-height:80vh;overflow:auto;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;z-index:1001;box-shadow:0 8px 32px #0008" aria-label="Assistant d’analyse">
+<section id="analysisPanel" hidden style="position:fixed;bottom:76px;right:16px;width:min(460px,calc(100vw - 32px));max-height:80vh;overflow:auto;background:var(--surface,#161b22);color:var(--text,#e6edf3);border:1px solid var(--border,#30363d);border-radius:12px;padding:16px;z-index:1001;box-shadow:0 8px 32px #0008" aria-label="Assistant d’analyse">
   <div style="display:flex;justify-content:space-between"><strong>Assistant d’analyse des résultats</strong><button class="btn btn-ghost btn-xs" onclick="toggleAnalysis()" aria-label="Fermer l’assistant">✕</button></div>
   <p style="font-size:.8rem">Analyse à la demande, hors benchmark. L’IA peut se tromper : vérifiez ses conclusions avec les mesures.</p>
   <label for="analysisProvider">Fournisseur</label><select id="analysisProvider" onchange="analysisProviderChanged()"><option value="ollama">Ollama local</option><option value="openai">OpenAI</option><option value="mistral">Mistral</option><option value="compatible">API compatible OpenAI / LM Studio</option></select>
