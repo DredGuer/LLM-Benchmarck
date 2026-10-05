@@ -13,7 +13,7 @@ Le backend expose `GET /api/hardware` et inclut `hardwareInventory` dans
 | Cœurs performance/efficacité | sysctl hw.perflevel*.name et physicalcpu ; pas de déduction si le nom manque |
 | Fréquence déclarée | hw.cpufrequency_max, puis hw.cpufrequency ; inconnue si non exposée |
 | RAM physique | sysctl hw.memsize, secours os.totalmem |
-| GPU et cœurs GPU | system_profiler SPDisplaysDataType |
+| GPU et cœurs GPU | system_profiler SPDisplaysDataType, sppci_cores (secours spdisplays_cores) |
 | Disques physiques | diskutil list -plist physical et diskutil info |
 | Version macOS | sw_vers -productVersion, séparée de la version du noyau |
 
@@ -21,6 +21,8 @@ Apple Silicon est identifié à partir de la puce détectée. La RAM est un pool
 sans inventer une capacité VRAM supplémentaire. Les disques physiques sont séparés des
 volumes APFS pour éviter de compter plusieurs fois leur capacité. Aucun rôle du disque
 (modèle/offload) n'est supposé. SSD/HDD, transport et capacité sont renseignés lorsque disponibles.
+
+Le transport « Apple Fabric » est conservé comme `apple-fabric`, sans le déduire comme NVMe.
 
 La fréquence CPU déclarée n'est pas une mesure en direct. Aucun débit SSD n'est mesuré :
 aucune lecture/écriture de benchmark, aucun test destructif, aucun accès aux fichiers modèles.
