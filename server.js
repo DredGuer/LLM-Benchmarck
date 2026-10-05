@@ -15,6 +15,7 @@ const pidusage = require('pidusage');
 const cors = require('cors');
 const os = require('os');
 const fs = require('fs');
+const { getAppleInventory } = require('./backend/apple-inventory');
 
 const app = express();
 const PORT = process.argv.includes('--port') ? 
@@ -557,6 +558,12 @@ app.get('/api/ollama/models', (req, res) => {
   request.on('error', err => { if (!res.headersSent) res.status(502).json({ error: err.message }); });
 });
 
+app.get('/api/hardware', async (req, res) => {
+  if (os.platform() !== 'darwin') return res.status(501).json({ status: 'unsupported', message: 'Apple collector only at this stage' });
+  try { res.json({ success: true, hardwareInventory: await getAppleInventory() }); }
+  catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+
 // API Endpoints
 
 /**
@@ -599,9 +606,25 @@ app.get('/api/memory', async (req, res) => {
 /**
  * GET /api/environment - Get complete system environment information
  */
-app.get('/api/environment', (req, res) => {
+app.get('/api/environment', async (req, res) => {
   try {
-    const env = getSystemEnvironment();
+    let env;
+    if (os.platform() === 'darwin') {
+      const hardwareInventory = await getAppleInventory();
+      const n = hardwareInventory.machine, cpu = n.cpus[0], gpu = n.gpus[0];
+      const bytes = n.memory.physicalCapacity.value;
+      env = {
+        os: n.os, machine: { model: cpu.model, manufacturer: n.platform === 'apple-silicon' ? 'Apple' : null },
+        cpu: { model: cpu.model, cores: cpu.logicalCores, physicalCores: cpu.physicalCores,
+          performanceCores: cpu.performanceCores, efficiencyCores: cpu.efficiencyCores,
+          speed: cpu.frequency.value ? (cpu.frequency.value / 1e9).toFixed(2) + ' GHz (déclarée)' : 'Non disponible' },
+        memory: { total: bytes, totalStr: (bytes / Math.pow(1024, 3)).toFixed(0) + ' GiB', architecture: n.memory.architecture },
+        gpu: { model: gpu?.model || 'Non disponible', type: gpu?.kind || 'unknown',
+          vramStr: n.memory.architecture === 'unified' ? 'Unifiée avec la RAM' : 'Non disponible',
+          all: n.gpus.map(g => ({ ...g, type: g.kind, vram: 'Unifiée avec la RAM' })) },
+        hardwareInventory
+      };
+    } else { env = getSystemEnvironment(); }
     res.json({
       success: true,
       timestamp: Date.now(),
