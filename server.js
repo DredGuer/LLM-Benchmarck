@@ -16,6 +16,8 @@ const cors = require('cors');
 const os = require('os');
 const fs = require('fs');
 const { getAppleInventory } = require('./backend/apple-inventory');
+const { createTelemetry } = require('./backend/apple-resources');
+const appleTelemetry = createTelemetry();
 
 const app = express();
 const PORT = process.argv.includes('--port') ? 
@@ -562,6 +564,23 @@ app.get('/api/hardware', async (req, res) => {
   if (os.platform() !== 'darwin') return res.status(501).json({ status: 'unsupported', message: 'Apple collector only at this stage' });
   try { res.json({ success: true, hardwareInventory: await getAppleInventory() }); }
   catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+
+// Sessions start before generation; log cursor prevents old MLX peaks leaking into a test.
+app.post('/api/telemetry/start', async (req, res) => {
+  if (os.platform() !== 'darwin') return res.status(501).json({ status: 'unsupported' });
+  try { res.json({ success: true, ...await appleTelemetry.start() }); }
+  catch { res.status(503).json({ success: false, status: 'unavailable' }); }
+});
+app.get('/api/telemetry/:id', async (req, res) => {
+  try {
+    const data = await appleTelemetry.sample(req.params.id, req.query.finish === '1');
+    if (!data) return res.status(404).json({ status: 'expired' });
+    res.json({ success: true, ...data });
+  } catch { res.status(503).json({ success: false, status: 'unavailable' }); }
+});
+app.delete('/api/telemetry/:id', (req, res) => {
+  appleTelemetry.cancel(req.params.id); res.json({ success: true });
 });
 
 // API Endpoints
