@@ -8,14 +8,14 @@ function buildStatistics(sessions) {
   var groups = new Map(), seen = new Set();
   (Array.isArray(sessions) ? sessions : []).forEach(function(session) {
     (session.results || []).forEach(function(r) {
-      if (r.error || r.phase === 'warmup' || seen.has(r.id)) return;
+      if (r.error || r.completion?.limitReached || r.phase === 'warmup' || seen.has(r.id)) return;
       if (r.id) seen.add(r.id);
       var m = r.metrics || {}, p = r.protocol || {}, meta = r.modelMetadata || {};
       if (!Number.isFinite(m.tokensPerSec) || m.tokensPerSec < 0) return;
       var key = JSON.stringify([r.model, r.memory?.loadedModel?.digest, r.runner, statisticsHardware(r.env),
         meta.quantization, meta.type, m.contextObservedTokens, r.promptType,
         p.promptDigest || r.promptText || r.id, m.temperature, m.maxTokens,
-        p.version || 'legacy', p.loadState || 'unknown', p.cacheState || 'unknown']);
+        r.runnerVersion || 'unknown', m.thinkingEnabled ?? 'unknown', m.thinkingObserved ?? 'unknown', p.version || 'legacy', p.loadState || 'unknown', p.cacheState || 'unknown']);
       if (!groups.has(key)) groups.set(key, { model:r.model, runner:r.runner, type:meta.type || 'unknown',
         context:m.contextObservedTokens ?? null, prompt:r.promptTypeName || r.promptType, load:p.loadState || 'unknown',
         cache:p.cacheState || 'unknown', paramsB:Number.isFinite(meta.parameterCount) && meta.parameterCount > 0 ? meta.parameterCount / 1e9 : null,
@@ -50,6 +50,9 @@ function renderStatistics() {
   var groups = buildStatistics(history), metric = document.getElementById('statisticsMetric')?.value || 'tps';
   var unit = {tps:'tok/s moyen',generationTPS:'tok/s génération',ttft:'ms TTFT',rss:'MiB RSS pic'}[metric];
   panel.textContent = '';
+  var note = document.createElement('p');
+  note.textContent = 'Chauffes, erreurs et réponses limitées en tokens exclues. Une seule mesure ne permet pas d’estimer la dispersion. Cache, versions et thinking participent au regroupement ; swap et applications en arrière-plan peuvent influencer les tendances. Tok/s par milliard est descriptif, pas un score de qualité.';
+  panel.appendChild(note);
   if (!groups.length) { panel.textContent = 'Lancez une campagne pour afficher les statistiques de votre historique.'; return; }
   var maximum = Math.max(...groups.map(g=>g.summary[metric].mean || 0),1);
   var table = document.createElement('table'); table.className = 'history-table';
