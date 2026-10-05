@@ -1022,6 +1022,12 @@
                 "null"
               ],
               "minimum": 0
+            },
+            "observed": {
+              "type": [
+                "boolean",
+                "null"
+              ]
             }
           },
           "required": [
@@ -1096,7 +1102,8 @@
             "cold",
             "warm",
             "disabled",
-            "unknown"
+            "unknown",
+            "present-coverage-unknown"
           ]
         },
         "repetition": {
@@ -1108,6 +1115,12 @@
             "warmup",
             "measurement",
             "unknown"
+          ]
+        },
+        "cachePolicy": {
+          "type": [
+            "string",
+            "null"
           ]
         }
       },
@@ -1162,6 +1175,9 @@
           "$ref": "#/$defs/measurement"
         },
         "cachedInputTokens": {
+          "$ref": "#/$defs/measurement"
+        },
+        "firstAnswerTime": {
           "$ref": "#/$defs/measurement"
         }
       },
@@ -1265,6 +1281,12 @@
           ]
         },
         "total": {
+          "$ref": "#/$defs/measurement"
+        },
+        "start": {
+          "$ref": "#/$defs/measurement"
+        },
+        "end": {
           "$ref": "#/$defs/measurement"
         }
       },
@@ -1698,6 +1720,34 @@
           "type": [
             "string",
             "null"
+          ]
+        },
+        "completion": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "reason": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "limitReached": {
+              "type": "boolean"
+            },
+            "state": {
+              "enum": [
+                "truncated",
+                "possibly-truncated",
+                "completed",
+                "unknown"
+              ]
+            }
+          },
+          "required": [
+            "reason",
+            "limitReached",
+            "state"
           ]
         }
       },
