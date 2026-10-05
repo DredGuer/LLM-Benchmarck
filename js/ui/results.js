@@ -125,8 +125,8 @@ function exportMarkdown() {
       md += '| Température | ' + m.temperature + ' |\n';
       md += '| Tokens max | ' + m.maxTokens + ' |\n';
       if (r.memory && r.memory.peak > 0) {
-        md += '| ' + memoryLabel(r.memory) + ' pic | ' + r.memory.peak + ' MB |\n';
-        md += '| ' + memoryLabel(r.memory) + ' moyenne | ' + r.memory.average + ' MB |\n';
+        md += '| ' + memoryLabel(r.memory) + ' pic | ' + r.memory.peak + ' MiB |\n';
+        md += '| ' + memoryLabel(r.memory) + ' moyenne | ' + r.memory.average + ' MiB |\n';
       }
       if (r.memory && r.memory.loadedModel) {
         md += '| Modèle chargé (déclaré par Ollama, pas un pic RAM) | ' + (r.memory.loadedModel.sizeBytes / Math.pow(1024, 3)).toFixed(2) + ' GiB |\n';
