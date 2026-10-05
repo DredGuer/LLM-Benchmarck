@@ -14,24 +14,6 @@
 
 ---
 
-## Utilisation, données et garanties
-
-Le projet est mis à disposition gratuitement sous [licence Apache 2.0](LICENSE),
-**en l'état**, sans garantie dans les limites de la licence et du droit applicable.
-L'absence de bugs, de perte de données ou de fuite d'informations n'est pas garantie.
-
-Les utilisateurs doivent vérifier les données saisies et les rapports avant partage,
-sauvegarder leurs fichiers et disposer des droits nécessaires sur les données traitées.
-Les API externes reçoivent les prompts et les informations d'authentification nécessaires ;
-les exports Markdown peuvent contenir des prompts et réponses confidentiels.
-Un fonctionnement local ne garantit pas, à lui seul, la confidentialité.
-
-Lire la [charte d'utilisation et de gestion des données](CHARTE_UTILISATION.md).
-Elle complète l'information sur les risques sans modifier la licence ni écarter les
-obligations légales applicables. L'envoi automatique au futur site n'est pas encore activé.
-
----
-
 ## 📖 Sommaire
 
 - [🚀 Premier benchmark avec Ollama](#-premier-benchmark-avec-ollama)
@@ -43,11 +25,10 @@ obligations légales applicables. L'envoi automatique au futur site n'est pas en
 - [📊 Comprendre les mesures](#-comprendre-les-mesures)
 - [📝 Export des résultats](#-export-des-résultats)
 - [💾 Stockage](#-stockage)
-- [Utilisation, données et garanties](#utilisation-données-et-garanties)
-- [Charte d'utilisation](CHARTE_UTILISATION.md)
 - [📜 Licence](#-licence)
 - [🤝 Contribuer](#-contribuer)
 - [⚠️ Limitations connues](#️-limitations-connues)
+- [Précautions d'utilisation](#précautions-dutilisation)
 
 ---
 
@@ -445,6 +426,21 @@ Pour toute question ou problème :
 - [Mistral AI](https://mistral.ai) - Pour les modèles ouverts
 - [Anthropic](https://anthropic.com) - Pour Claude
 - [Google](https://ai.google.com) - Pour **Gemini** ✨
+
+---
+
+## Précautions d'utilisation
+
+En téléchargeant ou en utilisant LLM Benchmarker, vous reconnaissez avoir pris connaissance
+des informations du projet et de sa [charte d'utilisation](CHARTE_UTILISATION.md).
+
+Les tests et leur historique sont consultables dans le navigateur ; les données conservées
+localement et les exports peuvent être accessibles en clair. Veillez à ne pas y inclure
+d'informations sensibles et à vérifier vos rapports avant de les partager. Si vous choisissez
+une API externe, les données nécessaires au test sont transmises au fournisseur sélectionné.
+
+Le logiciel est proposé gratuitement sous [licence Apache 2.0](LICENSE), avec les conditions
+de garantie et de responsabilité qu'elle prévoit.
 
 ---
 
