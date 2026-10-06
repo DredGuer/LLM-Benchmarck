@@ -1,5 +1,33 @@
+// A local Ollama endpoint can proxy remote inference. Retain routing evidence,
+// never remote host addresses or credentials. API evidence precedes name inference.
+function noteOllamaDeployment(model, data, source) {
+  if (!model || !data || !(data.remote_host || data.remote_model)) return;
+  state.ollamaDeployments = state.ollamaDeployments || Object.create(null);
+  state.ollamaDeployments[model] = source;
+}
+function isOllamaCloud(model) {
+  return state.runner === 'ollama' && !!(state.ollamaDeployments?.[model] || /(?:-|:)cloud(?::latest)?$/i.test(model || ''));
+}
+function resultUsesRemoteInference(result) {
+  return typeof result.provenance?.attribution === 'string' && result.provenance.attribution.startsWith('remote-inference:');
+}
+async function unloadOllamaModel(model) {
+  if (isOllamaCloud(model)) return 'remote';
+  var response = await fetchWithTimeout(RUNNERS.ollama.base + '/api/generate', {
+    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({model,keep_alive:0,stream:false})
+  },30000);
+  if (!response.ok || (await response.json()).done !== true) throw new Error('Déchargement non confirmé : '+model);
+  for(var attempt=0;attempt<10;attempt++) {
+    var observed=await observeLoadedModel(model);
+    if(observed==='cold')return 'local';
+    if(observed==='unknown')throw new Error('Déchargement invérifiable : API /api/ps indisponible.');
+    await new Promise(resolve=>setTimeout(resolve,500));
+  }
+  throw new Error('Le modèle reste chargé ; la suite ne sera pas lancée.');
+}
+
 async function observeLoadedModel(model, signal) {
-  if (state.runner !== 'ollama') return 'unknown';
+  if (state.runner !== 'ollama' || isOllamaCloud(model)) return 'unknown';
   try {
     var res = await fetchWithTimeout(RUNNERS.ollama.base + '/api/ps', { signal: signal }, 5000);
     if (!res.ok) return 'unknown';
@@ -24,6 +52,7 @@ async function consumeOllamaStream(response, signal, onFrame) {
     if (!line.trim()) return;
     var data = JSON.parse(line);
     if (data.error) throw new Error('Ollama : ' + data.error);
+    noteOllamaDeployment(typeof getSelectedModel === 'function' ? getSelectedModel() : null, data, 'ollama-api-stream');
     onFrame(data);
     if (data.done === true) completed = true;
   }
@@ -75,7 +104,7 @@ function classifyCompletion(reason, count, limit, kind) {
 }
 
 async function loadedModelSnapshot(model) {
-  if (state.runner !== 'ollama') return null;
+  if (state.runner !== 'ollama' || isOllamaCloud(model)) return null;
   try {
     var res = await fetchWithTimeout(RUNNERS.ollama.base + '/api/ps', {}, 5000);
     if (!res.ok) return null;
@@ -88,7 +117,8 @@ function updateCampaignPlan() {
   var agentic = typeof agenticEnabled === 'function' && agenticEnabled();
   var count = typeof campaignPromptTypes === 'function' ? campaignPromptTypes().length : state.selectedPrompts.size, reps = getRepetitions();
   if (typeof controlledEnabled === 'function' && controlledEnabled()) {
-    el.textContent = 'Campagne contrôlée : '+count+' cas de génération + '+(agentic ? selectedAgenticScenarios().length : 0)+' épreuves agentiques × 3 répétitions × 2 contextes ; température 0, chauffe à chaque contexte, cache non réinitialisé. Contextes demandés : '+document.getElementById('controlledContextA').value+' / '+document.getElementById('controlledContextB').value+' tokens. Les mesures sans contexte vérifié sont exclues des comparaisons.'; return;
+    if(isOllamaCloud(getSelectedModel())){el.textContent='Cloud : 3 répétitions à température 0 ; contexte fournisseur. RAM et cache distants inconnus, comparaison de contextes locaux indisponible.';return;}
+    el.textContent = 'Campagne contrôlée : '+count+' cas de génération + '+(agentic ? selectedAgenticScenarios().length : 0)+' épreuves agentiques × 3 répétitions × 2 contextes ; température 0, chauffe à chaque contexte, runner rechargé entre contextes, cache système non garanti. Contextes demandés : '+document.getElementById('controlledContextA').value+' / '+document.getElementById('controlledContextB').value+' tokens. Les mesures sans contexte vérifié sont exclues des comparaisons.'; return;
   }
   if (agentic) { var tasks=selectedAgenticScenarios().length; el.textContent = count+' catégorie(s) de génération + '+tasks+' épreuve(s) agentique(s) × '+reps+' répétition(s) = '+(count+tasks)*reps+' mesures + chauffe séparée. Chaque épreuve : 12 tours, 24 appels, 4 minutes ; '+getMaxTokens()+' tokens de sortie cumulés. Plusieurs répétitions fiabilisent les taux.'; return; }
   el.textContent = count+' catégorie(s) × '+reps+' répétition(s) = '+count*reps+' mesure(s)'+(RUNNERS[state.runner]?.type === 'local' ? ' + chauffe séparée' : '')+'. Limite : '+getMaxTokens()+' tokens par réponse.';

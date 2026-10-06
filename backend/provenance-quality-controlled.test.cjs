@@ -6,7 +6,7 @@ function scopeFor(extra={}){
  const store=new Map();const s={state:{runner:'ollama',runnerVersion:'mock',modelMetadata:{contextMaxTokens:32768},selectedPrompts:new Set(['math']),env:{},results:[]},RUNNERS:{ollama:{name:'Ollama',type:'local',base:'http://localhost:11434'}},PROMPT_TYPES:[{id:'math',name:'Math',prompt:'old'}],window:{},crypto,URL,TextEncoder,AbortController,
   document:{getElementById:id=>els[id],querySelectorAll:()=>[],addEventListener(){}},localStorage:{getItem:k=>store.get(k)||null,setItem:(k,v)=>store.set(k,v)},console,showToast(){},getSelectedModel:()=> 'model',agenticEnabled:()=>false,showResultsArea(){},resetLiveOutput(){},switchTab(){},setProgress(){},showLiveSections(){},setControlButtons(){},renderResultCard(){},renderStatistics(){},...extra};
  vm.createContext(s);for(const p of ['js/core/version.js','js/core/quality.js','js/core/runners.js','js/core/protocol.js','js/core/advancedConfig.js','js/core/controlled.js','js/core/benchmark.js','js/core/community-export.js'])vm.runInContext(read(p).replace('\ninitAdvancedConfig();',''),s);
- s.isManualMode=true;s.refreshModelMetadata=async()=>{};s.fetchWithTimeout=async()=>({ok:true,json:async()=>({models:[{name:'model'}],version:'mock'})});s.els=els;return s;
+ s.isManualMode=true;s.refreshModelMetadata=async()=>{};s.loaded=true;s.fetchWithTimeout=async(url,options={})=>{if(url.endsWith('/api/generate')){assert.equal(JSON.parse(options.body).keep_alive,0);s.loaded=false;return {ok:true,json:async()=>({done:true})};}return {ok:true,json:async()=>({models:s.loaded?[{name:'model'}]:[],version:'mock'})};};s.els=els;return s;
 }
 (async()=>{
  const s=scopeFor();
@@ -23,6 +23,7 @@ function scopeFor(extra={}){
  const fib=s.qualityTasksFor('code')[0].qualityTask;assert.equal(s.evaluateQuality(fib,'{"values":[0,1,55,6765]}').status,'pass');assert.equal(s.evaluateQuality(fib,'{"values":[0,1,55,6764]}').status,'fail');
  let id=0,saved=[];s.saveSessionToHistory=x=>{saved.push(x);return true;};
  s.executeTest=async(model,pt,prompt,rep,signal,protocol)=>{
+  if(protocol.warmup){assert.equal(s.loaded,false,'Each controlled context must start after unloading');s.loaded=true;}
   const options=s.buildOllamaOptions(s.getTemperatureForPromptType(pt.id),s.getMaxTokens(),s.getRequestedContextTokens());assert.equal(options.temperature,0);assert([8192,16384].includes(options.num_ctx));assert.equal(options.num_predict,8192);
   return {id:'r'+(++id),model,runner:'Ollama',phase:protocol.warmup?'warmup':'measurement',protocol:{...protocol,version:'0.09'},rep,metrics:{totalTokens:1,contextObservedTokens:options.num_ctx,contextRequestedTokens:options.num_ctx,contextMode:'explicit',temperature:0,maxTokens:8192,totalTime:100,tokensPerSec:10},response:'OK',env:{},executionOutcome:'completed',provenance:s.captureTestProvenance()};
  };

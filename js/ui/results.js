@@ -198,6 +198,7 @@ function renderResultCard(result) {
   if (result.completion?.limitReached) html += '<span class="badge badge-orange">⚠️ Limite de tokens atteinte · réponse possiblement tronquée</span>';
   if (result.phase === 'warmup') html += '<span class="badge badge-orange">🔥 Chauffe · hors moyennes</span>';
   html += '<span class="badge badge-blue">' + escapeHtml(result.runner) + '</span>';
+  if(result.provenance?.attribution?.startsWith('remote-inference:'))html += '<span class="badge badge-blue">Cloud · matériel distant inconnu</span>';
   html += '<span class="badge ' + (technicalError ? 'badge-red' : verdict.conformity === false ? 'badge-orange' : 'badge-green') + '">' + (technicalError ? '❌ Exécution interrompue / erreur' : verdict.conformity === false ? '⚠️ Critère non conforme' : verdict.execution === 'completed' ? '✅ Exécution terminée' : 'ℹ️ État ancien / inconnu') + '</span>';
   html += '<span class="badge badge-purple">' + escapeHtml(result.promptTypeName) + '</span>';
   html += '<small style="color:var(--text3);font-size:0.75rem;margin-left:auto;">' + new Date(result.timestamp).toLocaleTimeString('fr-FR') + '</small>';
@@ -206,12 +207,12 @@ function renderResultCard(result) {
   if (technicalError) html += '<div style="background:rgba(247,129,102,0.1);border:1px solid rgba(247,129,102,0.3);border-radius:6px;padding:12px;color:var(--accent3);font-size:0.875rem;">⚠️ <strong>Erreur :</strong> ' + escapeHtml(result.error) + '</div>';
   html += '<p>Exécution : <strong>' + escapeHtml(({completed:'terminée',interrupted:'interrompue',failed:'erreur technique',unknown:'état inconnu'})[verdict.execution]) + '</strong>' + (result.kind !== 'agentic' ? ' · Justesse : <strong>' + escapeHtml(({pass:'vérifiée sur cette épreuve',fail:'critères échoués','not-assessed':'non évaluée',incomplete:'non évaluée (réponse incomplète)'})[verdict.quality] || 'non évaluée') + '</strong>' : '') + '</p>';
   var failedCriteria = result.agentic?.evaluation.criteria?.filter(c => c.passed === false) || result.quality?.criteria?.filter(c => c.passed === false) || [];
-  if (result.protocol?.campaignId && result.protocol.contextValidation !== 'verified') failedCriteria.push({label:'Contexte demandé non confirmé : passe exclue des comparaisons contrôlées'});
+  if (result.protocol?.campaignId && result.protocol.contextValidation !== 'verified') failedCriteria.push({label:'Contexte demandé '+result.protocol.requestedContextTokens+' / observé '+(m.contextObservedTokens??'inconnu')+' : passe exclue des comparaisons contrôlées'});
   if (failedCriteria.length) html += '<p class="failed-criteria"><strong>Critères échoués :</strong> ' + failedCriteria.map(c => escapeHtml(c.label)).join(' · ') + '</p>';
   html += '<div class="metrics-grid primary-metrics">';
   html += '<div class="metric-box highlight-orange"><div class="metric-value">' + ttftStr + '</div><div class="metric-label">1er token (TTFT)</div></div>';
   html += '<div class="metric-box ' + tpsColor + '"><div class="metric-value">' + (Number.isFinite(m.tokensPerSec) ? m.tokensPerSec : 'N/A') + '</div><div class="metric-label">Tokens / sec</div></div>';
-  html += '<div class="metric-box highlight-purple"><div class="metric-value">' + (Number.isFinite(result.memory?.peak) ? result.memory.peak + ' MiB' : 'N/A') + '</div><div class="metric-label">' + (result.memory ? memoryLabel(result.memory) : 'Mémoire échantillonnée') + ' pic</div></div>';
+  html += '<div class="metric-box highlight-purple"><div class="metric-value">' + (Number.isFinite(result.memory?.peak) ? result.memory.peak + ' MiB' : 'N/A') + '</div><div class="metric-label">' + (result.provenance?.attribution?.startsWith('remote-inference:')?'Mémoire distante non mesurée':result.memory ? memoryLabel(result.memory) : 'Mémoire échantillonnée') + ' pic</div></div>';
   html += '<div class="metric-box"><div class="metric-value">' + (Number.isFinite(m.totalTime) ? (m.totalTime/1000).toFixed(2) + ' s' : 'N/A') + '</div><div class="metric-label">Temps total</div></div>';
   html += '</div>';
   html += '<details class="result-metric-details"><summary>Toutes les métriques et conditions</summary>';
@@ -229,7 +230,9 @@ function renderResultCard(result) {
   if (result.memory?.resources) html += '<p>Swap et E/S : système entier. Pic MLX des logs serveur Ollama, attribution au modèle non vérifiée. Activité disque observée, pas vitesse maximale SSD.</p>';
   if (result.protocol) html += '<p>Chargement : ' + escapeHtml(result.protocol.loadState) + ' · Cache : ' + escapeHtml(cacheDescription(result.protocol.cacheState)) + ' · Chauffes préalables : ' + result.protocol.warmupRuns + '</p>';
   if (result.quality?.taskId) html += '<p>Évaluateur : ' + escapeHtml(result.quality.evaluatorId) + ' v' + escapeHtml(result.quality.evaluatorVersion) + ' · Cas : ' + escapeHtml(result.quality.taskId) + '</p><ul>' + result.quality.criteria.map(c=>'<li>'+(c.passed?'✅ ':'❌ ')+escapeHtml(c.label)+'</li>').join('') + '</ul>';
+  if(result.provenance?.attribution?.startsWith('remote-inference:'))html += '<p>Provenance du routage : '+escapeHtml(result.provenance.attribution)+'</p>';
   if (result.protocol?.campaignId) html += '<p>Campagne contrôlée · contexte demandé : '+result.protocol.requestedContextTokens+' · vérification : '+escapeHtml(result.protocol.contextValidation)+' · ordre '+result.protocol.contextOrder+' · passe '+result.rep+'/3</p>';
+  if(result.provenance?.attribution?.startsWith('remote-inference:'))html += '<p><strong>Inférence cloud via Ollama</strong> · RAM, matériel, contexte réel et cache distants non mesurés. Inventaire matériel : machine cliente.</p>';
   html += '<p>Version lors du test : ' + escapeHtml(result.provenance?.applicationVersion || 'inconnue (ancien historique)') + ' · Client : navigateur · Moteur : ' + escapeHtml(result.provenance?.engine || 'non rapporté') + ' · Endpoint : ' + escapeHtml(result.provenance?.inferenceEndpoint || 'inconnu') + '</p>';
   if (result.memory?.resources?.mlxPeak) { var mlxEvidence = result.memory.resources.mlxPeak;
     html += '<p>Événement du pic MLX : ' + escapeHtml(mlxEvidence.observedAt || 'inconnu') + ' · fraîcheur : ' + escapeHtml(mlxEvidence.freshness || 'inconnue') + ' · attribution au modèle non vérifiée' + (mlxEvidence.overlappingTelemetry ? ' · télémétries simultanées' : '') + '</p>';
@@ -319,6 +322,7 @@ function buildMarkdownReport(results, now, communityExport) {
     var m = r.metrics;
     md += '**Exécution :** ' + markdownCell(resultVerdict(r).execution) + ' · **Justesse :** ' + markdownCell(r.quality?.status || 'non évaluée') + '\n\n';
     if (r.quality?.taskId) { md += '**Évaluateur :** ' + markdownCell(r.quality.evaluatorId + ' v' + r.quality.evaluatorVersion + ' · ' + r.quality.taskId) + '\n\n'; r.quality.criteria.forEach(c=>{md += '- ' + markdownCell(c.label) + ' : ' + (c.passed ? 'réussi' : 'échoué') + '\n';}); md += '\n'; }
+    if(r.provenance?.attribution?.startsWith('remote-inference:'))md += '**Inférence cloud via Ollama** — matériel local = client ; RAM, contexte et cache distants inconnus.\n\n';
     md += '**Version lors du test :** ' + markdownCell(r.provenance?.applicationVersion || 'inconnue (ancien historique)') + '\n\n';
     md += '### Test ' + (i+1) + ' — ' + r.promptEmoji + ' ' + r.promptTypeName + '\n\n';
     md += '**Modèle :** `'+ r.model +'` | **Runner :** ' + r.runner + ' | **Date :** ' + new Date(r.timestamp).toLocaleString('fr-FR') + '\n\n';

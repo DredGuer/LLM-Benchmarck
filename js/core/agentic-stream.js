@@ -17,7 +17,7 @@ async function consumeAgenticChat(response,runner,signal,onEvent) {
       onEvent('tool-arguments',typeof call.function.arguments==='string'?call.function.arguments:JSON.stringify(call.function.arguments));
     }
   }
-  function nativeFrame(frame){if(frame.error)throw new Error('Erreur du flux Ollama.');
+  function nativeFrame(frame){if(typeof noteOllamaDeployment==='function')noteOllamaDeployment(typeof getSelectedModel==='function'?getSelectedModel():null,frame,'ollama-api-chat-stream');if(frame.error)throw new Error('Erreur du flux Ollama.');
     if(frame.message){part('thinking',frame.message.thinking);part('content',frame.message.content);(frame.message.tool_calls||[]).forEach(c=>callDelta(c,true));}
     if(frame.done===true){completed=true;usage={outputTokens:frame.eval_count,inputTokens:frame.prompt_eval_count};timing={generationMs:Number.isFinite(frame.eval_duration)?frame.eval_duration/1e6:null,prefillMs:Number.isFinite(frame.prompt_eval_duration)?frame.prompt_eval_duration/1e6:null};finishReason=frame.done_reason||null;}
   }

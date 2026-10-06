@@ -12,14 +12,14 @@ function buildStatistics(sessions) {
       if (r.id) seen.add(r.id);
       var m = r.metrics || {}, p = r.protocol || {}, meta = r.modelMetadata || {};
       if (!Number.isFinite(m.tokensPerSec) || m.tokensPerSec < 0) return;
-      var key = JSON.stringify([r.model, r.memory?.loadedModel?.digest, r.runner, statisticsHardware(r.env),
+      var key = JSON.stringify([r.model, r.memory?.loadedModel?.digest, r.runner, (r.provenance?.attribution?.startsWith('remote-inference:') ? 'Cloud · matériel distant inconnu (inventaire client)' : statisticsHardware(r.env)),
         meta.quantization, meta.type, m.contextObservedTokens, r.promptType,
         p.promptDigest || r.promptText || r.id, m.temperature, m.maxTokens,
         r.runnerVersion || 'unknown', m.thinkingEnabled ?? 'unknown', m.thinkingObserved ?? 'unknown', p.version || 'legacy', r.provenance?.applicationVersion || 'unknown', r.quality?.evaluatorId || 'none', r.quality?.evaluatorVersion || 'none', p.loadState || 'unknown', p.cacheState || 'unknown']);
       if (!groups.has(key)) groups.set(key, { model:r.model, runner:r.runner, type:meta.type || 'unknown',
         context:m.contextObservedTokens ?? null, prompt:r.promptTypeName || r.promptType, load:p.loadState || 'unknown',
         cache:p.cacheState || 'unknown', paramsB:Number.isFinite(meta.parameterCount) && meta.parameterCount > 0 ? meta.parameterCount / 1e9 : null,
-        hardware:(r.env?.chip || 'CPU ?')+' / '+(r.env?.ram || 'RAM ?'), temperature:m.temperature, maxTokens:m.maxTokens,
+        hardware:r.provenance?.attribution?.startsWith('remote-inference:')?'Cloud · matériel distant inconnu':(r.env?.chip || 'CPU ?')+' / '+(r.env?.ram || 'RAM ?'), temperature:m.temperature, maxTokens:m.maxTokens,
         quantization:meta.quantization || 'unknown', runnerVersion:r.runnerVersion || 'unknown', thinkingEnabled:m.thinkingEnabled ?? null, thinkingObserved:m.thinkingObserved ?? null, protocolVersion:p.version || 'legacy', key:key, points:[] });
       groups.get(key).points.push({ id:r.id || key+'-'+(r.finishedAt || r.timestamp)+'-'+r.rep, rep:r.rep || 1, category:r.promptTypeName || r.promptType, prefill:Number.isFinite(m.prefillTimeMs) ? m.prefillTimeMs : null, at:r.finishedAt || r.timestamp, tps:m.tokensPerSec,
         generationTPS:Number.isFinite(m.generationTokensPerSec) ? m.generationTokensPerSec : null,
@@ -204,7 +204,7 @@ function buildAgenticStatistics(sessions) {
   (sessions||[]).forEach(session=>(session.results||[]).forEach(r=>{
     if((r.protocol?.campaignId && r.protocol.contextValidation!=='verified') || r.kind!=='agentic'||!r.agentic||seen.has(r.id))return;if(r.id)seen.add(r.id);
     var key=JSON.stringify([r.model,r.runner,r.runnerVersion,r.protocol?.version,r.agentic.scenario?.id,r.agentic.scenario?.version,r.protocol?.promptDigest,
-      statisticsHardware(r.env),r.modelMetadata?.quantization,r.metrics?.temperature,r.metrics?.maxTokens,
+      (r.provenance?.attribution?.startsWith('remote-inference:') ? 'Cloud · matériel distant inconnu (inventaire client)' : statisticsHardware(r.env)),r.modelMetadata?.quantization,r.metrics?.temperature,r.metrics?.maxTokens,
       r.metrics?.contextObservedTokens,r.protocol?.loadState,r.protocol?.cacheState,r.agentic.budget]);
     if(!groups.has(key))groups.set(key,{model:r.model,runner:r.runner,scenario:r.protocol?.version||'unknown',rows:[]});
     groups.get(key).rows.push(r);
@@ -221,7 +221,7 @@ function renderAgenticStatistics(history,panel) {
   statisticsElement('p','Les tâches, versions et conditions sont séparées. Objectif atteint et conformité complète diffèrent ; un critère non sollicité n’entre pas dans son taux. Les scores sont ceux de la batterie LLMB, pas de BFCL/τ-bench. Les échecs restent au dénominateur.',section);
   statisticsTable(section,['Modèle','Runner','Épreuve / version','Conformes / essais','Taux','Durée moyenne (s)','Appels moyens'],groups.map(g=>[
     g.model,g.runner,g.rows[0].agentic.scenario?.title||g.scenario,g.successes+' / '+g.attempts,(100*g.successes/g.attempts).toFixed(1)+'%',(g.meanDurationMs/1000).toFixed(2),g.meanToolCalls.toFixed(1)]));
-  var profileRows=new Map();groups.forEach(g=>{var r=g.rows[0],key=JSON.stringify([r.model,r.runner,r.runnerVersion,statisticsHardware(r.env),r.modelMetadata?.quantization,r.metrics?.temperature,r.metrics?.maxTokens,r.metrics?.contextObservedTokens,r.protocol?.version,r.protocol?.loadState,r.protocol?.cacheState]);if(!profileRows.has(key))profileRows.set(key,[]);profileRows.get(key).push(...g.rows);});
+  var profileRows=new Map();groups.forEach(g=>{var r=g.rows[0],key=JSON.stringify([r.model,r.runner,r.runnerVersion,(r.provenance?.attribution?.startsWith('remote-inference:') ? 'Cloud · matériel distant inconnu (inventaire client)' : statisticsHardware(r.env)),r.modelMetadata?.quantization,r.metrics?.temperature,r.metrics?.maxTokens,r.metrics?.contextObservedTokens,r.protocol?.version,r.protocol?.loadState,r.protocol?.cacheState]);if(!profileRows.has(key))profileRows.set(key,[]);profileRows.get(key).push(...g.rows);});
   profileRows.forEach(rows=>{var detail=statisticsDetails(section,'agentic-profile-'+rows[0].id,'Profil de capacités · '+rows[0].model+' · '+rows.length+' essais aux mêmes réglages');statisticsTable(detail,['Capacité','Critères réussis / évalués','Taux'],agenticDimensionScores(rows).map(d=>[agenticDimensionLabel(d.dimension),d.passed+' / '+d.total,(100*d.rate).toFixed(1)+'%']));});
   groups.forEach((g,i)=>{var detail=statisticsDetails(section,'agentic-group-'+i,g.model+' · '+(g.rows[0].agentic.scenario?.title||g.scenario));
     statisticsTable(detail,['Capacité','Critères réussis / évalués','Taux'],agenticDimensionScores(g.rows).map(d=>[agenticDimensionLabel(d.dimension),d.passed+' / '+d.total,(100*d.rate).toFixed(1)+'%']));

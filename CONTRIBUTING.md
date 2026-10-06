@@ -83,3 +83,6 @@ Les nouveaux résultats doivent préserver la version au moment de la mesure, di
 Les campagnes automatiques et exports locaux sont couverts par `node backend/batch-campaign.test.cjs` et `node backend/local-exports.test.cjs`. Conserver l’ordre sauvegarde → déchargement confirmé → modèle suivant, les versions capturées lors des tests et les chemins calculés côté serveur. Les fichiers du dossier `export/` ne doivent pas être committés.
 
 Le mode d’interface Simple/Pro est distinct du mode de génération Auto/Manuel. Toute évolution des champs de campagne doit actualiser la capture, validation et restauration de `js/core/profiles.js`, ainsi que `backend/profiles-interface.test.cjs`. Les profils ne doivent pas copier clés API, résultats, inventaires ou jetons ; conserver les réglages Pro lors des passages en Simple et signaler les modèles manquants avant tout lancement.
+
+
+Distinguer endpoint client et lieu de l’inférence : une URL localhost Ollama peut proxyfier le cloud. Ne jamais imposer des mesures RAM ou un contexte chargé localement à ce parcours, ni attribuer le matériel client au moteur distant. Tester noms cloud, aliases déclarés par API, erreurs fournisseur et exports avec `node backend/cloud-context.test.cjs`. Le déchargement confirmé reste exigé pour les modèles locaux, y compris avant chaque contexte contrôlé ; il ne prouve pas un cache système vide.

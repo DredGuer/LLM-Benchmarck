@@ -9,6 +9,7 @@ const scope = { state: { runner: 'ollama' }, RUNNERS: { ollama: { type: 'local',
   getSelectedModel: () => elements.modelCustom.value || elements.modelSelect.value,
   showToast() {}, console };
 vm.createContext(scope);
+vm.runInContext(fs.readFileSync(path.join(__dirname, '../js/core/protocol.js'), 'utf8'), scope);
 vm.runInContext(fs.readFileSync(path.join(__dirname, '../js/core/runners.js'), 'utf8'), scope);
 const moe = scope.parseModelMetadata({ model_info: { 'general.architecture': 'qwen3moe',
   'general.parameter_count': 30000000000, 'qwen3moe.expert_count': 128,

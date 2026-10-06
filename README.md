@@ -2,7 +2,7 @@
 
 Benchmarkez vos modèles locaux ou vos API, conservez les campagnes dans votre navigateur et comparez leurs performances sur votre machine.
 
-**Interface v0.11.0 · protocole de mesure 0.09 · export communautaire 2.2.0 (anciens rapports 2.0.0/2.1.0 acceptés).** Documentation vérifiée le 6 octobre 2026. [Historique des versions et changements](CHANGELOG.md). Ces versions désignent des éléments différents ; la version 1.2.0 de `package.json` concerne le backend.
+**Interface v0.12.0 · protocole de mesure 0.09 · export communautaire 2.2.0 (anciens rapports 2.0.0/2.1.0 acceptés).** Documentation vérifiée le 6 octobre 2026. [Historique des versions et changements](CHANGELOG.md). Ces versions désignent des éléments différents ; la version 1.2.0 de `package.json` concerne le backend.
 
 Fonctions actuelles : interface Simple/Pro et profils nommés de campagne, campagnes automatiques multi-modèles Ollama avec exports locaux classés, chauffe séparée, contexte Auto, identification Dense/MoE lorsqu’elle est disponible, inventaire Apple Silicon, suivi RSS/swap/MLX, exports Markdown/JSON, statistiques interactives, batterie de capacités agentiques et assistant d’analyse au choix. Les bulles **!** expliquent les réglages et mesures au clic, au clavier ou sur mobile.
 
@@ -10,7 +10,7 @@ Fonctions actuelles : interface Simple/Pro et profils nommés de campagne, campa
 
 Le sélecteur **Interface Simple / Interface Pro** est dans l’en-tête. Il s’agit de la même page, avec les réglages avancés masqués en Simple. Le choix d’interface est conservé dans le navigateur.
 
-**Simple** est proposé au premier lancement : choisissez votre runner et **un seul modèle**, ajustez si nécessaire le plafond de sortie (8 192 tokens par défaut), puis lancez le benchmark. Tous les tests classiques sont présélectionnés, avec les cas de justesse disponibles pour Mathématiques, Logique et Code. Le contexte reste Auto, les températures sont celles prévues pour chaque catégorie et il y a **1 répétition**. Cocher **Ajouter les capacités agentiques** active les six épreuves sans autre sélection ; cette option est disponible pour les runners locaux compatibles. Les campagnes Ollama passent par la file automatique à un modèle : backend requis pour sauvegarder les exports et confirmer le déchargement.
+**Simple** est proposé au premier lancement : choisissez votre runner et **un seul modèle**, ajustez si nécessaire le plafond de sortie (8 192 tokens par défaut), puis lancez le benchmark. Tous les tests classiques sont présélectionnés, avec les cas de justesse disponibles pour Mathématiques, Logique et Code. Le contexte reste Auto, les températures sont celles prévues pour chaque catégorie et il y a **1 répétition**. Cocher **Ajouter les capacités agentiques** active les six épreuves sans autre sélection ; cette option est disponible pour les runners locaux compatibles. Les campagnes Ollama passent par la file automatique à un modèle : backend requis pour sauvegarder les exports et confirmer le déchargement des modèles locaux.
 
 **Pro** affiche directement les **cases à cocher des modèles Ollama** dans « Modèles à tester », avec un compteur : sélectionnez un ou plusieurs modèles, puis le bouton de lancement exécute la file. Pour les autres fournisseurs, la sélection reste à un modèle. Pro expose les catégories, prompt personnalisé, température par type, répétitions, épreuves agentiques précises, justesse et deux contextes contrôlés. Passer de Pro à Simple préserve votre configuration Pro pendant la session ; revenir en Pro la restaure. Pour la conserver après fermeture ou rechargement, utilisez un profil.
 
@@ -22,7 +22,7 @@ Un profil conserve runner, modèle(s), catégories, prompt personnalisé et sa t
 
 Après avoir lancé Ollama, le backend (`npm start`) et la page, passez en **Interface Pro**, puis utilisez **Modèles à tester** dans la colonne de gauche. Cochez un ou plusieurs modèles détectés, puis choisissez les catégories et, si souhaité, les capacités agentiques et la justesse. Les mêmes réglages sont conservés pendant toute la file. Le mode normal garde **1 répétition par défaut** ; augmentez ce nombre en mode Manuel pour mieux estimer la variabilité. Le mode contrôlé garde **3 répétitions × 2 contextes** par modèle.
 
-Cliquez sur **Lancer N modèle(s)**, en bas des réglages. Pour chaque modèle : chargement/chauffe mesurée → catégories et épreuves → historique et exports → demande de déchargement Ollama → vérification de son absence dans `/api/ps` → modèle suivant. La chauffe reste séparée des scores. Aucun modèle n’est lancé en parallèle et aucun processus n’est tué. L’absence dans `/api/ps` confirme le déchargement rapporté par Ollama, pas la restitution instantanée de toute la RAM système.
+Cliquez sur **Lancer N modèle(s)**, en bas des réglages. Pour chaque modèle : chargement/chauffe mesurée → catégories et épreuves → historique et exports → demande de déchargement Ollama → vérification de son absence dans `/api/ps` → modèle suivant. Pour les modèles cloud, la sauvegarde est suivie directement du modèle suivant : aucune RAM distante n’est gérée. La chauffe reste séparée des scores. Aucun modèle n’est lancé en parallèle et aucun processus n’est tué. L’absence dans `/api/ps` confirme le déchargement rapporté par Ollama, pas la restitution instantanée de toute la RAM système.
 
 Le backend crée **`export/` à la racine du projet**, puis un sous-dossier par **nom complet de modèle** : Qwen, Gemma et leurs différentes variantes restent séparés. Un suffixe stable évite les collisions entre noms contenant `:`, `/`, etc. Chaque passage dans la file crée un **JSON communautaire v2** et un **Markdown**, avec modèle, date, identifiant de campagne et position dans leurs noms. Les contextes d’une campagne contrôlée sont regroupés dans les exports du modèle. Le dossier est exclu de Git.
 
@@ -50,8 +50,8 @@ Si aucun modèle n’est installé, téléchargez celui que vous souhaitez teste
 ### 2. Télécharger le projet et lancer le backend
 
 ```bash
-git clone https://github.com/DredGuer/LLM-Benchmarck.git
-cd LLM-Benchmarck
+git clone https://github.com/DredGuer/LLM-Benchmarker.git
+cd LLM-Benchmarker
 npm install
 npm start
 ```
@@ -63,7 +63,7 @@ Gardez ce terminal ouvert. Le backend écoute sur **http://localhost:3001**. Il 
 Depuis la racine du même dépôt :
 
 ```bash
-python3 -m http.server 8001 --bind 127.0.0.1 --bind 127.0.0.1
+python3 -m http.server 8001 --bind 127.0.0.1
 ```
 
 Ouvrez **http://localhost:8001/llm-benchmarker.html**. Gardez aussi ce terminal ouvert. Le serveur Python fournit les fichiers de l’interface ; le backend Node fournit les mesures ; Ollama exécute le modèle. Aucun build frontend n’est nécessaire.
@@ -75,7 +75,17 @@ Ouvrez **http://localhost:8001/llm-benchmarker.html**. Gardez aussi ce terminal 
 3. Choisissez les catégories de prompts ou votre prompt personnalisé.
 4. Vérifiez le récapitulatif du nombre de mesures, puis lancez le benchmark.
 
-Pour un runner local, une chauffe courte précède les mesures. Ses résultats restent visibles, mais sont exclus des statistiques. Une campagne avec les six catégories et une répétition produit normalement **1 chauffe + 6 mesures**.
+Pour un runner local, une chauffe courte précède les mesures. Les modèles cloud via Ollama ont une courte vérification séparée. Ses résultats restent visibles, mais sont exclus des statistiques. Une campagne avec les six catégories et une répétition produit normalement **1 chauffe + 6 mesures**.
+
+## Modèles cloud via Ollama
+
+Un modèle comme **`gemma4:cloud`** ou **`gemma4-cloud`** peut être testé via l’API de votre application Ollama locale, une fois connecté à votre compte Ollama. Choisissez-le dans la même liste ; la file peut mélanger modèles locaux et cloud. Les prompts et messages agentiques du modèle cloud partent au fournisseur, même si l’URL du proxy est `localhost`.
+
+Le benchmark vérifie sa réponse avec une courte chauffe hors moyennes, puis exécute les catégories et répétitions demandées. Il ne lui impose ni présence dans `/api/ps`, ni déchargement local. Les cartes, statistiques et exports distinguent **client local** et **inférence distante** : RAM, matériel distant, contexte réel et cache distant restent inconnus. Un suffixe cloud est un indice de nommage ; les champs `remote_host`/`remote_model` des API Ollama apportent une provenance plus précise, sans exporter leurs adresses.
+
+Si **Campagne contrôlée** est activée, un modèle cloud reçoit **3 répétitions à température 0, dans un seul contexte géré par le fournisseur**. Les contextes locaux A/B ne sont pas envoyés avec `num_ctx` et aucune comparaison de deux contextes n’est revendiquée. Pour les modèles locaux, les deux contextes demandés restent contrôlés et vérifiés après rechargement. Une erreur d’authentification ou de génération du fournisseur reste une erreur technique visible.
+
+[Parcours et limites cloud/local](backend/OLLAMA_CLOUD.md) · [Documentation Ollama cloud](https://docs.ollama.com/cloud) · [Gestion du contexte Ollama](https://docs.ollama.com/context-length).
 
 ## Relancer et mettre à jour
 
@@ -114,7 +124,7 @@ La limite de tokens est un plafond, pas une longueur imposée. Une réponse atte
 
 Plusieurs répétitions permettent d’estimer la variabilité à conditions comparables ; elles allongent le test. Avec une seule mesure, l’écart-type reste indisponible. Une température nulle réduit l’aléatoire sans garantir une exécution reproductible.
 
-La chauffe utilise un prompt court fixe, une température nulle et au plus 32 tokens. Pour Ollama, le thinking est désactivé pendant cette chauffe. `/api/ps` permet d’observer si le modèle était chargé ; un modèle déchargé pendant la campagne déclenche une nouvelle chauffe. Aucune chauffe supplémentaire n’est envoyée aux API externes.
+La chauffe utilise un prompt court fixe, une température nulle et au plus 32 tokens. Pour Ollama, le thinking est désactivé pendant cette chauffe. `/api/ps` permet d’observer si le modèle était chargé ; un modèle déchargé pendant la campagne déclenche une nouvelle chauffe. Les modèles Ollama cloud reçoivent également une requête courte de vérification, hors scores ; elle ne mesure pas leur chargement distant. Les autres API externes n’ont pas de chauffe supplémentaire.
 
 Le cache est géré par le runner et n’est pas vidé automatiquement. Des tokens réutilisés ne prouvent pas que tout le prompt est en cache. Le contexte observé du runner chargé est distinct du maximum théorique du modèle.
 
@@ -168,9 +178,9 @@ Dans **Justesse et campagnes contrôlées**, activer les cas de justesse remplac
 
 ## Campagne contrôlée : trois répétitions et deux contextes
 
-Disponible avec **Ollama**. Activer **Campagne contrôlée**, choisir deux contextes distincts (8 192 et 16 384 tokens proposés), puis lancer normalement. Les catégories et les épreuves agentiques sélectionnées sont exécutées **trois fois à chaque contexte**, avec température **0** et le même plafond de sortie capturé au lancement. Une chauffe est enregistrée à chaque contexte, hors moyennes ; elle ne signifie pas un chargement à froid garanti. Un ID relie les deux séries dans l’export ; elles sont sauvegardées séparément dans l’historique et restent ensemble à l’écran. L’ordre A/B est alterné entre campagnes du navigateur, sans prétendre à une randomisation.
+Disponible avec **Ollama local**. Activer **Campagne contrôlée**, choisir deux contextes distincts (8 192 et 16 384 tokens proposés), puis lancer normalement. Les catégories et les épreuves agentiques sélectionnées sont exécutées **trois fois à chaque contexte**, avec température **0** et le même plafond de sortie capturé au lancement. Le runner est déchargé via `keep_alive: 0`, son absence est vérifiée dans `/api/ps`, puis une chauffe est enregistrée à chaque contexte, hors moyennes. Cela force une nouvelle allocation du runner, sans garantir un cache système/disque vide. Un ID relie les deux séries dans l’export ; elles sont sauvegardées séparément dans l’historique et restent ensemble à l’écran. L’ordre A/B est alterné entre campagnes du navigateur, sans prétendre à une randomisation.
 
-Le contexte demandé est transmis par `num_ctx` et comparé au contexte chargé rapporté par Ollama. Si la valeur n’est pas confirmée ou diffère, la campagne s’arrête et la passe est conservée avec son statut de vérification ; elle est exclue des comparaisons contrôlées. Le cache reste géré par le runner, sans remise à zéro garantie. Le swap et les activités des autres applications peuvent varier entre séries. Ne pas utiliser les boutons de saut/reprise dans cette campagne ; un arrêt interrompt les contextes restants.
+Le contexte demandé est transmis par `num_ctx` et comparé au contexte chargé rapporté par Ollama. Si la valeur n’est pas confirmée ou diffère, la campagne s’arrête et la passe est conservée avec son statut de vérification ; elle est exclue des comparaisons contrôlées. Le cache système/disque reste hors contrôle et le cache de prompt n’est pas déclaré réinitialisé. Le swap et les activités des autres applications peuvent varier entre séries. Ne pas utiliser les boutons de saut/reprise dans cette campagne ; un arrêt interrompt les contextes restants.
 
 Exemple avec les trois catégories évaluées et six épreuves agentiques : `(6 cas + 6 épreuves) × 3 passes × 2 contextes = 72 mesures`, plus les chauffes. Prévoir le temps nécessaire. L’exécution réelle doit être validée sur votre machine ; les tests automatisés utilisent des réponses simulées.
 

@@ -23,7 +23,7 @@ async function scenario(parent,mode='normal') {
    return {ok:true,json:async()=>({version:'mock'})};
  };
  s.executeTest=async(model,pt,prompt,rep,signal,protocol)=>{
-  if(protocol.warmup){events.push('warmup:'+model);assert(!loaded||loaded===model);loaded=model;}
+  if(protocol.warmup){events.push('warmup:'+model);assert(mode==='controlled'?!loaded:(!loaded||loaded===model));loaded=model;}
   else {events.push('measure:'+model);if(mode==='abort') {s.requestBatchStop(true);throw Error('Test annulé');}if((mode==='continue'||mode==='fail')&&model===models[0])throw Error('provider-failed');if(mode==='stop-after')s.requestBatchStop(false);}
   const context=s.getRequestedContextTokens();
   return {id:'test-'+(++id),model,runner:'Ollama',phase:protocol.warmup?'warmup':'measurement',promptType:pt.id,promptTypeName:pt.name,promptEmoji:pt.emoji,promptText:prompt,response:'OK',rep,
@@ -34,9 +34,9 @@ async function scenario(parent,mode='normal') {
  if(mode==='normal'||mode==='controlled'){
   const warmups=mode==='controlled'?2:1,measurements=mode==='controlled'?6:2;
   assert.equal(history.length,2*warmups);assert.equal(events.filter(e=>e.startsWith('measure:')).length,2*measurements);
-  assert(events.indexOf('save:'+models[0])<events.indexOf('unload:'+models[0]));assert(events.indexOf('unload:'+models[0])<events.indexOf('warmup:'+models[1]));assert.equal(s.state.results.length,2*(warmups+measurements));
+  assert(events.indexOf('save:'+models[0])<events.lastIndexOf('unload:'+models[0]));assert(events.lastIndexOf('unload:'+models[0])<events.indexOf('warmup:'+models[1]));assert.equal(s.state.results.length,2*(warmups+measurements));
   assert.equal(s.state.batchQueue[1].status,'terminé · exports sauvegardés · déchargé');
-  const dirs=await fs.readdir(path.join(parent,'export'));assert.equal(dirs.length,2);for(const dir of dirs){const files=await fs.readdir(path.join(parent,'export',dir));assert.equal(files.length,2);const file=files.find(f=>f.endsWith('.json')),report=JSON.parse(await fs.readFile(path.join(parent,'export',dir,file),'utf8'));const md=await fs.readFile(path.join(parent,'export',dir,files.find(f=>f.endsWith('.md'))),'utf8');const block=md.match(/```json\n([\s\S]*?)\n```/);assert(block);assert.deepEqual(JSON.parse(block[1]),report);assert.equal(report.producer.version,'0.11.0');assert(report.tests.every(t=>t.model.id===report.tests[0].model.id));assert(report.tests.every(t=>t.provenance.applicationVersion==='0.11.0'));}
+  const dirs=await fs.readdir(path.join(parent,'export'));assert.equal(dirs.length,2);for(const dir of dirs){const files=await fs.readdir(path.join(parent,'export',dir));assert.equal(files.length,2);const file=files.find(f=>f.endsWith('.json')),report=JSON.parse(await fs.readFile(path.join(parent,'export',dir,file),'utf8'));const md=await fs.readFile(path.join(parent,'export',dir,files.find(f=>f.endsWith('.md'))),'utf8');const block=md.match(/```json\n([\s\S]*?)\n```/);assert(block);assert.deepEqual(JSON.parse(block[1]),report);assert.equal(report.producer.version,'0.12.0');assert(report.tests.every(t=>t.model.id===report.tests[0].model.id));assert(report.tests.every(t=>t.provenance.applicationVersion==='0.12.0'));}
  }else if(mode==='continue'){assert(events.includes('warmup:'+models[1]));assert(events.includes('unload:'+models[0]));}
  else{assert(!events.includes('warmup:'+models[1]));assert(events.includes('unload:'+models[0]));}
  if(mode==='save-fail'){assert(s.state.pendingLocalExport);await s.recoverLocalExports();assert.equal(s.state.pendingLocalExport,null);assert.equal(saves,2);}

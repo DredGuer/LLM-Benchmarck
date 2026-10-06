@@ -14,7 +14,7 @@ python3 -m http.server 8001 --bind 127.0.0.1
 
 Ouvrir `http://localhost:8001/llm-benchmarker.html`. Choisir Ollama, LM Studio ou llama.cpp local et un modèle/template prenant en charge les appels d’outils natifs. Cocher **Ajouter les capacités agentiques à cette campagne** et choisir les épreuves. Conserver ou désélectionner les catégories de texte : les deux peuvent être exécutées ensemble, avec une chauffe mesurée séparée.
 
-Une répétition suffit pour vérifier le parcours. Trois répétitions aux mêmes conditions permettent de constater la variabilité ; elles ne suffisent pas à prouver une fiabilité générale. Chaque répétition reçoit un nouveau dossier et une conversation neuve par épreuve. Le cache du runner n’est pas remis à zéro ; son état agentique reste inconnu. Un modèle Ollama déchargé est réchauffé avant la mesure suivante.
+Une répétition suffit pour vérifier le parcours. Trois répétitions aux mêmes conditions permettent de constater la variabilité ; elles ne suffisent pas à prouver une fiabilité générale. Chaque répétition reçoit un nouveau dossier et une conversation neuve par épreuve. Le cache du runner n’est pas remis à zéro ; son état agentique reste inconnu. Un modèle Ollama local déchargé est réchauffé avant la mesure suivante. Pour un modèle cloud via Ollama, la chauffe vérifie seulement la réponse : chargement et contexte distants restent inconnus ; les outils restent dans le sandbox local, et les messages/retours d’outils sont transmis au fournisseur. Une campagne contrôlée cloud utilise trois répétitions dans le contexte fournisseur, sans comparaison A/B locale.
 
 ## Les six épreuves
 

@@ -47,14 +47,14 @@ function buildCommunityV2(results, generatedAt) {
   results.forEach(function(r) {
     // Keep materially different inventories and runners in separate schema-valid reports.
     var machine = communityMachine(r.env, generatedAt, 'local');
-    var key = JSON.stringify([r.runner, r.runnerVersion || null, machine]);
+    var key = JSON.stringify([r.runner, r.runnerVersion || null, machine, !!r.provenance?.attribution?.startsWith('remote-inference:')]);
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(r);
   });
   var reports = [];
   groups.forEach(function(items) {
     var first = items[0], runner = first.runner || 'unknown';
-    var localRunner = ['Ollama', 'LM Studio', 'llama.cpp'].includes(runner);
+    var localRunner = !first.provenance?.attribution?.startsWith('remote-inference:') && ['Ollama', 'LM Studio', 'llama.cpp'].includes(runner);
     var inferenceNode = localRunner ? 'local' : 'inference-unknown';
     var machines = [communityMachine(first.env, generatedAt, 'local')];
     if (!localRunner) machines.push(communityMachine({}, generatedAt, inferenceNode));

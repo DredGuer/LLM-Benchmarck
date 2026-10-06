@@ -70,7 +70,7 @@ async function fetchModels() {
     if (state.runner === 'ollama') {
       var res = await fetchWithTimeout(base + '/api/tags', {}, 10000);
       var data = await res.json();
-      models = data.models ? data.models.map(function(m) { return m.name; }) : [];
+      models = data.models ? data.models.map(function(m) { noteOllamaDeployment(m.name, m, 'ollama-api-tags'); return m.name; }) : [];
     } else {
       var res = await fetchWithTimeout(base + '/v1/models', {}, 10000);
       var data = await res.json();
@@ -99,6 +99,7 @@ async function fetchModels() {
 }
 
 function parseModelMetadata(data, model) {
+  noteOllamaDeployment(model, data, 'ollama-api-show');
   var info = data.model_info || {};
   var architecture = typeof info['general.architecture'] === 'string' ? info['general.architecture'] : null;
   function numeric(key) { var value = info[key]; return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null; }
@@ -132,7 +133,7 @@ function renderModelMetadata(metadata) {
     ['Paramètres totaux', metadata.parameterCount === null ? 'Inconnus' : (metadata.parameterCount / 1e9).toFixed(2) + ' milliards'],
     ['Quantification', metadata.quantization || 'Inconnue'],
     ['Contexte maximum', (metadata.contextMaxTokens ?? 'Inconnu') + ' tokens'],
-    ['Contexte du test', state.runner === 'ollama' ? 'Auto · réglage Ollama' : 'Géré par le fournisseur']
+    ['Contexte du test', isOllamaCloud(metadata.model) ? 'Cloud · contexte fournisseur non vérifiable localement' : state.runner === 'ollama' ? 'Auto · réglage Ollama' : 'Géré par le fournisseur']
   ];
   cards.forEach(function(item) {
     var box = document.createElement('div');
@@ -158,6 +159,7 @@ async function refreshModelMetadata() {
     if (generation !== modelMetadataGeneration || runner !== state.runner || model !== getSelectedModel()) return null;
     state.modelMetadata = metadata;
     renderModelMetadata(metadata);
+    if(typeof updateCampaignPlan==='function')updateCampaignPlan();
     return metadata;
   } catch (error) {
     if (generation === modelMetadataGeneration) renderModelMetadata(null);
@@ -166,7 +168,7 @@ async function refreshModelMetadata() {
 }
 
 // Auto delegates context allocation to the runner; never forces the model maximum.
-function getRequestedContextTokens() { return state.controlledActive && Number.isInteger(state.activeContextTokens) ? state.activeContextTokens : null; }
+function getRequestedContextTokens() { if (isOllamaCloud(getSelectedModel())) return null; return state.controlledActive && Number.isInteger(state.activeContextTokens) ? state.activeContextTokens : null; }
 
 function buildOllamaOptions(temperature, maxTokens, contextTokens) {
   var options = { temperature: temperature, num_predict: maxTokens };

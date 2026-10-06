@@ -65,19 +65,7 @@ function requestBatchStop(immediate) {
   showToast(immediate ? 'Arrêt demandé ; conservation des résultats partiels puis déchargement.' : 'Arrêt après le modèle en cours.', 'info');
 }
 async function unloadBatchModel(model) {
-  var response = await fetchWithTimeout(RUNNERS.ollama.base + '/api/generate', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model, keep_alive: 0, stream: false })
-  }, 30000);
-  if (!response.ok) throw new Error('Ollama a refusé le déchargement : ' + model);
-  var data = await response.json();
-  if (!data.done) throw new Error('Confirmation de déchargement absente : ' + model);
-  for (var attempt = 0; attempt < 10; attempt++) {
-    var observed = await observeLoadedModel(model);
-    if (observed === 'cold') return;
-    if (observed === 'unknown') throw new Error('Déchargement invérifiable : API /api/ps indisponible.');
-    await new Promise(resolve => setTimeout(resolve, 500));
-  }
-  throw new Error('Le modèle reste chargé ; le suivant ne sera pas lancé.');
+  return unloadOllamaModel(model);
 }
 async function runBatchCampaign(explicitModels) {
   if (state.batchActive || state.isRunning || state.analysisRunning) return;
@@ -107,6 +95,7 @@ async function runBatchCampaign(explicitModels) {
         await runBenchmark(true);
         var results = state.results.filter(r => r.model === model).slice();
         state.batchResults.push(...results);
+        var contextIssue=results.some(r=>r.protocol?.campaignId&&r.protocol.contextValidation!=='verified');
         var failed = !!state.batchFailure || !results.length || results.some(r => ['failed', 'interrupted'].includes(r.executionOutcome));
         entry.status = state.batchAbort ? 'interrompu · sauvegarde' : failed ? 'erreur technique · sauvegarde' : 'mesures terminées · sauvegarde'; renderBatchQueue();
         if (results.length) {
@@ -118,13 +107,13 @@ async function runBatchCampaign(explicitModels) {
         }
         entry.status = 'déchargement et vérification'; renderBatchQueue();
         await unloadBatchModel(model); unloaded = true;
-        entry.status = (state.batchAbort ? 'interrompu' : failed ? 'erreur technique' : 'terminé') + (results.length ? ' · exports sauvegardés' : ' · aucun résultat') + ' · déchargé';
+        entry.status = (state.batchAbort ? 'interrompu' : failed ? 'erreur technique' : contextIssue ? 'partiel : contexte non confirmé' : 'terminé') + (results.length ? ' · exports sauvegardés' : ' · aucun résultat') + (isOllamaCloud(model) ? ' · cloud : mémoire distante non gérée' : ' · déchargé');
         if (state.unsavedSession) throw new Error('Historique non sauvegardé ; exports conservés, file arrêtée.');
         if (failed && !continueErrors) break;
       } catch (error) {
         entry.status = 'arrêt : ' + error.message;
         // Even if export/history fails, release this model; never proceed on failure.
-        if (!unloaded) { try { await unloadBatchModel(model); entry.status += ' · déchargé'; } catch (unloadError) { entry.status += ' · ' + unloadError.message; } }
+        if (!unloaded) { try { await unloadBatchModel(model); entry.status += isOllamaCloud(model)?' · cloud : mémoire distante non gérée':' · déchargé'; } catch (unloadError) { entry.status += ' · ' + unloadError.message; } }
         throw error;
       } finally { document.getElementById('runBtn').disabled = true; renderBatchQueue(); }
     }

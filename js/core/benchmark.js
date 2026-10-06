@@ -33,7 +33,7 @@ async function runBenchmark(inBatch) {
       { warmup: true, loadState: loadState, warmupRuns: warmupRuns });
     if (!result.metrics.totalTokens && !result.response) throw new Error('Le modèle n’a généré aucun token pendant la chauffe.');
     remember(result); warmupRuns++;
-    if (state.controlledActive && state.controlledStop) throw new Error('Le contexte demandé n’est pas confirmé après la chauffe.');
+    if (state.controlledActive && state.controlledStop) throw Object.assign(new Error('Le contexte demandé n’est pas confirmé après la chauffe.'),{contextVerification:true});
     if (runner === 'ollama' && await observeLoadedModel(model, currentAbortController.signal) === 'cold')
       throw new Error('Le modèle ne reste pas chargé après la chauffe.');
   }
@@ -81,11 +81,11 @@ async function runBenchmark(inBatch) {
     setProgress(100, 'Terminé : chauffe séparée et ' + completedTests + ' mesure(s)');
     showToast('Campagne terminée : ' + completedTests + ' mesure(s)', 'success');
   } catch (error) {
-    if (state.batchActive) state.batchFailure = error.message;
+    if (state.batchActive && !error.contextVerification) state.batchFailure = error.message;
     if (state.controlledActive) state.controlledStop = true;
     var failed = buildErrorResult(model, activeType, error.message, activeRep);
     failed.phase = activePhase; failed.promptText = activePrompt;
-    remember(failed); showToast(error.message, 'error');
+    if(!error.contextVerification)remember(failed); showToast(error.message, 'error');
   } finally {
     if (sessionResults.length) {
       var session = { model: model, runner: runner, results: sessionResults,
@@ -103,14 +103,15 @@ async function runBenchmark(inBatch) {
 async function executeTest(model, promptType, promptText, rep, signal, protocol) {
   // Use advanced config functions to get settings based on mode
   protocol = protocol || {};
-  var provenance = typeof captureTestProvenance === 'function' ? captureTestProvenance() : null;
+  var provenance = typeof captureTestProvenance === 'function' ? captureTestProvenance(model) : null;
   var temperature = protocol.warmup ? 0 : getTemperatureForPromptType(promptType.id);
   var maxTokens = protocol.warmup ? 32 : getMaxTokens();
   var fingerprint = await promptFingerprint(promptText);
   var contextTokens = getRequestedContextTokens();
   var modelMetadata = state.modelMetadata && state.modelMetadata.model === model ? Object.assign({}, state.modelMetadata) : null;
+  var monitorLocal = state.runner === 'ollama' && !isOllamaCloud(model);
   var loadedBefore = await loadedModelSnapshot(model);
-  if (state.runner === 'ollama') await ollamaMemoryMonitor.startResources();
+  if (monitorLocal) await ollamaMemoryMonitor.startResources();
   try {
   var testStartedAt = new Date().toISOString();
   var t0 = performance.now();
@@ -132,7 +133,7 @@ async function executeTest(model, promptType, promptText, rep, signal, protocol)
     ' ; maximum déclaré : ' + (modelMetadata?.contextMaxTokens ?? 'inconnu'), 'info');
 
   // Start memory monitoring for local runners (Ollama)
-  if (state.runner === 'ollama') {
+  if (monitorLocal) {
     ollamaMemoryMonitor.start(model);
   }
 
@@ -263,9 +264,10 @@ async function executeTest(model, promptType, promptText, rep, signal, protocol)
   
   var generationTotalTime = performance.now() - t0;
   var testFinishedAt = new Date().toISOString();
-  if (state.runner === 'ollama') memoryStats = ollamaMemoryMonitor.stop();
+  if (monitorLocal) memoryStats = ollamaMemoryMonitor.stop();
+  if (isOllamaCloud(model)) { memoryStats = null; provenance = typeof captureTestProvenance === 'function' ? captureTestProvenance(model) : null; }
   // Capture the last loaded runner context and resource sample after the stream closes.
-  if (state.runner === 'ollama') {
+  if (monitorLocal && !isOllamaCloud(model)) {
     await ollamaMemoryMonitor._fetchLoadedModel(ollamaMemoryMonitor.generation, true);
     if (ollamaMemoryMonitor.resourcesPending) await ollamaMemoryMonitor.resourcesPending;
     // Ollama emits its MLX memory line just after completing the response.
@@ -274,7 +276,7 @@ async function executeTest(model, promptType, promptText, rep, signal, protocol)
   }
 
   // Stop memory monitoring for Ollama
-  if (state.runner === 'ollama') {
+  if (memoryStats) {
     memoryStats.loadedModel = ollamaMemoryMonitor.loadedModel;
     memoryStats.resources = ollamaMemoryMonitor.resources;
     if (memoryStats.peakMemory) {
@@ -284,6 +286,7 @@ async function executeTest(model, promptType, promptText, rep, signal, protocol)
     }
   }
   
+  if(isOllamaCloud(model)){contextTokens=null;cachedTokens=null;protocol.loadState='unknown';}
   var totalTime = generationTotalTime;
   var tokensPerSec = tokensGenerated > 0 ? (tokensGenerated / (totalTime / 1000)) : 0;
   var ttft = firstTokenTime !== null ? firstTokenTime : null;
@@ -299,7 +302,7 @@ async function executeTest(model, promptType, promptText, rep, signal, protocol)
     phase: protocol.warmup ? 'warmup' : 'measurement',
     protocol: { version: '0.09', phase: protocol.warmup ? 'warmup' : 'measurement', promptDigest: fingerprint,
       warmupRuns: protocol.warmupRuns || 0, loadState: protocol.loadState || 'unknown',
-      cacheState: cachedTokens === null ? 'unknown' : cachedTokens > 0 ? 'present-coverage-unknown' : 'cold', cachePolicy: 'runner-managed; persistent model; no forced cache reset' },
+      cacheState: cachedTokens === null ? 'unknown' : cachedTokens > 0 ? 'present-coverage-unknown' : 'cold', cachePolicy: isOllamaCloud(model) ? 'remote-provider-managed; context and cache unknown' : 'runner-managed; persistent model; no forced cache reset' },
     completion: classifyCompletion(finishReason, tokensGenerated, maxTokens, tokenCountKind),
     quality: typeof evaluateQuality === 'function' && !protocol.warmup ? evaluateQuality(promptType.qualityTask, fullText, classifyCompletion(finishReason, tokensGenerated, maxTokens, tokenCountKind)) : undefined,
     runnerVersion: state.runnerVersion || null,
@@ -356,7 +359,7 @@ async function executeTest(model, promptType, promptText, rep, signal, protocol)
   
   return result;
   } finally {
-    if (state.runner === 'ollama') {
+    if (monitorLocal) {
       if (ollamaMemoryMonitor.isActive) ollamaMemoryMonitor.stop();
       await ollamaMemoryMonitor.cancelResources();
     }
@@ -367,7 +370,7 @@ function buildErrorResult(model, promptType, errorMsg, rep) {
   return {
     id: crypto.randomUUID(),
     timestamp: new Date().toISOString(),
-    provenance: typeof captureTestProvenance === 'function' ? captureTestProvenance() : null,
+    provenance: typeof captureTestProvenance === 'function' ? captureTestProvenance(model) : null,
     model: model,
     runner: RUNNERS[state.runner] ? RUNNERS[state.runner].name : state.runner,
     promptType: promptType.id,

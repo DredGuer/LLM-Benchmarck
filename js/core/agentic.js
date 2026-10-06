@@ -41,11 +41,12 @@ async function agenticRequest(route,body,session,signal,method){
   if(!response.ok)throw new Error('Backend agentique indisponible ou budget atteint (HTTP '+response.status+'). Vérifiez npm start.');return response.json();
 }
 async function executeAgenticTest(model,rep,externalSignal,warmupRuns,scenario){
-  var provenance=typeof captureTestProvenance==='function'?captureTestProvenance():null;
+  var provenance=typeof captureTestProvenance==='function'?captureTestProvenance(model):null;
   var runner=state.runner,session=null,outcome=null,memory=null,loadedBefore=null,trace=[],traceBudget=65536,traceLimited=false,turns=0,tokens=0,declared=true,firstSegment=null,firstAnswer=null,firstTool=null,turnFirstContent=null,thinkingSeen=false,turnOpen=false;
   var genMs=0,prefillMs=0,timingKnown=true,timingReports=0,text='',failure=null,started=performance.now(),startedAt=new Date().toISOString(),finishedAt,elapsed=0;
   var maxTokens=getMaxTokens(),temperature=getTemperatureForPromptType('agentic'),controller=new AbortController(),deadlineTimer;
   var signal=controller.signal;function cancel(){controller.abort();}if(externalSignal.aborted)cancel();else externalSignal.addEventListener('abort',cancel,{once:true});
+  var monitorLocal=runner==='ollama'&&!isOllamaCloud(model);
   var load=await observeLoadedModel(model,signal);
   function event(type,value){
     agenticLive(type,value);if(type==='thinking')thinkingSeen=true;
@@ -56,7 +57,7 @@ async function executeAgenticTest(model,rep,externalSignal,warmupRuns,scenario){
     else if(trace.length<160){if(value.length>16000)traceLimited=true;trace.push({type,text:value.slice(0,16000),elapsedMs:Math.round(performance.now()-started)});}else traceLimited=true;
   }
   try{
-    if(runner==='ollama'){loadedBefore=await loadedModelSnapshot(model);await ollamaMemoryMonitor.startResources();ollamaMemoryMonitor.start(model);}
+    if(monitorLocal){loadedBefore=await loadedModelSnapshot(model);await ollamaMemoryMonitor.startResources();ollamaMemoryMonitor.start(model);}
     session=await agenticRequest('/start',{scenario:scenario.id},null,signal);
     started=performance.now();startedAt=new Date().toISOString();deadlineTimer=setTimeout(cancel,session.budget.timeoutMs);
     agenticLiveStart(session.scenario.title);event('request','Le modèle reçoit le cadre système, l’objectif et les schémas d’outils. Aucun flux de réflexion reçu à ce stade.');
@@ -97,10 +98,11 @@ async function executeAgenticTest(model,rep,externalSignal,warmupRuns,scenario){
     event('verification',failure);
   }finally{
     clearTimeout(deadlineTimer);externalSignal.removeEventListener('abort',cancel);elapsed=performance.now()-started;finishedAt=new Date().toISOString();
-    if(runner==='ollama'){try{var stats=ollamaMemoryMonitor.stop();await ollamaMemoryMonitor._fetchLoadedModel(ollamaMemoryMonitor.generation,true);if(ollamaMemoryMonitor.resourcesPending)await ollamaMemoryMonitor.resourcesPending;await ollamaMemoryMonitor.pollResources(true);
+    if(monitorLocal){try{var stats=ollamaMemoryMonitor.stop();await ollamaMemoryMonitor._fetchLoadedModel(ollamaMemoryMonitor.generation,true);if(ollamaMemoryMonitor.resourcesPending)await ollamaMemoryMonitor.resourcesPending;await ollamaMemoryMonitor.pollResources(true);
       memory={peak:stats.peakMemory||null,average:stats.averageMemory||null,source:stats.source,unit:'MiB',readings:stats.readings,sampleCount:stats.readings.length,intervalMs:window.MEMORY_MONITOR_CONFIG.pollInterval,loadedModelBefore:loadedBefore,loadedModel:ollamaMemoryMonitor.loadedModel,resources:ollamaMemoryMonitor.resources};
     }catch(_){}finally{await ollamaMemoryMonitor.cancelResources();}}
   }
+  if(isOllamaCloud(model)){memory=null;provenance=typeof captureTestProvenance==='function'?captureTestProvenance(model):null;}
   if(!outcome)throw new Error(failure||'Aucune évaluation backend reçue.');
   return {id:crypto.randomUUID(),provenance,executionOutcome:done?'completed':signal.aborted?'interrupted':'failed',kind:'agentic',agentic:outcome.agentic,agenticArtifacts:outcome.artifactTexts,agenticTrace:trace,agenticTraceLimited:traceLimited,agenticSystemPrompt:session.systemPrompt,agenticToolSchemas:session.tools,
     model,runner:RUNNERS[runner].name,runnerVersion:state.runnerVersion||null,modelMetadata:state.modelMetadata,timestamp:finishedAt,startedAt,finishedAt,phase:'measurement',rep,
@@ -123,7 +125,7 @@ async function runAgenticBenchmark(inBatch){
   function remember(r){if(typeof recordControlledResult==='function')recordControlledResult(r);results.push(r);state.results.unshift(r);renderResultCard(r);}
   async function warmup(){agenticLiveStart('Chargement / chauffe');agenticLive('warmup','Le runner charge le modèle et vérifie sa réponse ; cette passe reste hors des scores.');
     button.textContent='Chargement / chauffe…';var warm=await executeTest(model,{id:'warmup',name:'Chargement / chauffe',emoji:'🔥'},'Réponds uniquement par OK.',1,controller.signal,{warmup:true,loadState:await observeLoadedModel(model,controller.signal),warmupRuns:warmups});
-    if(controller.signal.aborted)throw new Error('Campagne annulée pendant la chauffe.');if(!warm.metrics.totalTokens&&!warm.response)throw new Error('Le modèle ne répond pas pendant la chauffe.');remember(warm);warmups++;if(state.controlledActive&&state.controlledStop)throw new Error('Contexte demandé non confirmé après la chauffe.');showLiveSections(false);setControlButtons(false);
+    if(controller.signal.aborted)throw new Error('Campagne annulée pendant la chauffe.');if(!warm.metrics.totalTokens&&!warm.response)throw new Error('Le modèle ne répond pas pendant la chauffe.');remember(warm);warmups++;if(state.controlledActive&&state.controlledStop)throw Object.assign(new Error('Contexte demandé non confirmé après la chauffe.'),{contextVerification:true});showLiveSections(false);setControlButtons(false);
   }
   try{var info=await agenticRequest('/info',null,null,controller.signal);if(info.version!=='2.0.1'||!Array.isArray(info.scenarios))throw new Error('Redémarrez le backend mis à jour : batterie agentique v2 requise.');
     resetCampaignResults();switchTab('results');document.getElementById('progressSection').style.display='block';await refreshModelMetadata();state.runnerVersion=null;
@@ -145,7 +147,7 @@ async function runAgenticBenchmark(inBatch){
       if(state.batchAbort || controller.signal.aborted || (state.controlledActive && state.controlledStop))break;
     }
     showToast(controller.signal.aborted?'Campagne interrompue ; résultats conservés.':'Campagne terminée : génération et capacités agentiques.','info');
-  }catch(error){if(state.batchActive)state.batchFailure=error.message;if(state.controlledActive)state.controlledStop=true;showToast(error.message,'error');}
+  }catch(error){if(state.batchActive&&!error.contextVerification)state.batchFailure=error.message;if(state.controlledActive)state.controlledStop=true;showToast(error.message,'error');}
   finally{if(controller.signal.aborted&&state.controlledActive)state.controlledStop=true;if(results.length){var session={model,runner,results,env:JSON.parse(JSON.stringify(state.env)),repetitions,warmupRuns:warmups};if(saveSessionToHistory(session)===false)state.unsavedSession=session;}
     document.getElementById('exportBtn').disabled=!state.results.length;document.getElementById('progressSection').style.display='none';document.getElementById('agenticStop').hidden=true;
     currentAbortController=null;showLiveSections(false);setControlButtons(false);button.disabled=!!state.batchActive;button.textContent='⚡ Lancer le benchmark';state.isRunning=false;lockCampaignControls(false);renderStatistics();}

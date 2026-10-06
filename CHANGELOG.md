@@ -6,7 +6,7 @@ Historique des changements de LLM Benchmarker. Les dates correspondent aux inté
 
 | Élément | Version | Référence |
 |---|---|---|
-| Application / interface / producteur des exports | **0.11.0** | `js/core/version.js` |
+| Application / interface / producteur des exports | **0.12.0** | `js/core/version.js` |
 | Backend Node | 1.2.0 | `package.json` |
 | Protocole de génération | 0.09 | `js/core/benchmark.js` |
 | Batterie agentique | 2.0.1 | `backend/agentic-suite.js` |
@@ -15,6 +15,16 @@ Historique des changements de LLM Benchmarker. Les dates correspondent aux inté
 | Inventaire Apple | 1.0.0 | `backend/apple-inventory.js` |
 
 Ces numéros désignent des composants différents. Les résultats historiques et exemples synthétiques conservent leur version d’origine. Le suffixe des URL de scripts sert à invalider le cache ; il ne désigne pas nécessairement la version de l’application.
+
+## [0.12.0] — 2026-10-06
+
+- Ollama cloud : génération et agentique via le proxy local, reconnaissance par champs API `remote_host`/`remote_model` ou convention de nom explicitement inférée ; aucune adresse distante retenue. La présence dans `/api/ps`, le contexte chargé et le déchargement locaux ne sont plus exigés pour le cloud.
+- Campagne cloud contrôlée : une série de trois répétitions à température 0, contexte fournisseur Auto/inconnu ; pas de `num_ctx`, pas de faux contexte validé ni double série locale.
+- Campagne locale à deux contextes : déchargement confirmé et rechargement avant chaque contexte. Vérification du contexte réel maintenue, y compris MLX ; chauffe non confirmée conservée et signalée comme résultat partiel, sans génération échouée fictive. Cache système/disque hors contrôle.
+- Cartes et Markdown : attribution cloud explicite et mémoire distante inconnue. JSON : client et nœud d’inférence inconnu séparés, télémétrie locale non attribuée au cloud. Statistiques et assistant IA distinguent matériel client/moteur distant.
+- Interface, caches et producteur d’export 0.12.0 ; provenance historique préservée. Backend 1.2.0, protocole 0.09, schéma 2.2.0 et bundle 1.0.0 inchangés (champs existants).
+- Documentation actualisée, guide cloud/local ajouté, URL d’installation corrigée vers le dépôt renommé LLM-Benchmarker et option Python `--bind` dédoublonnée.
+- Validation : 19 suites passent, dont les campagnes cloud réellement parcourues avec flux simulés, aliases API, erreurs fournisseur, exports/provenance/confidentialité, trois répétitions et rechargement local par contexte ; agentique cloud testé avec le sandbox réel. Aucun test d’inférence réelle ni validation visuelle réalisée ici : à confirmer sur le Mac.
 
 ## [0.11.0] — 2026-10-06
 

@@ -194,3 +194,10 @@ Les tests combinent états fichiers réellement exécutés, réponses modèle si
 Les mesures MLX peuvent contenir collecte, horodatage réel, âge, fraîcheur, nombre d’événements et chevauchement de télémétrie. Elles restent des événements serveur non attribués au modèle. Le validateur vérifie la cohérence des critères/verdicts et des contextes, sans certifier l’authenticité de données soumises.
 
 Pour le futur site : identifier d’abord `schema` et `schemaVersion`, valider le document, puis appliquer une politique version/protocole par mesure. Accepter ou migrer les formats connus ; refuser les formats inconnus. Un résultat ancien peut être importable mais non comparable. Ne pas refuser automatiquement tous les anciens résultats simplement parce que le producteur est ancien. Les signatures ou preuves d’exécution ne sont pas mises en place.
+
+
+### Routage cloud dans les exports 0.12.0
+
+Le schéma 2.2.0 reste compatible. `tests[].provenance.inferenceEndpoint` décrit l’endpoint configuré du client : `loopback` peut donc être un proxy Ollama cloud. Le préfixe `remote-inference:` de `provenance.attribution` distingue les nouvelles passes distantes ; la source API ou l’inférence par convention de nom y est indiquée, sans URL. `participatingNodeIds` pointe alors vers `inference-unknown` ; l’inventaire `local` appartient au client, pas au moteur. Aucune ressource RSS/swap/MLX locale ne décrit cette inférence.
+
+Une campagne cloud à trois répétitions conserve un contexte Auto inconnu et une `cachePolicy` explicite, sans `campaignId` ni contexte local faussement validé. Les anciens résultats gardent leurs données et attribution d’origine ; ce correctif ne réinterprète pas rétroactivement leurs mesures. La version `producer.version` (0.12.0) est celle du logiciel exporteur ; `provenance.applicationVersion` reste celle de la passe.
