@@ -10,7 +10,7 @@ function benchmarkHelp(label) {
     ['temps total', 'Durée de la requête de génération jusqu’à sa fin. La finalisation du monitoring est exclue.'],
     ['rss', 'Mémoire résidente des processus Ollama suivis, additionnée. Sur Apple Silicon, elle ne représente pas à elle seule toutes les allocations Metal/MLX. Ne l’additionnez pas aux autres mesures mémoire.'],
     ['mlx', 'Allocation rapportée par les nouveaux événements des logs serveur Ollama. Le pic est différent de l’allocation conservée. L’attribution à ce modèle n’est pas vérifiée si plusieurs générations sont actives.'],
-    ['swap', 'Mémoire du système déplacée vers le disque. Avant/après et pic concernent toute la machine. Les volumes lus/écrits estimés en pages ne sont pas un débit maximal du SSD.'],
+    ['swap', 'Espace disque utilisé par macOS pour conserver des pages mémoire. Un volume occupé ne prouve pas des échanges actifs : les deltas de lecture/écriture les renseignent séparément. Toute la machine est concernée ; aucune attribution au modèle ni cause de ralentissement n’est démontrée. Ce mécanisme système n’est pas un défaut à lui seul.'],
     ['compressée', 'RAM compressée par macOS pour réduire la pression mémoire. Mesure du système entier, pas du seul modèle.'],
     ['disques', 'Volume lu ou écrit pendant le test sur les disques observés. Inclut les autres applications ; ce n’est pas un test de vitesse du SSD.'],
     ['déclarée ollama', 'Allocation déclarée par Ollama pour le modèle chargé. Elle peut évoluer avec les caches ; ce n’est ni la taille des seuls poids ni un pic RAM mesuré.'],
@@ -205,7 +205,7 @@ function renderResultCard(result) {
   html += '</div>';
   html += '<div class="result-card-body">';
   if (technicalError) html += '<div style="background:rgba(247,129,102,0.1);border:1px solid rgba(247,129,102,0.3);border-radius:6px;padding:12px;color:var(--accent3);font-size:0.875rem;">⚠️ <strong>Erreur :</strong> ' + escapeHtml(result.error) + '</div>';
-  html += '<p>Exécution : <strong>' + escapeHtml(({completed:'terminée',interrupted:'interrompue',failed:'erreur technique',unknown:'état inconnu'})[verdict.execution]) + '</strong>' + (result.kind !== 'agentic' ? ' · Justesse : <strong>' + escapeHtml(({pass:'vérifiée sur cette épreuve',fail:'critères échoués','not-assessed':'non évaluée',incomplete:'non évaluée (réponse incomplète)'})[verdict.quality] || 'non évaluée') + '</strong>' : '') + '</p>';
+  html += '<p>Exécution : <strong>' + escapeHtml(({completed:'terminée',interrupted:'interrompue',failed:'arrêtée / erreur',unknown:'état inconnu'})[verdict.execution]) + '</strong>' + (result.kind !== 'agentic' ? ' · Justesse : <strong>' + escapeHtml(({pass:'vérifiée sur cette épreuve',fail:'critères échoués','not-assessed':'non évaluée',incomplete:'non évaluée (réponse incomplète)'})[verdict.quality] || 'non évaluée') + '</strong>' : '') + '</p>';
   var failedCriteria = result.agentic?.evaluation.criteria?.filter(c => c.passed === false) || result.quality?.criteria?.filter(c => c.passed === false) || [];
   if (result.protocol?.campaignId && result.protocol.contextValidation !== 'verified') failedCriteria.push({label:'Contexte demandé '+result.protocol.requestedContextTokens+' / observé '+(m.contextObservedTokens??'inconnu')+' : passe exclue des comparaisons contrôlées'});
   if (failedCriteria.length) html += '<p class="failed-criteria"><strong>Critères échoués :</strong> ' + failedCriteria.map(c => escapeHtml(c.label)).join(' · ') + '</p>';
@@ -227,7 +227,7 @@ function renderResultCard(result) {
   });
   html += '</div>';
   if (result.modelMetadata || m.contextRequestedTokens != null) html += '<p>' + escapeHtml(modelArchitectureText(result.modelMetadata)) + ' · Contexte '+(m.contextMode === 'explicit' ? 'explicite ('+m.contextRequestedTokens+' demandé)' : 'Auto')+' · runner chargé : ' + (m.contextObservedTokens ?? 'inconnu') + ' tokens · Maximum déclaré : ' + (result.modelMetadata?.contextMaxTokens ?? 'inconnu') + ' tokens</p>';
-  if (result.memory?.resources) html += '<p>Swap et E/S : système entier. Pic MLX des logs serveur Ollama, attribution au modèle non vérifiée. Activité disque observée, pas vitesse maximale SSD.</p>';
+  if (result.memory?.resources) html += '<p>Swap occupé et E/S : système entier. Le volume de swap occupé et les échanges pendant le test sont distincts ; ils ne démontrent ni l’attribution au modèle ni la cause d’un ralentissement. Pic MLX des logs serveur Ollama, attribution au modèle non vérifiée. Activité disque observée, pas vitesse maximale SSD.</p>';
   if (result.protocol) html += '<p>Chargement : ' + escapeHtml(result.protocol.loadState) + ' · Cache : ' + escapeHtml(cacheDescription(result.protocol.cacheState)) + ' · Chauffes préalables : ' + result.protocol.warmupRuns + '</p>';
   if (result.quality?.taskId) html += '<p>Évaluateur : ' + escapeHtml(result.quality.evaluatorId) + ' v' + escapeHtml(result.quality.evaluatorVersion) + ' · Cas : ' + escapeHtml(result.quality.taskId) + '</p><ul>' + result.quality.criteria.map(c=>'<li>'+(c.passed?'✅ ':'❌ ')+escapeHtml(c.label)+'</li>').join('') + '</ul>';
   if(result.provenance?.attribution?.startsWith('remote-inference:'))html += '<p>Provenance du routage : '+escapeHtml(result.provenance.attribution)+'</p>';
@@ -319,26 +319,32 @@ function buildMarkdownReport(results, now, communityExport) {
   
   for (var i = 0; i < results.length; i++) {
     var r = results[i];
-    var m = r.metrics;
-    md += '**Exécution :** ' + markdownCell(resultVerdict(r).execution) + ' · **Justesse :** ' + markdownCell(r.quality?.status || 'non évaluée') + '\n\n';
+    var m = r.metrics || {}, verdict = resultVerdict(r);
+    md += '### Test ' + (i+1) + ' — ' + r.promptEmoji + ' ' + r.promptTypeName + '\n\n';
+    md += '**Exécution :** ' + markdownCell(({completed:'terminée',interrupted:'interrompue',failed:'arrêtée / erreur',unknown:'inconnue'})[verdict.execution]) + ' · **Justesse :** ' + markdownCell(r.quality?.status || 'non évaluée') + '\n\n';
     if (r.quality?.taskId) { md += '**Évaluateur :** ' + markdownCell(r.quality.evaluatorId + ' v' + r.quality.evaluatorVersion + ' · ' + r.quality.taskId) + '\n\n'; r.quality.criteria.forEach(c=>{md += '- ' + markdownCell(c.label) + ' : ' + (c.passed ? 'réussi' : 'échoué') + '\n';}); md += '\n'; }
     if(r.provenance?.attribution?.startsWith('remote-inference:'))md += '**Inférence cloud via Ollama** — matériel local = client ; RAM, contexte et cache distants inconnus.\n\n';
     md += '**Version lors du test :** ' + markdownCell(r.provenance?.applicationVersion || 'inconnue (ancien historique)') + '\n\n';
-    md += '### Test ' + (i+1) + ' — ' + r.promptEmoji + ' ' + r.promptTypeName + '\n\n';
     md += '**Modèle :** `'+ r.model +'` | **Runner :** ' + r.runner + ' | **Date :** ' + new Date(r.timestamp).toLocaleString('fr-FR') + '\n\n';
     
+    if (r.kind === 'agentic') {
+      md += '**Objectif atteint :** ' + (verdict.goalCompleted === true ? 'oui' : verdict.goalCompleted === false ? 'non' : 'inconnu') +
+        ' · **Conformité :** ' + (verdict.conformity === true ? 'réussie' : verdict.conformity === false ? 'échouée' : 'inconnue') + '\n\n';
+    }
     if (r.error) {
-      md += '**Statut :** ❌ Erreur\n\n';
-      md += '**Message d\'erreur :**\n';
+      md += verdict.execution === 'completed' ? '**Statut :** ⚠️ Exécution terminée — critères non conformes\n\n**Diagnostic :**\n' :
+        '**Statut :** ⚠️ Exécution arrêtée / erreur — consulter le motif\n\n**Motif :**\n';
       md += '```\n' + r.error + '\n```\n\n';
-    } else {
+    }
+    // Preserve partial measurements and artifacts on failure; null timings are not zero.
+    if (Number.isFinite(m.totalTime) || Number.isFinite(m.totalTokens)) {
       md += '#### Métriques\n\n';
       md += '| Métrique | Valeur |\n';
       md += '|----------|--------|\n';
-      md += '| Tokens générés | ' + m.totalTokens + ' |\n';
-      md += '| Tokens / seconde | ' + m.tokensPerSec + ' |\n';
-      md += '| Temps 1er token (TTFT) | ' + (m.ttft !== null ? m.ttft + ' ms' : 'N/A') + ' |\n';
-      md += '| Temps total | ' + (m.totalTime/1000).toFixed(2) + ' s |\n';
+      md += '| Tokens générés | ' + (m.totalTokens ?? 'N/A') + ' |\n';
+      md += '| Tokens / seconde | ' + (m.tokensPerSec ?? 'N/A') + ' |\n';
+      md += '| Temps 1er token (TTFT) | ' + (Number.isFinite(m.ttft) ? m.ttft + ' ms' : 'N/A') + ' |\n';
+      md += '| Temps total | ' + (Number.isFinite(m.totalTime) ? (m.totalTime/1000).toFixed(2) + ' s' : 'N/A') + ' |\n';
       md += '| Température | ' + m.temperature + ' |\n';
       md += '| Phase | ' + (r.phase || 'Historique non standardisé') + ' |\n';
       md += '| Chargement / cache | ' + (r.protocol?.loadState || 'unknown') + ' / ' + cacheDescription(r.protocol?.cacheState || 'unknown') + ' |\n';
@@ -367,7 +373,7 @@ function buildMarkdownReport(results, now, communityExport) {
         md += '| ' + markdownCell(item[0]) + ' | ' + resourceValue(item[1]) + ' |\n';
         md += '| Source ' + markdownCell(item[0]) + ' | ' + markdownCell(item[1]?.source || 'N/A') + ' |\n';
       });
-      if (r.memory?.resources) md += '\nSwap et E/S : système entier. Le pic MLX est un événement des logs Ollama dont l’attribution au modèle est non vérifiée. Aucune vitesse maximale SSD n’est mesurée.\n';
+      if (r.memory?.resources) md += '\nSwap occupé et E/S : système entier. Le volume de swap occupé et les échanges pendant le test sont distincts ; ils ne démontrent ni l’attribution au modèle ni la cause d’un ralentissement. Le pic MLX est un événement des logs Ollama dont l’attribution au modèle est non vérifiée. Aucune vitesse maximale SSD n’est mesurée.\n';
       md += '\n';
       md += '#### Prompt\n\n';
       md += '```\n' + r.promptText + '\n```\n\n';

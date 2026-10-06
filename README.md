@@ -2,7 +2,7 @@
 
 Benchmarkez vos modèles locaux ou vos API, conservez les campagnes dans votre navigateur et comparez leurs performances sur votre machine.
 
-**Interface v0.12.0 · protocole de mesure 0.09 · export communautaire 2.2.0 (anciens rapports 2.0.0/2.1.0 acceptés).** Documentation vérifiée le 6 octobre 2026. [Historique des versions et changements](CHANGELOG.md). Ces versions désignent des éléments différents ; la version 1.2.0 de `package.json` concerne le backend.
+**Interface v0.12.1 · protocole de mesure 0.09 · export communautaire 2.2.0 (anciens rapports 2.0.0/2.1.0 acceptés).** Documentation vérifiée le 6 octobre 2026. [Historique des versions et changements](CHANGELOG.md). Ces versions désignent des éléments différents ; la version 1.2.0 de `package.json` concerne le backend.
 
 Fonctions actuelles : interface Simple/Pro et profils nommés de campagne, campagnes automatiques multi-modèles Ollama avec exports locaux classés, chauffe séparée, contexte Auto, identification Dense/MoE lorsqu’elle est disponible, inventaire Apple Silicon, suivi RSS/swap/MLX, exports Markdown/JSON, statistiques interactives, batterie de capacités agentiques et assistant d’analyse au choix. Les bulles **!** expliquent les réglages et mesures au clic, au clavier ou sur mobile.
 
@@ -281,3 +281,10 @@ En téléchargeant ou en utilisant LLM Benchmarker, vous reconnaissez avoir pris
 Les tests, historiques et clés API sauvegardées pour les benchmarks sont conservés dans le navigateur et peuvent être accessibles en clair. Le stockage local ne garantit pas leur sauvegarde. Vérifiez les exports avant partage ; avec une API externe, les données nécessaires aux requêtes sont transmises au fournisseur choisi.
 
 Le logiciel est proposé gratuitement sous [licence Apache 2.0](LICENSE), avec les conditions de garantie et de responsabilité qu’elle prévoit.
+
+
+### Lire les verdicts et les mesures partielles
+
+Un objectif agentique atteint ne signifie pas que tous les critères sont respectés. Une exécution peut terminer avec une conformité échouée, ou être arrêtée par un budget après production du fichier attendu. Les rapports distinguent exécution, objectif et conformité ; ils conservent les mesures disponibles sur les épreuves arrêtées. Le titre de chaque test précède désormais ses verdicts et sa version.
+
+Le swap occupé concerne toute la machine ; les deltas de lecture/écriture indiquent séparément les échanges pendant la mesure. Ces données ne prouvent ni que le modèle en est seul responsable, ni qu’il explique un ralentissement. Les budgets et évaluateurs actuels restent inchangés. La piste des tests granulaires de contexte et capacités, avec bornes manuelles/automatiques, est consignée dans [la roadmap](innovation.md) et n’est pas encore implémentée.

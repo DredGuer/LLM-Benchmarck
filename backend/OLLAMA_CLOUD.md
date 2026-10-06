@@ -1,4 +1,4 @@
-# Ollama cloud et contextes locaux — interface 0.12.0
+# Ollama cloud et contextes locaux — interface 0.12.1
 
 ## Tester un modèle cloud
 

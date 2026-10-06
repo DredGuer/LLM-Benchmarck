@@ -31,7 +31,7 @@ function scopeFor(model='gemma4:cloud',controlled=true){
   for(const r of s.state.results){assert.equal(r.executionOutcome,'completed');assert(!r.memory);assert.equal(r.metrics.contextRequestedTokens,null);assert.equal(r.metrics.contextObservedTokens,null);assert.equal(r.protocol.loadState,'unknown');assert.equal(r.protocol.cacheState,'unknown');assert(!r.protocol.campaignId);assert(r.provenance.attribution.startsWith('remote-inference:'));}
   assert.equal(await s.observeLoadedModel(model),'unknown');assert.equal(await s.loadedModelSnapshot(model),null);assert.equal(await s.unloadOllamaModel(model),'remote');
   const report=JSON.parse(JSON.stringify(s.buildCommunityV2(s.state.results,new Date().toISOString())));validateReport(report);
-  assert.equal(report.producer.version,'0.12.0');assert.equal(report.machines.length,2);assert(report.tests.every(t=>t.participatingNodeIds[0]==='inference-unknown'&&!t.resourceSummaries.length&&!t.resourceSamples.length));
+  assert.equal(report.producer.version,'0.12.1');assert.equal(report.machines.length,2);assert(report.tests.every(t=>t.participatingNodeIds[0]==='inference-unknown'&&!t.resourceSummaries.length&&!t.resourceSamples.length));
   assert(!JSON.stringify(report).includes('private.example'));assert(!JSON.stringify(report).includes('SECRET'));
   const dataset=s.analysisDataset(s.state.results);assert.equal(dataset[0].hardware.status,'unknown');assert(dataset[0].provenance.attribution.startsWith('remote-inference:'));
   const stats=s.buildStatistics([{results:s.state.results}]);assert(stats.length);assert.equal(stats.reduce((n,g)=>n+g.points.length,0),3);

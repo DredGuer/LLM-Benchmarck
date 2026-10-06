@@ -6,7 +6,7 @@ Historique des changements de LLM Benchmarker. Les dates correspondent aux inté
 
 | Élément | Version | Référence |
 |---|---|---|
-| Application / interface / producteur des exports | **0.12.0** | `js/core/version.js` |
+| Application / interface / producteur des exports | **0.12.1** | `js/core/version.js` |
 | Backend Node | 1.2.0 | `package.json` |
 | Protocole de génération | 0.09 | `js/core/benchmark.js` |
 | Batterie agentique | 2.0.1 | `backend/agentic-suite.js` |
@@ -15,6 +15,15 @@ Historique des changements de LLM Benchmarker. Les dates correspondent aux inté
 | Inventaire Apple | 1.0.0 | `backend/apple-inventory.js` |
 
 Ces numéros désignent des composants différents. Les résultats historiques et exemples synthétiques conservent leur version d’origine. Le suffixe des URL de scripts sert à invalider le cache ; il ne désigne pas nécessairement la version de l’application.
+
+## [0.12.1] — 2026-10-06
+
+- Markdown : titre de chaque test avant ses verdicts, évaluateur et version ; suppression de l’association visuelle au test précédent.
+- Verdicts : une tâche terminée mais non conforme n’est plus présentée comme une erreur technique. Exécution, objectif atteint, conformité et motif d’arrêt restent distincts.
+- Les épreuves arrêtées conservent leurs métriques disponibles, leurs évaluations et artefacts ; les timings absents ne deviennent pas zéro. La bulle swap et les rapports distinguent occupation et échanges système sans attribuer automatiquement un ralentissement au modèle.
+- Roadmap : conception des balayages de contexte à bornes/pas/liste manuels ou automatiques, distinction fenêtre allouée/longueur réelle du prompt, budgets, arrêt, répétitions, exports et sous-épreuves agentiques. Non implémenté ; batterie stricte et historique inchangés.
+- Application, caches et producteur d’export 0.12.1 ; backend, budgets, protocoles et schémas inchangés. README et documentation technique actualisés.
+- Validation : 19 suites passent ; régressions sur ordre des sections Markdown, non-conformité, arrêt après objectif atteint, métriques partielles et provenance historique. DOM/inférence simulés ; pas de nouvelle validation visuelle ou inférence réelle.
 
 ## [0.12.0] — 2026-10-06
 
