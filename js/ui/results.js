@@ -122,7 +122,7 @@ function buildCommunityExport(results, generatedAt) {
   function number(value) { return typeof value === 'number' && Number.isFinite(value) ? value : null; }
   return {
     schema: 'llm-benchmarker.community', schemaVersion: '1.0.0',
-    appVersion: '0.06', generatedAt: generatedAt,
+    appVersion: typeof LLMB_VERSION === 'string' ? LLMB_VERSION : 'unknown', generatedAt: generatedAt,
     tests: results.map(function(r) {
       var m = r.metrics || {}, memory = r.memory || {}, loaded = memory.loadedModel || {}, env = r.env || {};
       return {
@@ -256,7 +256,7 @@ function exportMarkdown() {
   var env = state.results[0]?.env || {};
   
   var md = '# 📊 Rapport de Benchmark LLM\n\n';
-  md += '> Généré le ' + dateStr + ' à ' + timeStr + ' par **LLM Benchmarker v0.06**\n\n';
+  md += '> Généré le ' + dateStr + ' à ' + timeStr + ' par **LLM Benchmarker v' + (typeof LLMB_VERSION === 'string' ? LLMB_VERSION : 'unknown') + '**\n\n';
   md += '---\n\n';
   md += '## 💻 Environnement de test\n\n';
   md += '| Paramètre | Valeur |\n';
@@ -307,8 +307,10 @@ function exportMarkdown() {
   }
   md += '\nLe débit moyen inclut toute la durée du test. La mémoire échantillonnée dépend de sa source (RSS cumulée ou tas JS navigateur). La taille du modèle déclarée par Ollama est distincte du pic RAM ; ne pas additionner size et size_vram sur mémoire unifiée. N/A signifie inconnu.\n';
   md += '\n## Données structurées pour import communautaire\n\n';
-  md += 'Schéma llm-benchmarker.community, version 2.0.0 (bundle de rapports si plusieurs runners/inventaires). Bloc limité aux paramètres, mesures et environnement sélectionné ; sans clés API, logs, prompts ni réponses. Le reste du rapport contient les prompts et réponses : vérifier avant partage.\n\n';
-  md += '\x60\x60\x60json\n' + JSON.stringify(buildCommunityV2(state.results, now.toISOString()), null, 2).replace(/\x60/g, '\\u0060') + '\n\x60\x60\x60\n';
+  var communityExport = buildCommunityV2(state.results, now.toISOString());
+  var schemaDescription = communityExport.schema === 'llm-benchmarker.community' ? 'Schéma llm-benchmarker.community, version ' + communityExport.schemaVersion : 'Bundle ' + communityExport.schema + ', version ' + communityExport.schemaVersion + ' ; versions des rapports : ' + Array.from(new Set(communityExport.reports.map(function(report) { return report.schemaVersion; }))).join(', ');
+  md += schemaDescription + '. Bloc limité aux paramètres, mesures et environnement sélectionné ; sans clés API, logs, prompts ni réponses. Le reste du rapport contient les prompts et réponses : vérifier avant partage.\n\n';
+  md += '\x60\x60\x60json\n' + JSON.stringify(communityExport, null, 2).replace(/\x60/g, '\\u0060') + '\n\x60\x60\x60\n';
   md += '\n---\n\n';
   md += '## 🔍 Détail des tests\n\n';
   
@@ -369,7 +371,7 @@ function exportMarkdown() {
     md += '---\n\n';
   }
   
-  md += '*Rapport généré automatiquement par LLM Benchmarker v0.06*\n';
+  md += '*Rapport généré automatiquement par LLM Benchmarker v' + (typeof LLMB_VERSION === 'string' ? LLMB_VERSION : 'unknown') + '*\n';
   
   var blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
   var url = URL.createObjectURL(blob);

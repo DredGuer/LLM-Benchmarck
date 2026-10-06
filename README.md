@@ -2,7 +2,7 @@
 
 Benchmarkez vos modèles locaux ou vos API, conservez les campagnes dans votre navigateur et comparez leurs performances sur votre machine.
 
-**Interface v0.06 · protocole de mesure 0.08 · export communautaire v2 (2.1 pour les nouvelles épreuves agentiques).** Documentation vérifiée le 5 octobre 2026. Ces versions désignent des éléments différents ; la version 1.0.0 de `package.json` concerne le backend.
+**Interface v0.07 · protocole de mesure 0.08 · export communautaire v2 (2.1 pour les nouvelles épreuves agentiques).** Documentation vérifiée le 6 octobre 2026. [Historique des versions et changements](CHANGELOG.md). Ces versions désignent des éléments différents ; la version 1.0.0 de `package.json` concerne le backend.
 
 Fonctions actuelles : chauffe séparée, contexte Auto, identification Dense/MoE lorsqu’elle est disponible, inventaire Apple Silicon, suivi RSS/swap/MLX, exports Markdown/JSON, statistiques interactives, batterie de capacités agentiques et assistant d’analyse au choix. Les bulles **!** expliquent les réglages et mesures au clic, au clavier ou sur mobile.
 
@@ -170,7 +170,7 @@ Les consignes demandent une réponse courte, distinguant constats et hypothèses
 
 Le nom du JSON inclut le modèle, par exemple `LLMB-hf.co-empero-ai-Qwen-Q4_K_M-community-v2-DATE.json`. Les caractères incompatibles sont remplacés. Pour plusieurs modèles, le nom reprend le premier et le nombre des autres ; le contenu reste la référence complète.
 
-Un rapport homogène utilise le schéma `llm-benchmarker.community` 2.0.0. Des ensembles hétérogènes de runner/version/inventaire produisent un bundle 1.0.0 contenant plusieurs rapports v2. Les anciens historiques sont exportables avec leurs données manquantes explicitement inconnues.
+Un rapport homogène utilise le schéma `llm-benchmarker.community` 2.0.0, ou 2.1.0 lorsqu’il contient les nouvelles épreuves agentiques. Des ensembles hétérogènes de runner/version/inventaire produisent un bundle 1.0.0 contenant plusieurs rapports v2. Les anciens historiques sont exportables avec leurs données manquantes explicitement inconnues.
 
 Le futur site et l’envoi automatique ne sont pas implémentés. Voir [le contrat d’export](schemas/README.md).
 

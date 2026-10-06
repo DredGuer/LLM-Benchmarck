@@ -55,7 +55,7 @@ function buildCommunityV2(results, generatedAt) {
     var report = {
       schema: 'llm-benchmarker.community', schemaVersion: items.some(r=>r.agentic?.scenario) ? '2.1.0' : '2.0.0',
       reportId: crypto.randomUUID(), generatedAt: generatedAt,
-      producer: { name: 'LLM Benchmarker', version: '0.06' }, synthetic: false,
+      producer: { name: 'LLM Benchmarker', version: typeof LLMB_VERSION === 'string' ? LLMB_VERSION : 'unknown' }, synthetic: false,
       privacy: { profile: 'community-redacted', rawPromptsIncluded: false, rawResponsesIncluded: false, rawToolArgumentsIncluded: false },
       machines: machines,
       execution: { mode: 'single-machine', runner: { name: runner, version: first.runnerVersion || null, engine: null, backend: null },
@@ -133,7 +133,7 @@ function buildCommunityV2(results, generatedAt) {
             contextTokens: communityInteger(m.contextObservedTokens), contextSource: m.contextObservedTokens != null ? 'ollama-api-ps:context_length (observed loaded runner)' : null, concurrency: 1,
             thinking: { enabled: typeof m.thinkingEnabled === 'boolean' ? m.thinkingEnabled : null, observed: typeof m.thinkingObserved === 'boolean' ? m.thinkingObserved : null } },
           protocol: { id: r.agentic?.scenario ? 'llmb-agentic-'+r.agentic.scenario.id : r.kind === 'agentic' ? 'llmb-agentic-files' : 'llmb-generation-' + (['conversation','factual','math','code','logic','creative','warmup'].includes(r.promptType) ? r.promptType : 'custom'),
-            version: r.protocol?.version || '0.06', phase: r.phase || 'unknown', promptDigest: r.protocol?.promptDigest || null,
+            version: r.protocol?.version || 'unknown', phase: r.phase || 'unknown', promptDigest: r.protocol?.promptDigest || null,
             warmupRuns: r.protocol?.warmupRuns || 0, loadState: r.protocol?.loadState || 'unknown', cacheState: r.protocol?.cacheState || 'unknown',
             cachePolicy: r.protocol?.cachePolicy || null, repetition: Math.max(1, communityInteger(r.rep) || 1) },
           participatingNodeIds: [inferenceNode],

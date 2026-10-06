@@ -73,3 +73,7 @@ Utiliser des données de démonstration sans secrets, stocker les images dans un
 Pour les tâches agentiques, conserver un scénario versionné, des outils explicitement limités, des budgets et une vérification backend indépendante des déclarations du modèle. Documenter toute évolution des capacités fichiers/réseau/shell. Le taux de réussite inclut les tentatives évaluées en échec ; ne pas mélanger ces essais aux courbes de génération.
 
 Toute nouvelle épreuve doit avoir un ID/version, un objectif sans recette d’appels imposée, un cadre système/protocole documenté et un évaluateur d’état indépendant. Tester au moins réussite, échec, dépendances causales observables et absence d’effet sur un tour tronqué. Ne jamais revendiquer un score officiel de benchmark externe pour les tâches LLMB originales. Les réflexions et appels bruts restent dans le journal local, sans export communautaire.
+
+## Versions et changelog
+
+Chaque modification validée doit actualiser les guides concernés et `CHANGELOG.md` (date, ajouts, corrections, limites et validation). La version de l’application est centralisée dans `js/core/version.js` ; mettre à jour les libellés de secours HTML, les paramètres de cache des scripts modifiés et les guides lors d’une nouvelle version. Les versions du backend (`package.json`), des protocoles, scénarios et schémas restent indépendantes. Ne pas réécrire les versions des résultats historiques ou des fixtures.

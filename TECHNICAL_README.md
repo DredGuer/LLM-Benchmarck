@@ -2,7 +2,7 @@
 
 [Prise en main](README.md) · [Backend](BACKEND_README.md) · [Contrat communautaire](schemas/README.md)
 
-État documenté le 5 octobre 2026 : interface v0.06, protocole de génération 0.08, exports 2.0.0/2.1.0 et bundle 1.0.0. La batterie `agentic-suite-2.0.0` est exécutée ; les fixtures de schéma agentiques/Exo restent synthétiques. Exo n’est pas exécuté.
+État documenté le 6 octobre 2026 : interface v0.07, protocole de génération 0.08, exports 2.0.0/2.1.0 et bundle 1.0.0. La batterie `agentic-suite-2.0.0` est exécutée ; les fixtures de schéma agentiques/Exo restent synthétiques. Exo n’est pas exécuté.
 
 ## Organisation
 
