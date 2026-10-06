@@ -2,7 +2,7 @@
 
 [Prise en main](README.md) · [Backend](BACKEND_README.md) · [Contrat communautaire](schemas/README.md)
 
-État documenté le 6 octobre 2026 : interface v0.08, protocole de génération 0.08, exports 2.0.0/2.1.0 et bundle 1.0.0. La batterie `agentic-suite-2.0.0` est exécutée ; les fixtures de schéma agentiques/Exo restent synthétiques. Exo n’est pas exécuté.
+État documenté le 6 octobre 2026 : interface v0.09.0, protocole de génération 0.09, exports 2.0.0/2.1.0/2.2.0 et bundle 1.0.0. La batterie `agentic-suite-2.0.1` est exécutée ; les fixtures de schéma agentiques/Exo restent synthétiques. Exo n’est pas exécuté.
 
 ## Organisation
 
@@ -85,3 +85,11 @@ Tests : `agentic-harness.test.cjs` (compatibilité v1), `agentic-suite.test.cjs`
 ### Présentation compacte des résultats (0.08)
 
 `js/ui/results.js` affiche quatre métriques principales et regroupe les autres mesures/conditions dans un élément HTML `details` fermé par défaut. Le bilan agentique reste visible ; ses critères et traces ont leur propre volet. `css/styles.css` adapte les quatre colonnes à deux puis une sur petits écrans. Cette présentation ne modifie ni la collecte, ni les statistiques, ni les données exportées.
+
+## Fiabilisation 0.09.0
+
+`version.js` capture la provenance à l’exécution, indépendamment du producteur de l’export. Les résultats ajoutent `executionOutcome` et `quality`, les protocoles contrôlés ajoutent un ID, ordre, contexte demandé et validation. `community-export.js` transforme ces champs par liste autorisée vers le schéma 2.2.0, sans URL, clés, prompts, réponses ou arguments bruts.
+
+`quality.js` définit six cas structurés et leurs évaluateurs déterministes 1.0.0. Une réponse invalide échoue, une réponse tronquée est incomplète ; les autres catégories sont non évaluées. `controlled.js` orchestre deux campagnes existantes avec trois répétitions, chauffe par contexte, température 0 et plafond stable ; les contrôles restent verrouillés, l’arrêt et un contexte non confirmé empêchent la série suivante. Les contextes 8192/16384 sont des valeurs proposées, pas une optimisation matérielle garantie. Les groupes statistiques séparent versions, cas, prompts et conditions ; la justesse reste distincte du débit.
+
+Validation supplémentaire : `node backend/provenance-quality-controlled.test.cjs`. Les tests de campagne et adaptateurs ne remplacent pas les essais sur Ollama/MLX réels.

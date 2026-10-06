@@ -2,7 +2,7 @@
 
 Recherche et intégration : 5 octobre 2026. [Batterie exécutée](AGENTIC_BENCHMARK.md).
 
-La première tâche fichiers démontrait des opérations, mais prescrivait leur ordre et donnait seulement un verdict global. Elle ne distinguait pas suffisamment sélection, format, dépendances, reprise ou dialogue. La batterie 2.0 teste ces comportements avec un message système, des schémas d’outils, des objectifs utilisateur et des états vérifiés indépendamment.
+La première tâche fichiers démontrait des opérations, mais prescrivait leur ordre et donnait seulement un verdict global. Elle ne distinguait pas suffisamment sélection, format, dépendances, reprise ou dialogue. La batterie 2.0.1 teste ces comportements avec un message système, des schémas d’outils, des objectifs utilisateur et des états vérifiés indépendamment.
 
 | Source primaire étudiée | Principe retenu | Application dans LLMB |
 |---|---|---|
@@ -36,3 +36,5 @@ Sur le même Mac, choisir deux modèles compatibles, même quantification/contex
 ## Extensions ultérieures
 
 Ajouter des tâches et variantes versionnées, de nouvelles fixtures et évaluateurs, puis une validation sur machines/modèles réels. Une extension aux shells, au réseau ou à des tâches arbitraires devra avoir une isolation adaptée avant exécution. Exo et l’exécution distribuée restent reportés ; le prochain chantier prioritaire est le site communautaire et l’import d’exports validés.
+
+Depuis la batterie 2.0.1, le contenu de la phrase d’abstention tolère les apostrophes droites/typographiques ; la reproduction exacte reste un critère distinct de conformité. Les anciens résultats 2.0.0 gardent leurs critères et verdicts initiaux. Une fin de conversation sans tous les critères peut être une exécution terminée avec objectif non atteint. Les campagnes contrôlées passent le contexte explicite à tous les tours natifs Ollama.

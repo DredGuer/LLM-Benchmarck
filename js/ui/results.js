@@ -187,6 +187,7 @@ function renderResultCard(result) {
   card.id = 'result-' + result.id;
   
   var isError = !!result.error;
+  var verdict = resultVerdict(result), technicalError = isError && verdict.execution !== 'completed';
   var m = result.metrics || {};
   var ttftStr = Number.isFinite(m.ttft) ? m.ttft + ' ms' : 'N/A';
   var tpsColor = m.tokensPerSec > 30 ? 'highlight-green' : m.tokensPerSec > 10 ? 'highlight-orange' : 'highlight-purple';
@@ -197,12 +198,16 @@ function renderResultCard(result) {
   if (result.completion?.limitReached) html += '<span class="badge badge-orange">⚠️ Limite de tokens atteinte · réponse possiblement tronquée</span>';
   if (result.phase === 'warmup') html += '<span class="badge badge-orange">🔥 Chauffe · hors moyennes</span>';
   html += '<span class="badge badge-blue">' + escapeHtml(result.runner) + '</span>';
-  html += '<span class="badge ' + (isError ? 'badge-red' : 'badge-green') + '">' + (isError ? '❌ Erreur' : '✅ OK') + '</span>';
+  html += '<span class="badge ' + (technicalError ? 'badge-red' : verdict.conformity === false ? 'badge-orange' : 'badge-green') + '">' + (technicalError ? '❌ Exécution interrompue / erreur' : verdict.conformity === false ? '⚠️ Critère non conforme' : verdict.execution === 'completed' ? '✅ Exécution terminée' : 'ℹ️ État ancien / inconnu') + '</span>';
   html += '<span class="badge badge-purple">' + escapeHtml(result.promptTypeName) + '</span>';
   html += '<small style="color:var(--text3);font-size:0.75rem;margin-left:auto;">' + new Date(result.timestamp).toLocaleTimeString('fr-FR') + '</small>';
   html += '</div>';
   html += '<div class="result-card-body">';
-  if (isError) html += '<div style="background:rgba(247,129,102,0.1);border:1px solid rgba(247,129,102,0.3);border-radius:6px;padding:12px;color:var(--accent3);font-size:0.875rem;">⚠️ <strong>Erreur :</strong> ' + escapeHtml(result.error) + '</div>';
+  if (technicalError) html += '<div style="background:rgba(247,129,102,0.1);border:1px solid rgba(247,129,102,0.3);border-radius:6px;padding:12px;color:var(--accent3);font-size:0.875rem;">⚠️ <strong>Erreur :</strong> ' + escapeHtml(result.error) + '</div>';
+  html += '<p>Exécution : <strong>' + escapeHtml(({completed:'terminée',interrupted:'interrompue',failed:'erreur technique',unknown:'état inconnu'})[verdict.execution]) + '</strong>' + (result.kind !== 'agentic' ? ' · Justesse : <strong>' + escapeHtml(({pass:'vérifiée sur cette épreuve',fail:'critères échoués','not-assessed':'non évaluée',incomplete:'non évaluée (réponse incomplète)'})[verdict.quality] || 'non évaluée') + '</strong>' : '') + '</p>';
+  var failedCriteria = result.agentic?.evaluation.criteria?.filter(c => c.passed === false) || result.quality?.criteria?.filter(c => c.passed === false) || [];
+  if (result.protocol?.campaignId && result.protocol.contextValidation !== 'verified') failedCriteria.push({label:'Contexte demandé non confirmé : passe exclue des comparaisons contrôlées'});
+  if (failedCriteria.length) html += '<p class="failed-criteria"><strong>Critères échoués :</strong> ' + failedCriteria.map(c => escapeHtml(c.label)).join(' · ') + '</p>';
   html += '<div class="metrics-grid primary-metrics">';
   html += '<div class="metric-box highlight-orange"><div class="metric-value">' + ttftStr + '</div><div class="metric-label">1er token (TTFT)</div></div>';
   html += '<div class="metric-box ' + tpsColor + '"><div class="metric-value">' + (Number.isFinite(m.tokensPerSec) ? m.tokensPerSec : 'N/A') + '</div><div class="metric-label">Tokens / sec</div></div>';
@@ -220,9 +225,15 @@ function renderResultCard(result) {
     html += '<div class="metric-box"><div class="metric-value">' + resourceValue(item[1]) + '</div><div class="metric-label">' + escapeHtml(item[0]) + '</div></div>';
   });
   html += '</div>';
-  if (result.modelMetadata || m.contextRequestedTokens != null) html += '<p>' + escapeHtml(modelArchitectureText(result.modelMetadata)) + ' · Contexte Auto · runner chargé : ' + (m.contextObservedTokens ?? 'inconnu') + ' tokens · Maximum déclaré : ' + (result.modelMetadata?.contextMaxTokens ?? 'inconnu') + ' tokens</p>';
+  if (result.modelMetadata || m.contextRequestedTokens != null) html += '<p>' + escapeHtml(modelArchitectureText(result.modelMetadata)) + ' · Contexte '+(m.contextMode === 'explicit' ? 'explicite ('+m.contextRequestedTokens+' demandé)' : 'Auto')+' · runner chargé : ' + (m.contextObservedTokens ?? 'inconnu') + ' tokens · Maximum déclaré : ' + (result.modelMetadata?.contextMaxTokens ?? 'inconnu') + ' tokens</p>';
   if (result.memory?.resources) html += '<p>Swap et E/S : système entier. Pic MLX des logs serveur Ollama, attribution au modèle non vérifiée. Activité disque observée, pas vitesse maximale SSD.</p>';
   if (result.protocol) html += '<p>Chargement : ' + escapeHtml(result.protocol.loadState) + ' · Cache : ' + escapeHtml(cacheDescription(result.protocol.cacheState)) + ' · Chauffes préalables : ' + result.protocol.warmupRuns + '</p>';
+  if (result.quality?.taskId) html += '<p>Évaluateur : ' + escapeHtml(result.quality.evaluatorId) + ' v' + escapeHtml(result.quality.evaluatorVersion) + ' · Cas : ' + escapeHtml(result.quality.taskId) + '</p><ul>' + result.quality.criteria.map(c=>'<li>'+(c.passed?'✅ ':'❌ ')+escapeHtml(c.label)+'</li>').join('') + '</ul>';
+  if (result.protocol?.campaignId) html += '<p>Campagne contrôlée · contexte demandé : '+result.protocol.requestedContextTokens+' · vérification : '+escapeHtml(result.protocol.contextValidation)+' · ordre '+result.protocol.contextOrder+' · passe '+result.rep+'/3</p>';
+  html += '<p>Version lors du test : ' + escapeHtml(result.provenance?.applicationVersion || 'inconnue (ancien historique)') + ' · Client : navigateur · Moteur : ' + escapeHtml(result.provenance?.engine || 'non rapporté') + ' · Endpoint : ' + escapeHtml(result.provenance?.inferenceEndpoint || 'inconnu') + '</p>';
+  if (result.memory?.resources?.mlxPeak) { var mlxEvidence = result.memory.resources.mlxPeak;
+    html += '<p>Événement du pic MLX : ' + escapeHtml(mlxEvidence.observedAt || 'inconnu') + ' · fraîcheur : ' + escapeHtml(mlxEvidence.freshness || 'inconnue') + ' · attribution au modèle non vérifiée' + (mlxEvidence.overlappingTelemetry ? ' · télémétries simultanées' : '') + '</p>';
+  }
   html += '</details>';
   if (!isError && result.kind !== 'agentic') {
     html += '<div class="prompt-echo"><strong>Prompt :</strong> ' + escapeHtml((result.promptText || '').substring(0, 180)) + ((result.promptText || '').length > 180 ? '…' : '') + '</div>';
@@ -291,7 +302,7 @@ function exportMarkdown() {
       memory.average != null ? memory.average : 'N/A',
       loaded && Number.isFinite(loaded.sizeBytes) ? (loaded.sizeBytes / Math.pow(1024, 3)).toFixed(2) : 'N/A',
       loaded ? loaded.source : 'N/A', modelArchitectureText(r.modelMetadata),
-      m.contextObservedTokens ?? 'Inconnu / non applicable', r.modelMetadata?.contextMaxTokens ?? 'N/A', r.error ? 'Erreur' : 'OK'
+      m.contextObservedTokens ?? 'Inconnu / non applicable', r.modelMetadata?.contextMaxTokens ?? 'N/A', r.executionOutcome === 'completed' && r.agentic?.evaluation.taskSuccess === false ? 'Terminée · non conforme' : r.error ? 'Erreur / interruption' : 'Terminée · justesse ' + (r.quality?.status || 'non évaluée')
     ];
     md += '| ' + cells.map(markdownCell).join(' | ') + ' |\n';
   }
@@ -307,6 +318,9 @@ function exportMarkdown() {
   for (var i = 0; i < state.results.length; i++) {
     var r = state.results[i];
     var m = r.metrics;
+    md += '**Exécution :** ' + markdownCell(resultVerdict(r).execution) + ' · **Justesse :** ' + markdownCell(r.quality?.status || 'non évaluée') + '\n\n';
+    if (r.quality?.taskId) { md += '**Évaluateur :** ' + markdownCell(r.quality.evaluatorId + ' v' + r.quality.evaluatorVersion + ' · ' + r.quality.taskId) + '\n\n'; r.quality.criteria.forEach(c=>{md += '- ' + markdownCell(c.label) + ' : ' + (c.passed ? 'réussi' : 'échoué') + '\n';}); md += '\n'; }
+    md += '**Version lors du test :** ' + markdownCell(r.provenance?.applicationVersion || 'inconnue (ancien historique)') + '\n\n';
     md += '### Test ' + (i+1) + ' — ' + r.promptEmoji + ' ' + r.promptTypeName + '\n\n';
     md += '**Modèle :** `'+ r.model +'` | **Runner :** ' + r.runner + ' | **Date :** ' + new Date(r.timestamp).toLocaleString('fr-FR') + '\n\n';
     

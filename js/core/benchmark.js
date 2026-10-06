@@ -3,6 +3,7 @@
  */
 
 async function runBenchmark() {
+  if (typeof controlledEnabled === 'function' && controlledEnabled() && !state.controlledActive) return runControlledCampaign();
   if (typeof agenticEnabled === 'function' && agenticEnabled()) return runAgenticBenchmark();
   if (state.isRunning || state.analysisRunning) return;
   if (!state.selectedPrompts.size) { showToast('Sélectionnez un type de prompt', 'error'); return; }
@@ -14,13 +15,13 @@ async function runBenchmark() {
   state.unsavedSession = null;
   var runner = state.runner, sessionResults = [], warmupRuns = 0, completedTests = 0;
   var runBtn = document.getElementById('runBtn'), progressSection = document.getElementById('progressSection');
-  var selectedTypes = PROMPT_TYPES.filter(pt => state.selectedPrompts.has(pt.id));
+  var selectedTypes = typeof campaignPromptTypes === 'function' ? campaignPromptTypes() : PROMPT_TYPES.filter(pt => state.selectedPrompts.has(pt.id));
   var totalTests = selectedTypes.length * repetitions;
   var activeType = selectedTypes[0], activePrompt = '', activeRep = 1, activePhase = 'measurement';
   state.isRunning = true; resetCampaignResults(); switchTab('results'); lockCampaignControls(true);
   runBtn.disabled = true; runBtn.innerHTML = '<div class="spinner"></div> Chargement / chauffe…';
   progressSection.style.display = 'block'; skipToNextFlag = false; retryCurrentFlag = false;
-  function remember(result) { sessionResults.push(result); state.results.unshift(result); renderResultCard(result); }
+  function remember(result) { if (typeof recordControlledResult === 'function') recordControlledResult(result); sessionResults.push(result); state.results.unshift(result); renderResultCard(result); }
   async function warmup() {
     activeType = { id: 'warmup', name: 'Chargement / chauffe', emoji: '🔥' };
     activePrompt = 'Réponds uniquement par OK.'; activeRep = 1; activePhase = 'warmup';
@@ -31,6 +32,7 @@ async function runBenchmark() {
       { warmup: true, loadState: loadState, warmupRuns: warmupRuns });
     if (!result.metrics.totalTokens && !result.response) throw new Error('Le modèle n’a généré aucun token pendant la chauffe.');
     remember(result); warmupRuns++;
+    if (state.controlledActive && state.controlledStop) throw new Error('Le contexte demandé n’est pas confirmé après la chauffe.');
     if (runner === 'ollama' && await observeLoadedModel(model, currentAbortController.signal) === 'cold')
       throw new Error('Le modèle ne reste pas chargé après la chauffe.');
   }
@@ -44,7 +46,9 @@ async function runBenchmark() {
     }
     if (RUNNERS[runner].type === 'local') await warmup();
     for (var i = 0; i < selectedTypes.length; i++) {
+      if (state.controlledStop && state.controlledActive) break;
       for (var rep = 1; rep <= repetitions; rep++) {
+        if (state.controlledStop && state.controlledActive) break;
         activeType = selectedTypes[i]; activeRep = rep; activePhase = 'measurement';
         activePrompt = activeType.id === 'custom' ? (document.getElementById('customPromptText').value.trim() || 'Dis bonjour.') : activeType.prompt;
         skipToNextFlag = false; retryCurrentFlag = false;
@@ -75,6 +79,7 @@ async function runBenchmark() {
     setProgress(100, 'Terminé : chauffe séparée et ' + completedTests + ' mesure(s)');
     showToast('Campagne terminée : ' + completedTests + ' mesure(s)', 'success');
   } catch (error) {
+    if (state.controlledActive) state.controlledStop = true;
     var failed = buildErrorResult(model, activeType, error.message, activeRep);
     failed.phase = activePhase; failed.promptText = activePrompt;
     remember(failed); showToast(error.message, 'error');
@@ -95,6 +100,7 @@ async function runBenchmark() {
 async function executeTest(model, promptType, promptText, rep, signal, protocol) {
   // Use advanced config functions to get settings based on mode
   protocol = protocol || {};
+  var provenance = typeof captureTestProvenance === 'function' ? captureTestProvenance() : null;
   var temperature = protocol.warmup ? 0 : getTemperatureForPromptType(promptType.id);
   var maxTokens = protocol.warmup ? 32 : getMaxTokens();
   var fingerprint = await promptFingerprint(promptText);
@@ -113,7 +119,7 @@ async function executeTest(model, promptType, promptText, rep, signal, protocol)
   resetLiveOutput(); 
   showLiveSections(true); 
   setControlButtons(true);
-  if (typeof agenticEnabled === 'function' && agenticEnabled()) {
+  if (state.controlledActive || (typeof agenticEnabled === 'function' && agenticEnabled())) {
     document.getElementById('nextBtn').disabled = true; document.getElementById('retryBtn').disabled = true;
   }
   addDebugLog('Démarrage du test: ' + model + ' - ' + promptType.name, 'info');
@@ -282,14 +288,17 @@ async function executeTest(model, promptType, promptText, rep, signal, protocol)
   // Build result object
   var result = {
     id: crypto.randomUUID(),
+    provenance: provenance,
+    executionOutcome: 'completed',
     timestamp: testFinishedAt,
     startedAt: testStartedAt,
     finishedAt: testFinishedAt,
     phase: protocol.warmup ? 'warmup' : 'measurement',
-    protocol: { version: '0.08', phase: protocol.warmup ? 'warmup' : 'measurement', promptDigest: fingerprint,
+    protocol: { version: '0.09', phase: protocol.warmup ? 'warmup' : 'measurement', promptDigest: fingerprint,
       warmupRuns: protocol.warmupRuns || 0, loadState: protocol.loadState || 'unknown',
       cacheState: cachedTokens === null ? 'unknown' : cachedTokens > 0 ? 'present-coverage-unknown' : 'cold', cachePolicy: 'runner-managed; persistent model; no forced cache reset' },
     completion: classifyCompletion(finishReason, tokensGenerated, maxTokens, tokenCountKind),
+    quality: typeof evaluateQuality === 'function' && !protocol.warmup ? evaluateQuality(promptType.qualityTask, fullText, classifyCompletion(finishReason, tokensGenerated, maxTokens, tokenCountKind)) : undefined,
     runnerVersion: state.runnerVersion || null,
     model: model,
     modelMetadata: modelMetadata,
@@ -318,7 +327,7 @@ async function executeTest(model, promptType, promptText, rep, signal, protocol)
       temperature: temperature,
       maxTokens: maxTokens,
       contextRequestedTokens: contextTokens,
-      contextMode: 'auto',
+      contextMode: contextTokens === null ? 'auto' : 'explicit',
       contextObservedTokens: memoryStats?.loadedModel?.contextTokens ?? null
     },
     env: JSON.parse(JSON.stringify(state.env)),
@@ -355,6 +364,7 @@ function buildErrorResult(model, promptType, errorMsg, rep) {
   return {
     id: crypto.randomUUID(),
     timestamp: new Date().toISOString(),
+    provenance: typeof captureTestProvenance === 'function' ? captureTestProvenance() : null,
     model: model,
     runner: RUNNERS[state.runner] ? RUNNERS[state.runner].name : state.runner,
     promptType: promptType.id,
@@ -362,7 +372,9 @@ function buildErrorResult(model, promptType, errorMsg, rep) {
     promptEmoji: promptType.emoji,
     promptText: promptType.prompt || '',
     response: '',
-    metrics: { totalTokens: 0, tokensPerSec: 0, ttft: null, totalTime: 0 },
+    executionOutcome: /annul|interromp/i.test(errorMsg) ? 'interrupted' : 'failed',
+    quality: typeof evaluateQuality === 'function' ? evaluateQuality(promptType.qualityTask, '', {limitReached:true}) : undefined,
+    metrics: { totalTokens: null, tokensPerSec: null, ttft: null, totalTime: null },
     env: state.env,
     rep: rep,
     error: errorMsg

@@ -2,7 +2,7 @@
 
 Benchmarkez vos modèles locaux ou vos API, conservez les campagnes dans votre navigateur et comparez leurs performances sur votre machine.
 
-**Interface v0.08 · protocole de mesure 0.08 · export communautaire v2 (2.1 pour les nouvelles épreuves agentiques).** Documentation vérifiée le 6 octobre 2026. [Historique des versions et changements](CHANGELOG.md). Ces versions désignent des éléments différents ; la version 1.0.0 de `package.json` concerne le backend.
+**Interface v0.09.0 · protocole de mesure 0.09 · export communautaire 2.2.0 (anciens rapports 2.0.0/2.1.0 acceptés).** Documentation vérifiée le 6 octobre 2026. [Historique des versions et changements](CHANGELOG.md). Ces versions désignent des éléments différents ; la version 1.1.0 de `package.json` concerne le backend.
 
 Fonctions actuelles : chauffe séparée, contexte Auto, identification Dense/MoE lorsqu’elle est disponible, inventaire Apple Silicon, suivi RSS/swap/MLX, exports Markdown/JSON, statistiques interactives, batterie de capacités agentiques et assistant d’analyse au choix. Les bulles **!** expliquent les réglages et mesures au clic, au clavier ou sur mobile.
 
@@ -102,7 +102,7 @@ Le suivi en direct montre attente, messages, appels, arguments, retours et véri
 
 Gardez **1 répétition** pour vérifier le parcours, puis **3** aux mêmes réglages pour observer la variabilité. Par épreuve : **12 tours modèle, 24 appels, 4 minutes**. **Tokens max** est le budget cumulé de sortie de l’épreuve. Les seuls fichiers accessibles aux outils sont des entrées synthétiques et des sorties temporaires autorisées ; aucun shell ou document personnel. Le dialogue de clarification/changement d’objectif est scripté.
 
-[Guide détaillé, scores et isolation](backend/AGENTIC_BENCHMARK.md) · [Recherche et limites de la méthodologie](backend/AGENTIC_METHODOLOGY.md). Ces tâches originales LLMB ne sont pas des scores officiels BFCL ou τ-bench et ne prouvent pas une autonomie générale. L’export communautaire **2.1.0** ajoute scénarios et critères, sans réflexion, arguments bruts ou contenu des fichiers ; les rapports 2.0.0 restent acceptés. Aucun envoi automatique n’est activé. **Exo reste reporté.**
+[Guide détaillé, scores et isolation](backend/AGENTIC_BENCHMARK.md) · [Recherche et limites de la méthodologie](backend/AGENTIC_METHODOLOGY.md). Ces tâches originales LLMB ne sont pas des scores officiels BFCL ou τ-bench et ne prouvent pas une autonomie générale. L’export communautaire **2.2.0** conserve scénarios et critères, et ajoute provenance, verdicts, justesse et contextes contrôlés, sans réflexion, arguments bruts ou contenu des fichiers ; les rapports 2.0.0 restent acceptés. Aucun envoi automatique n’est activé. **Exo reste reporté.**
 
 ## Lire les résultats
 
@@ -131,6 +131,22 @@ L’inventaire Apple indique CPU exact, cœurs physiques/logiques et performance
 Chaque carte affiche quatre mesures : **TTFT**, **tokens/s sur la durée totale**, **pic de mémoire échantillonnée** et **temps total**. La mémoire conserve son libellé de source (RSS cumulée ou tas du navigateur) ; ce n’est pas une garantie de pic RAM complet. Une valeur inconnue reste `N/A`.
 
 Dépliez **Toutes les métriques et conditions** pour les tokens générés, réponse finale, mémoire moyenne, allocation déclarée, MLX, swap, E/S, contexte et état de chargement/cache. Les critères, appels, traces et artefacts agentiques sont dans **Critères, outils et détails agentiques** ; l’objectif atteint et la conformité restent visibles. Ces volets sont fermés au départ et utilisables au clavier. Les exports et l’historique conservent les données complètes.
+
+## Fiabilisation : provenance, verdicts et justesse
+
+La **version au moment du test** est enregistrée par passe et distincte de la version de l’application qui exporte. Un ancien résultat sans provenance reste inconnu. Le client est le navigateur ; le moteur/backend d’inférence reste non rapporté lorsqu’aucune source ne le fournit. Une URL compatible n’est pas une preuve d’un moteur particulier.
+
+Les cartes distinguent **exécution terminée/interrompue/erreur**, **objectif atteint**, **conformité agentique** et **justesse évaluée**. Les critères échoués apparaissent immédiatement. La phrase d’abstention distingue contenu avec apostrophes équivalentes et reproduction typographique exacte ; les anciennes évaluations ne sont pas recalculées.
+
+Dans **Justesse et campagnes contrôlées**, activer les cas de justesse remplace les catégories Mathématiques/Logique/Code sélectionnées par **deux cas structurés par catégorie**, avec évaluateurs `llmb-duration`, `llmb-transport`, `llmb-fibonacci` version 1.0.0. Les vérifications portent sur valeurs numériques, conversions, ordre transport/traitement et sorties algorithmiques. JSON invalide et critères faux sont distingués par le détail des vérifications. Les prompts libres restent non évalués. **Aucun code généré n’est exécuté** ; Fibonacci teste ses sorties, pas la qualité d’une implémentation. Ce sont des tâches synthétiques originales, publiques, pas une mesure générale de qualité.
+
+## Campagne contrôlée : trois répétitions et deux contextes
+
+Disponible avec **Ollama**. Activer **Campagne contrôlée**, choisir deux contextes distincts (8 192 et 16 384 tokens proposés), puis lancer normalement. Les catégories et les épreuves agentiques sélectionnées sont exécutées **trois fois à chaque contexte**, avec température **0** et le même plafond de sortie capturé au lancement. Une chauffe est enregistrée à chaque contexte, hors moyennes ; elle ne signifie pas un chargement à froid garanti. Un ID relie les deux séries dans l’export ; elles sont sauvegardées séparément dans l’historique et restent ensemble à l’écran. L’ordre A/B est alterné entre campagnes du navigateur, sans prétendre à une randomisation.
+
+Le contexte demandé est transmis par `num_ctx` et comparé au contexte chargé rapporté par Ollama. Si la valeur n’est pas confirmée ou diffère, la campagne s’arrête et la passe est conservée avec son statut de vérification ; elle est exclue des comparaisons contrôlées. Le cache reste géré par le runner, sans remise à zéro garantie. Le swap et les activités des autres applications peuvent varier entre séries. Ne pas utiliser les boutons de saut/reprise dans cette campagne ; un arrêt interrompt les contextes restants.
+
+Exemple avec les trois catégories évaluées et six épreuves agentiques : `(6 cas + 6 épreuves) × 3 passes × 2 contextes = 72 mesures`, plus les chauffes. Prévoir le temps nécessaire. L’exécution réelle doit être validée sur votre machine ; les tests automatisés utilisent des réponses simulées.
 
 ## Historique et statistiques
 
@@ -176,7 +192,7 @@ Les consignes demandent une réponse courte, distinguant constats et hypothèses
 
 Le nom du JSON inclut le modèle, par exemple `LLMB-hf.co-empero-ai-Qwen-Q4_K_M-community-v2-DATE.json`. Les caractères incompatibles sont remplacés. Pour plusieurs modèles, le nom reprend le premier et le nombre des autres ; le contenu reste la référence complète.
 
-Un rapport homogène utilise le schéma `llm-benchmarker.community` 2.0.0, ou 2.1.0 lorsqu’il contient les nouvelles épreuves agentiques. Des ensembles hétérogènes de runner/version/inventaire produisent un bundle 1.0.0 contenant plusieurs rapports v2. Les anciens historiques sont exportables avec leurs données manquantes explicitement inconnues.
+Un rapport récent utilise le schéma `llm-benchmarker.community` 2.2.0. Les historiques sans les nouveaux champs gardent un rapport 2.0.0 ou 2.1.0 selon leurs données. Des ensembles hétérogènes de runner/version/inventaire produisent un bundle 1.0.0 contenant plusieurs rapports v2. Les anciens historiques sont exportables avec leurs données manquantes explicitement inconnues.
 
 Le futur site et l’envoi automatique ne sont pas implémentés. Voir [le contrat d’export](schemas/README.md).
 

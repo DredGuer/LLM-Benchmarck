@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>LLM Benchmarker Local</title>
-  <link rel="stylesheet" href="css/styles.css?v=0.08">
+  <link rel="stylesheet" href="css/styles.css?v=0.09.0">
 
 <style>
 .agentic-panel{overflow-x:auto;min-width:0}.agentic-panel table{width:100%;font-size:.85rem;border-collapse:collapse}.agentic-panel td,.agentic-panel th{padding:8px;text-align:left;border-bottom:1px solid var(--border);vertical-align:top}.agentic-panel pre,#agenticLiveTrace p{overflow-wrap:anywhere}
@@ -26,7 +26,7 @@
 ══════════════════════════════════════════════ -->
 <header class="app-header">
   <span class="logo">⚡ LLM Benchmarker</span>
-  <span class="version" data-app-version>v0.08</span>
+  <span class="version" data-app-version>v0.09.0</span>
   <div class="header-actions">
     <button class="btn btn-ghost btn-sm" onclick="openModal('apiModal')">🔑 Clés API</button>
     <button class="btn btn-ghost btn-sm" onclick="clearAllResults()">🗑 Vider</button>
@@ -207,6 +207,16 @@
       </div>
     </div>
 
+    <details class="card" style="padding:12px;margin-bottom:12px">
+      <summary>Justesse et campagnes contrôlées</summary>
+      <label><input type="checkbox" id="qualityEnabled" onchange="updateCampaignPlan()"> Activer les cas de justesse contrôlée</label>
+      <small>Remplace Mathématiques, Logique et Code sélectionnés par deux cas structurés par catégorie. Vérifie calculs, plans et sorties algorithmiques ; aucun code généré n’est exécuté. Les autres catégories restent non évaluées.</small>
+      <label><input type="checkbox" id="controlledEnabled" onchange="updateCampaignPlan()"> Campagne contrôlée Ollama : 3 répétitions × 2 contextes</label>
+      <label>Premier contexte (tokens)<input type="number" id="controlledContextA" value="8192" min="1024" max="262144" step="1024"></label>
+      <label>Second contexte (tokens)<input type="number" id="controlledContextB" value="16384" min="1024" max="262144" step="1024"></label>
+      <small>Température 0, plafond de sortie fixé au lancement, chauffe séparée à chaque contexte. Cache géré par le runner, sans remise à zéro garantie. L’ordre des contextes est alterné entre campagnes ; tous les contextes observés sont vérifiés.</small>
+    </details>
+
     <!-- LANCER -->
     <p id="campaignPlan" aria-live="polite" style="font-size:.85rem"></p>
     <button class="btn btn-primary btn-lg" id="runBtn" onclick="runBenchmark()">
@@ -357,7 +367,7 @@
         <div class="card-title"><span class="icon">ℹ️</span> À propos de LLM Benchmarker</div>
         <div style="font-size:0.875rem;color:var(--text2);line-height:1.9;">
           <p style="margin-bottom:12px;">
-            <strong style="color:var(--text)">LLM Benchmarker <span data-app-version>v0.08</span></strong> est une maquette fonctionnelle
+            <strong style="color:var(--text)">LLM Benchmarker <span data-app-version>v0.09.0</span></strong> est une maquette fonctionnelle
             permettant d'évaluer les performances de modèles LLM locaux et externes directement depuis le navigateur.
           </p>
           <p style="margin-bottom:12px;"><strong style="color:var(--text)">Runners locaux supportés :</strong><br>
@@ -656,7 +666,7 @@ window.PROMPT_TYPES = [
 ];
 </script>
 
-<script src="js/core/version.js?v=0.08"></script>
+<script src="js/core/version.js?v=0.09.0"></script>
 <script src="js/core/state.js"></script>
 <script src="js/utils/helpers.js?v=agentic2"></script>
 <script src="js/ui/toast.js"></script>
@@ -664,21 +674,23 @@ window.PROMPT_TYPES = [
 <script src="js/ui/tabs.js?v=0.08-reliability1"></script>
 <script src="js/core/storage.js"></script>
 <script src="js/core/environment.js?v=0.06-model-context1"></script>
-<script src="js/core/advancedConfig.js?v=0.08-reliability1"></script>
+<script src="js/core/advancedConfig.js?v=0.09.0"></script>
 <script src="js/core/memory.js?v=0.06-apple-resources1"></script>
-<script src="js/core/runners.js?v=0.06-apple-resources1"></script>
+<script src="js/core/runners.js?v=0.09.0"></script>
 <script src="js/core/prompts.js"></script>
 <script src="js/core/streaming.js"></script>
-<script src="js/core/community-export.js?v=0.08"></script>
-<script src="js/ui/results.js?v=0.08"></script>
-<script src="js/core/protocol.js?v=agentic2"></script>
+<script src="js/core/community-export.js?v=0.09.0"></script>
+<script src="js/ui/results.js?v=0.09.0"></script>
+<script src="js/core/protocol.js?v=0.09.0"></script>
 <script src="js/core/agentic-stream.js?v=agentic2"></script>
-<script src="js/core/agentic.js?v=agentic2"></script>
-<script src="js/core/benchmark.js?v=agentic2"></script>
+<script src="js/core/agentic.js?v=0.09.0"></script>
+<script src="js/core/quality.js?v=0.09.0"></script>
+<script src="js/core/controlled.js?v=0.09.0"></script>
+<script src="js/core/benchmark.js?v=0.09.0"></script>
 <script src="js/core/apiKeys.js"></script>
 <script src="js/core/connectivity.js"></script>
 <script src="js/core/history.js?v=0.08-reliability1"></script>
-<script src="js/ui/statistics.js?v=agentic2"></script>
+<script src="js/ui/statistics.js?v=0.09.0"></script>
 
 <button class="btn btn-primary" onclick="toggleAnalysis()" style="position:fixed;bottom:20px;right:20px;z-index:1000">💬 Analyser les résultats</button>
 <section id="analysisPanel" hidden style="position:fixed;bottom:76px;right:16px;width:min(460px,calc(100vw - 32px));max-height:80vh;overflow:auto;background:var(--surface,#161b22);color:var(--text,#e6edf3);border:1px solid var(--border,#30363d);border-radius:12px;padding:16px;z-index:1001;box-shadow:0 8px 32px #0008" aria-label="Assistant d’analyse">
@@ -699,7 +711,7 @@ window.PROMPT_TYPES = [
   <div style="display:flex;gap:6px;flex-wrap:wrap"><button id="analysisSend" class="btn btn-primary btn-sm" onclick="askAnalysis(false)">Envoyer</button><button id="analysisConclusion" class="btn btn-ghost btn-sm" onclick="askAnalysis(true)">Écrire une conclusion</button><button class="btn btn-ghost btn-sm" onclick="cancelAnalysis()">Annuler</button><button class="btn btn-ghost btn-sm" onclick="clearAnalysis()">Effacer échanges et clé</button></div>
 </section>
 
-<script src="js/ui/analysis.js?v=agentic2"></script>
+<script src="js/ui/analysis.js?v=0.09.0"></script>
 <script>document.addEventListener("click",function(){setTimeout(updateCampaignPlan,0);});document.addEventListener("input",updateCampaignPlan);document.addEventListener("change",updateCampaignPlan);document.addEventListener("DOMContentLoaded",updateCampaignPlan);</script>
 <script src="js/main.js?v=0.06-model-context1"></script>
 <script>initAgenticUI();</script>

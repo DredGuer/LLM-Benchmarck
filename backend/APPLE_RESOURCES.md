@@ -60,3 +60,7 @@ Les exports réels ont permis de vérifier la collecte sur un M3 Pro. Les autres
 La chauffe est une session distincte. Les analyses IA ont lieu après le benchmark et ne sont pas incluses dans ces mesures. Pour interpréter une accumulation, comparer les allocations déclarées avant/après, les événements MLX disponibles et le swap système, sans conclure automatiquement à une fuite mémoire.
 
 [Backend et lancement](../BACKEND_README.md) · [Architecture](../TECHNICAL_README.md) · [Contrat v2](../schemas/README.md)
+
+## Fraîcheur des événements MLX
+
+Le pic garde l’horodatage de la ligne portant la valeur maximale, pas celui du dernier événement. La lecture d’allocation conservée garde celui de son propre événement. `collectedAt`, `ageMs`, `freshness` (récent dans la session jusqu’à 5 s, historique ensuite) et `overlappingTelemetry` sont des preuves de collecte ; ils n’attribuent pas les octets au modèle. Une date future est exclue. Le pic historique reste pertinent pour la session, mais n’est pas une allocation courante.

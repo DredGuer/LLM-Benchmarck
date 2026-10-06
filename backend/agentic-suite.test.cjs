@@ -31,3 +31,5 @@ const markdown='# Rapport\n\n| id | totalEUR |\n|---|---|\n| A1 | 39.00 |\n| B2 
  assert.equal((await fs.readdir(parent)).length,0);
  console.log('PASS: six stateful tasks, typed arguments, causal dependencies, goal vs compliance, scripted clarification/revision, recovery, abstention, budgets, path/symlink rejection, cleanup');
  }finally{await fs.rm(parent,{recursive:true,force:true});}})().catch(e=>{console.error(e);process.exitCode=1;});
+
+(async()=>{const h=createSuiteHarness({parent:process.cwd()});const s=await h.start('no-tool');const r=await h.finish(s.id,s.token,null,"Le benchmark ne mesure pas toute l'intelligence du modèle.");assert.equal(r.agentic.evaluation.goalCompleted,true);assert.equal(r.agentic.evaluation.taskSuccess,false);assert.equal(r.agentic.evaluation.criteria.find(c=>c.id==='answer').passed,false);})().catch(e=>{console.error(e);process.exitCode=1;});

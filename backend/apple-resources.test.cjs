@@ -21,6 +21,7 @@ const started = Date.parse('2026-10-05T17:00:00Z');
 const line = 'time=2026-10-05T19:00:01+02:00 level=INFO source=pipeline.go:101 msg=memory peak="21.21 GiB" held="20.83 GiB"\n';
 assert.equal(parseMLXEvents(line, started)[0].value, 21.21 * GiB);
 assert.equal(parseMLXEvents(line, started + 2000).length, 0);
+assert.equal(parseMLXEvents(line, started, started).length, 0); // Future events cannot be used.
 assert.equal(parseMLXEvents('msg=memory peak="10 GiB"', started).length, 0);
 assert.equal(parseMLXEvents(line.replace('GiB', 'garbage'), started).length, 0);
 (async () => {
@@ -43,6 +44,15 @@ assert.equal(parseMLXEvents(line.replace('GiB', 'garbage'), started).length, 0);
   logs += line.slice(80); summary = await telemetry.sample(session.id);
   assert.equal(summary.mlxPeak.value, 21.21 * GiB);
   assert.equal(summary.mlxPeak.attribution, 'ollama-server-unverified-model');
+  assert.equal(summary.mlxPeak.observedAt, '2026-10-05T17:00:01.000Z');
+  assert.equal(summary.mlxPeak.freshness, 'recent-in-session');
+  time += 7000; const second = line.replace('19:00:01','19:00:08').replace('21.21','19.01'); logs += second;
+  summary = await telemetry.sample(session.id);
+  assert.equal(summary.mlxPeak.observedAt, '2026-10-05T17:00:01.000Z'); // Timestamp of the maximum, not the last event.
+  assert.equal(summary.mlxHeldEnd.observedAt, '2026-10-05T17:00:08.000Z');
+  assert.equal(summary.mlxPeak.freshness, 'historical-in-session');
+  const concurrent = await telemetry.start(); summary = await telemetry.sample(session.id);
+  assert.equal(summary.mlxPeak.overlappingTelemetry, true); telemetry.cancel(concurrent.id);
   assert.equal(summary.diskReadDelta.value, 200);
   assert(!JSON.stringify(summary).includes('private prompt'));
   reads = 50; summary = await telemetry.sample(session.id); assert.equal(summary.diskReadDelta.value, null);

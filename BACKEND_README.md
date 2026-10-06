@@ -2,7 +2,7 @@
 
 [Guide de démarrage](README.md) · [Architecture](TECHNICAL_README.md)
 
-Le backend Node.js fournit à l’interface des mesures Ollama et des informations sur la machine où il s’exécute. Il exécute également les outils restreints de la batterie agentique. Il ne sert pas la page HTML et n’exécute pas les modèles. La version `package.json` 1.0.0 est distincte de l’interface v0.08 et du protocole 0.08.
+Le backend Node.js fournit à l’interface des mesures Ollama et des informations sur la machine où il s’exécute. Il exécute également les outils restreints de la batterie agentique. Il ne sert pas la page HTML et n’exécute pas les modèles. La version `package.json` 1.1.0 est distincte de l’interface v0.09.0 et du protocole 0.09.
 
 ## Lancement
 
@@ -113,7 +113,7 @@ Les opérations fichiers sont réellement exécutées en test ; les réponses de
 
 `backend/agentic-suite.js` contient six tâches versionnées, le cadre système, les outils restreints et les évaluateurs d’état. `POST /api/agentic/start` reçoit par exemple `{"scenario":"tool-selection"}` ; la session v2 possède son propre jeton et expire après quatre minutes. `finish` reçoit `finalAnswer` pour les contrôles de réponse et `reason` en cas d’interruption. Il retourne critères, objectif atteint, conformité, étapes et contenus locaux de fichiers avant nettoyage. L’interface exclut ces contenus des exports communautaires.
 
-Le chemin fichiers v1 reste compatible pour les sessions démarrées sans scénario ; il n’est plus proposé par l’interface. Les sessions v1 et v2 sont routées vers leurs harness respectifs. Ne pas confondre la version de paquet backend 1.0.0 et le protocole agentique 2.0.0.
+Le chemin fichiers v1 reste compatible pour les sessions démarrées sans scénario ; il n’est plus proposé par l’interface. Les sessions v1 et v2 sont routées vers leurs harness respectifs. Ne pas confondre la version de paquet backend 1.1.0 et le protocole agentique 2.0.1.
 
 ```bash
 node backend/agentic-suite.test.cjs
@@ -121,3 +121,7 @@ node backend/agentic-stream.test.cjs
 ```
 
 [Principes et sources de la méthodologie](backend/AGENTIC_METHODOLOGY.md). Les entrées sont synthétiques, les conversations utilisateur scriptées, le périmètre applicatif restreint ; aucun shell réseau ou Exo n’est ajouté.
+
+## Provenance et MLX (application 0.09.0 / backend 1.1.0)
+
+La batterie courante est 2.0.1 ; redémarrer Node après la mise à jour. Les journaux MLX ne fournissent pas de preuve d’attribution à un modèle. Chaque lecture indique `observedAt` (événement), `collectedAt` (collecte), âge, fraîcheur et chevauchement des sessions de télémétrie. Le pic utilise l’heure de l’événement maximal ; l’allocation conservée utilise celle du dernier événement. Les lignes antérieures au curseur/session, futures, incomplètes, ou provenant d’un fichier tourné ne deviennent pas des mesures fraîches valides. Les sessions externes non observées restent possibles.

@@ -8,14 +8,14 @@ function buildStatistics(sessions) {
   var groups = new Map(), seen = new Set();
   (Array.isArray(sessions) ? sessions : []).forEach(function(session) {
     (session.results || []).forEach(function(r) {
-      if (r.kind === 'agentic' || r.error || r.completion?.limitReached || r.phase === 'warmup' || seen.has(r.id)) return;
+      if (r.kind === 'agentic' || r.error || r.completion?.limitReached || r.phase === 'warmup' || (r.protocol?.campaignId && r.protocol.contextValidation !== 'verified') || seen.has(r.id)) return;
       if (r.id) seen.add(r.id);
       var m = r.metrics || {}, p = r.protocol || {}, meta = r.modelMetadata || {};
       if (!Number.isFinite(m.tokensPerSec) || m.tokensPerSec < 0) return;
       var key = JSON.stringify([r.model, r.memory?.loadedModel?.digest, r.runner, statisticsHardware(r.env),
         meta.quantization, meta.type, m.contextObservedTokens, r.promptType,
         p.promptDigest || r.promptText || r.id, m.temperature, m.maxTokens,
-        r.runnerVersion || 'unknown', m.thinkingEnabled ?? 'unknown', m.thinkingObserved ?? 'unknown', p.version || 'legacy', p.loadState || 'unknown', p.cacheState || 'unknown']);
+        r.runnerVersion || 'unknown', m.thinkingEnabled ?? 'unknown', m.thinkingObserved ?? 'unknown', p.version || 'legacy', r.provenance?.applicationVersion || 'unknown', r.quality?.evaluatorId || 'none', r.quality?.evaluatorVersion || 'none', p.loadState || 'unknown', p.cacheState || 'unknown']);
       if (!groups.has(key)) groups.set(key, { model:r.model, runner:r.runner, type:meta.type || 'unknown',
         context:m.contextObservedTokens ?? null, prompt:r.promptTypeName || r.promptType, load:p.loadState || 'unknown',
         cache:p.cacheState || 'unknown', paramsB:Number.isFinite(meta.parameterCount) && meta.parameterCount > 0 ? meta.parameterCount / 1e9 : null,
@@ -132,6 +132,14 @@ function renderStatistics() {
   var windowSize=Number(document.getElementById('statisticsWindow')?.value)||1;
   panel.textContent='';
   renderAgenticStatistics(history,panel);
+  if (typeof qualitySummary === 'function') {
+    var seenQuality = new Set(), rows = history.flatMap(s=>s.results || []).filter(r=>{if(seenQuality.has(r.id))return false;seenQuality.add(r.id);return !(r.protocol?.campaignId && r.protocol.contextValidation !== 'verified');});
+    var qualityRows = qualitySummary(rows);
+    if (qualityRows.length) { var detail = statisticsDetails(panel,'quality-results','Justesse contrôlée · résultats séparés des performances');
+      statisticsElement('p','Taux observés sur les cas structurés LLMB ; pas une mesure générale de qualité. Les sorties algorithmiques ne prouvent pas l’exécution du code.',detail);
+      statisticsTable(detail,['Modèle','Cas','Évaluateur v','Contexte','Conditions','Réussites','Échecs','Incomplètes'],qualityRows.map(g=>[g.model,g.task,g.version,g.context,g.conditions,g.pass,g.fail,g.incomplete]));
+    }
+  }
   if(!groups.length){statisticsElement('p','Aucune mesure exploitable dans l’historique. Lancez une campagne.',panel);return;}
   statisticsElement('p','Chaque passe sélectionnée a le même poids dans la moyenne. Les comparaisons globales sont descriptives : catégories, cache, versions, matériel et longueurs des réponses peuvent différer. Les conditions comparables restent détaillées séparément. Avec N = 1, aucune dispersion ne peut être estimée.',panel);
   var controls=statisticsElement('div',undefined,panel);statisticsElement('strong','Modèles à afficher',controls);
@@ -194,7 +202,7 @@ function renderStatistics() {
 function buildAgenticStatistics(sessions) {
   var groups=new Map(),seen=new Set();
   (sessions||[]).forEach(session=>(session.results||[]).forEach(r=>{
-    if(r.kind!=='agentic'||!r.agentic||seen.has(r.id))return;if(r.id)seen.add(r.id);
+    if((r.protocol?.campaignId && r.protocol.contextValidation!=='verified') || r.kind!=='agentic'||!r.agentic||seen.has(r.id))return;if(r.id)seen.add(r.id);
     var key=JSON.stringify([r.model,r.runner,r.runnerVersion,r.protocol?.version,r.agentic.scenario?.id,r.agentic.scenario?.version,r.protocol?.promptDigest,
       statisticsHardware(r.env),r.modelMetadata?.quantization,r.metrics?.temperature,r.metrics?.maxTokens,
       r.metrics?.contextObservedTokens,r.protocol?.loadState,r.protocol?.cacheState,r.agentic.budget]);

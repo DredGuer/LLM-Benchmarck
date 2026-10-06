@@ -1,4 +1,4 @@
-# Capacités agentiques — batterie LLMB 2.0
+# Capacités agentiques — batterie LLMB 2.0.1
 
 [Prise en main](../README.md) · [Méthodologie et références](AGENTIC_METHODOLOGY.md) · [API](../BACKEND_README.md) · [Export](../schemas/README.md)
 
@@ -63,7 +63,7 @@ Les restrictions sont **applicatives**, sans sandbox OS ni protection contre un 
 
 ## Exports, versions et validation
 
-Le protocole est `agentic-suite-2.0.0`, avec scénario/évaluateur 2.0.0 et export communautaire **2.1.0** pour les rapports contenant ces épreuves. Le validateur accepte encore 2.0.0 et les historiques restent lisibles. Les nouveaux champs sont scénario, critères, objectif atteint, premier appel et nombre de tours ; les empreintes de fichiers remplacent leur contenu dans l’export.
+Le protocole courant est `agentic-suite-2.0.1`, avec scénario/évaluateur 2.0.1 et export communautaire **2.2.0** pour les nouvelles mesures. Le validateur accepte encore 2.0.0/2.1.0 et les historiques restent lisibles. Les nouveaux champs sont scénario, critères, objectif atteint, premier appel et nombre de tours ; les empreintes de fichiers remplacent leur contenu dans l’export.
 
 Le parcours fichiers v1 est conservé côté backend pour compatibilité et dans les anciennes cartes ; il n’est plus proposé comme nouvelle campagne. Les nouvelles scores ne sont pas agrégés avec lui.
 
@@ -78,3 +78,5 @@ node schemas/test.cjs
 Les tests utilisent de vrais dossiers/fichiers, avec réponses modèle simulées pour les adaptateurs. Ils vérifient les six tâches et leurs échecs, causalité observable, scores, annulation, flux fragmentés/incomplets, isolation, nettoyage, historique mixte et confidentialité des exports. Une validation avec des modèles réels sur votre machine reste indispensable. Ces tâches vérifient des comportements observables ; elles ne prouvent pas une capacité générale de raisonnement ou d’autonomie.
 
 Exo est reporté. Après validation de cette batterie, le site communautaire pourra importer les rapports, comparer les mêmes tâches/versions et distinguer réussite fonctionnelle, conformité et performances matérielles.
+
+Depuis la batterie 2.0.1, le contenu de la phrase d’abstention tolère les apostrophes droites/typographiques ; la reproduction exacte reste un critère distinct de conformité. Les anciens résultats 2.0.0 gardent leurs critères et verdicts initiaux. Une fin de conversation sans tous les critères peut être une exécution terminée avec objectif non atteint. Les campagnes contrôlées passent le contexte explicite à tous les tours natifs Ollama.

@@ -160,7 +160,7 @@ async function refreshModelMetadata() {
 }
 
 // Auto delegates context allocation to the runner; never forces the model maximum.
-function getRequestedContextTokens() { return null; }
+function getRequestedContextTokens() { return state.controlledActive && Number.isInteger(state.activeContextTokens) ? state.activeContextTokens : null; }
 
 function buildOllamaOptions(temperature, maxTokens, contextTokens) {
   var options = { temperature: temperature, num_predict: maxTokens };

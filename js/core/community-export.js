@@ -1,3 +1,9 @@
+function resultVerdict(r) {
+  return { execution: r.executionOutcome || (r.completion?.state === 'completed' ? 'completed' : 'unknown'),
+    goalCompleted: typeof r.agentic?.evaluation.goalCompleted === 'boolean' ? r.agentic.evaluation.goalCompleted : null,
+    conformity: typeof r.agentic?.evaluation.taskSuccess === 'boolean' ? r.agentic.evaluation.taskSuccess : null,
+    quality: r.quality?.status || 'not-assessed' };
+}
 // Community v2 export: explicit units, scopes and unknowns; no prompt/response/log/key fields.
 function communityNumber(value) { return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null; }
 function communityInteger(value) { return Number.isSafeInteger(value) && value >= 0 ? value : null; }
@@ -53,7 +59,7 @@ function buildCommunityV2(results, generatedAt) {
     var machines = [communityMachine(first.env, generatedAt, 'local')];
     if (!localRunner) machines.push(communityMachine({}, generatedAt, inferenceNode));
     var report = {
-      schema: 'llm-benchmarker.community', schemaVersion: items.some(r=>r.agentic?.scenario) ? '2.1.0' : '2.0.0',
+      schema: 'llm-benchmarker.community', schemaVersion: items.some(r=>r.executionOutcome || r.provenance || r.quality || r.protocol?.campaignId) ? '2.2.0' : items.some(r=>r.agentic?.scenario) ? '2.1.0' : '2.0.0',
       reportId: crypto.randomUUID(), generatedAt: generatedAt,
       producer: { name: 'LLM Benchmarker', version: typeof LLMB_VERSION === 'string' ? LLMB_VERSION : 'unknown' }, synthetic: false,
       privacy: { profile: 'community-redacted', rawPromptsIncluded: false, rawResponsesIncluded: false, rawToolArgumentsIncluded: false },
@@ -116,10 +122,15 @@ function buildCommunityV2(results, generatedAt) {
             summary[spec[2]] = communityReading(input.value, 'bytes', input.source, input.observedAt || finishedAt,
               input.scope, 'local', input.kind, spec[0].startsWith('mlx') ? 'Ollama server log; model attribution unverified; rounded allocator peak' :
               input.method || (spec[2] === 'total' ? 'System-wide counter delta during telemetry session; not SSD benchmark speed' : (spec[2] === 'peak' ? 'System-wide sampled peak' : 'System-wide boundary gauge')));
+            if (spec[0].startsWith('mlx')) {
+              ['collectedAt','attribution','freshness','ageMs','eventCount','overlappingTelemetry','logStatus'].forEach(function(key) {
+                if (input[key] !== undefined) summary[spec[2]][key] = input[key];
+              });
+            }
             summaries.push(summary);
           });
         }
-        var apiTimingSource = r.kind === 'agentic' ? 'ollama-api-chat:sum' : 'ollama-api-generate';
+        var apiTimingSource = runner === 'Ollama' ? (r.kind === 'agentic' ? 'ollama-api-chat:sum' : 'ollama-api-generate') : (r.kind === 'agentic' ? 'compatible-chat:sum' : 'provider-response');
         var tokenKind = m.tokenCountKind || 'estimated';
         var test = {
           id: r.id || 'test-' + index, kind: r.kind === 'agentic' ? 'agentic' : 'generation', status: r.error ? 'failure' : r.completion?.limitReached ? 'partial' : 'success',
@@ -130,7 +141,7 @@ function buildCommunityV2(results, generatedAt) {
             architecture: meta.type || 'unknown', architectureName: meta.architecture || null,
             expertCount: communityInteger(meta.expertCount), activeExpertsPerToken: communityInteger(meta.activeExperts) },
           parameters: { temperature: communityNumber(m.temperature), maxOutputTokens: communityInteger(m.maxTokens),
-            contextTokens: communityInteger(m.contextObservedTokens), contextSource: m.contextObservedTokens != null ? 'ollama-api-ps:context_length (observed loaded runner)' : null, concurrency: 1,
+            contextTokens: communityInteger(m.contextObservedTokens), ...(r.provenance || r.protocol?.campaignId ? {requestedContextTokens:communityInteger(m.contextRequestedTokens),contextMode:m.contextMode || 'unknown'} : {}), contextSource: m.contextObservedTokens != null ? 'ollama-api-ps:context_length (observed loaded runner)' : null, concurrency: 1,
             thinking: { enabled: typeof m.thinkingEnabled === 'boolean' ? m.thinkingEnabled : null, observed: typeof m.thinkingObserved === 'boolean' ? m.thinkingObserved : null } },
           protocol: { id: r.agentic?.scenario ? 'llmb-agentic-'+r.agentic.scenario.id : r.kind === 'agentic' ? 'llmb-agentic-files' : 'llmb-generation-' + (['conversation','factual','math','code','logic','creative','warmup'].includes(r.promptType) ? r.promptType : 'custom'),
             version: r.protocol?.version || 'unknown', phase: r.phase || 'unknown', promptDigest: r.protocol?.promptDigest || null,
@@ -142,14 +153,24 @@ function buildCommunityV2(results, generatedAt) {
             generationTime: metric(m.generationTimeMs, 'ms', apiTimingSource+':eval_duration', 'declared'),
             generationThroughput: metric(m.generationTokensPerSec, 'tokens/s', 'eval_count/eval_duration', 'estimated'),
             firstAnswerTime: metric(m.firstAnswerTimeMs, 'ms', 'browser:first-visible-answer-segment', 'measured'),
-            inputTokens: metric(m.inputTokens, 'tokens', 'ollama-api-generate:prompt_eval_count', 'declared'),
-            cachedInputTokens: metric(m.cachedInputTokens, 'tokens', 'ollama-api-generate:prompt_eval_cached_count', 'declared'),
+            inputTokens: metric(m.inputTokens, 'tokens', apiTimingSource+':input-token-count', 'declared'),
+            cachedInputTokens: metric(m.cachedInputTokens, 'tokens', apiTimingSource+':cached-input-token-count', 'declared'),
             totalTime: metric(m.totalTime, 'ms', 'browser:performance.now', 'measured', r.kind === 'agentic' ? 'Whole task including orchestration, model calls, tools and verification; excludes telemetry finalization' : 'Request duration excluding telemetry finalization'),
             totalOutputTokens: metric(m.totalTokens, 'tokens', m.tokenCountSource || 'legacy-unknown-token-count', tokenKind),
             thinkingTokens: metric(null, 'tokens', 'not-separated'), answerTokens: metric(null, 'tokens', 'not-separated'),
             averageThroughput: metric(m.tokensPerSec, 'tokens/s', 'generated-tokens/total-test-seconds', 'estimated'),
             ttft: metric(runner === 'Ollama' || r.agentic?.scenario ? m.ttft : null, 'ms', 'browser:first-response-segment', 'measured') },
           resourceSamples: samples.sort((a,b) => a.elapsedMs - b.elapsedMs), resourceSummaries: summaries
+        };
+        if (r.quality) test.quality = {status:r.quality.status,evaluatorId:r.quality.evaluatorId || null,evaluatorVersion:r.quality.evaluatorVersion || null,taskId:r.quality.taskId || null,
+          criteria:r.quality.criteria.map(c=>({id:c.id,label:c.label,passed:!!c.passed}))};
+        if (r.protocol?.campaignId) { ['campaignId','contextOrder','requestedContextTokens','contextValidation'].forEach(key=>{test.protocol[key]=r.protocol[key];}); }
+        if (r.executionOutcome || r.quality) test.verdict = resultVerdict(r);
+        if (r.provenance) test.provenance = {
+          applicationVersion: typeof r.provenance.applicationVersion === 'string' ? r.provenance.applicationVersion : null,
+          capturedAt: r.provenance.capturedAt, clientNodeId: 'local', inferenceEndpoint: r.provenance.inferenceEndpoint,
+          runnerName: r.provenance.runnerName || null, runnerVersion: r.provenance.runnerVersion || null,
+          engine: r.provenance.engine || null, backend: r.provenance.backend || null, attribution: r.provenance.attribution
         };
         if (r.agentic?.scenario) { test.metrics.firstToolTime = metric(m.firstToolTimeMs, 'ms', 'browser:first-executed-tool', 'measured'); test.metrics.modelTurns = metric(m.modelTurns, 'count', 'browser:chat-turn-count', 'measured'); }
         if (r.completion) test.completion = { reason: r.completion.reason || null, limitReached: !!r.completion.limitReached, state: r.completion.state || 'unknown' };

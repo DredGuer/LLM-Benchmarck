@@ -98,6 +98,7 @@ function updateModeUI() {
  * In Auto mode, uses predefined temperatures; in Manual mode, uses global setting
  */
 function getTemperatureForPromptType(promptTypeId) {
+  if (state.controlledActive) return 0;
   const parsedTemp = parseFloat(document.getElementById('temperature')?.value);
   const manualTemp = Number.isFinite(parsedTemp) ? parsedTemp : 0.7;
   
@@ -119,6 +120,7 @@ function getTemperatureForPromptType(promptTypeId) {
  * In Auto mode, uses fixed value; in Manual mode, uses input value
  */
 function getMaxTokens() {
+  if (state.controlledActive && Number.isInteger(state.controlledMaxTokens)) return state.controlledMaxTokens;
   if (isManualMode) {
     return parseInt(document.getElementById('maxTokens')?.value) || 8192;
   } else {
@@ -131,6 +133,7 @@ function getMaxTokens() {
  * In Auto mode, uses fixed value; in Manual mode, uses input value
  */
 function getRepetitions() {
+  if (state.controlledActive) return 3;
   if (isManualMode) {
     return parseInt(document.getElementById('repetitions')?.value) || 1;
   } else {

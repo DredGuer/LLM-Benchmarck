@@ -60,12 +60,12 @@ async function collectAppleResources(execute = run) {
   return { observedAt: new Date().toISOString(), swapUsedBytes: parseSwapUsage(swap),
     swapStatus: parseSwapUsage(swap) !== null ? 'available' : swap ? 'unrecognized-format' : 'command-unavailable', ...parseVM(vm), ...parseDisks(disk) };
 }
-function parseMLXEvents(text, since) {
+function parseMLXEvents(text, since, until = Infinity) {
   const units = { B: 1, KiB: 1024, MiB: 1024 ** 2, GiB: 1024 ** 3, TiB: 1024 ** 4, KB: 1000, MB: 1e6, GB: 1e9 };
   return text.split('\n').flatMap(line => {
     const time = line.match(/^time=([^\s]+)/), peak = line.match(/\bmsg=(?:"memory"|memory)\s+peak="([\d.]+)\s+([A-Za-z]+)"/);
     const timestamp = time ? Date.parse(time[1]) : NaN;
-    if (!/\blevel=INFO\b/.test(line) || !/\bsource=(?:\S*\/)?pipeline\.go:\d+\s/.test(line) || !peak || !Number.isFinite(timestamp) || timestamp < since || !units[peak[2]]) return [];
+    if (!/\blevel=INFO\b/.test(line) || !/\bsource=(?:\S*\/)?pipeline\.go:\d+\s/.test(line) || !peak || !Number.isFinite(timestamp) || timestamp < since || timestamp > until || !units[peak[2]]) return [];
     const value = nonnegative(Number(peak[1]) * units[peak[2]]);
     const held = line.match(/\bheld="([\d.]+)\s+([A-Za-z]+)"/);
     const heldBytes = held && units[held[2]] ? nonnegative(Number(held[1]) * units[held[2]]) : null;
@@ -92,7 +92,9 @@ function createTelemetry({ collect = collectAppleResources, state = logState, ch
     const cursor = await state().catch(() => null);
     const baseline = await collect();
     if (sessions.size >= 16) throw new Error('Too many telemetry sessions');
-    sessions.set(id, { startedAt, cursor, partial: '', baseline, samples: [baseline], events: [], pending: null, logIssue: cursor ? null : 'unavailable' });
+    const overlapping = sessions.size > 0;
+    if (overlapping) for (const existing of sessions.values()) existing.overlapping = true;
+    sessions.set(id, { overlapping, startedAt, cursor, partial: '', baseline, samples: [baseline], events: [], pending: null, logIssue: cursor ? null : 'unavailable' });
     return { id, baseline, mlxLogStatus: cursor ? 'available' : 'unavailable' };
   }
   async function sample(id, finish = false) {
@@ -113,7 +115,7 @@ function createTelemetry({ collect = collectAppleResources, state = logState, ch
             const end = data.lastIndexOf('\n');
             s.partial = end < 0 ? data : data.slice(end + 1);
             if (s.partial.length > 65536) { s.logIssue = 'overflow'; s.partial = ''; }
-            if (end >= 0) s.events.push(...parseMLXEvents(data.slice(0, end), s.startedAt));
+            if (end >= 0) s.events.push(...parseMLXEvents(data.slice(0, end), s.startedAt, now()));
             s.cursor.size = stat.size;
           }
         } catch { s.logIssue = 'unavailable'; }
@@ -129,7 +131,18 @@ function createTelemetry({ collect = collectAppleResources, state = logState, ch
         // Resets/hot-plug are unknown, never negative or substituted by zero.
         return a !== null && b !== null && b >= a ? b - a : null;
       }
-      const mlx = s.events.length && !s.logIssue ? Math.max(...s.events.map(e => e.value)) : null;
+      const usableEvents = s.logIssue ? [] : s.events;
+      const maxEvent = usableEvents.reduce((best, e) => !best || e.value > best.value ? e : best, null);
+      const lastEvent = usableEvents.at(-1) || null;
+      function mlxReading(event, held) {
+        const eventTime = event ? Date.parse(event.observedAt) : null;
+        const ageMs = eventTime === null ? null : Math.max(0, now() - eventTime);
+        return { ...reading(event ? held ? event.heldBytes : event.value : null, held ? 'ollama-server-log:memory-held' : 'ollama-server-log:memory-peak', 'process-tree'),
+          observedAt: event ? event.observedAt : current.observedAt, collectedAt: current.observedAt,
+          attribution: 'ollama-server-unverified-model', freshness: event ? ageMs <= 5000 ? 'recent-in-session' : 'historical-in-session' : 'unavailable',
+          ageMs, eventCount: usableEvents.length, overlappingTelemetry: s.overlapping,
+          logStatus: s.logIssue || (event ? 'observed' : 'no-event') };
+      }
       return {
         sample: Object.fromEntries(Object.entries(current).filter(([key]) => key !== 'deviceSet')), sampleCount: s.samples.length, startedAt: new Date(s.startedAt).toISOString(),
         swapStatus: current.swapStatus || 'unknown',
@@ -144,11 +157,8 @@ function createTelemetry({ collect = collectAppleResources, state = logState, ch
         swapWriteDelta: { ...reading(delta('swapWriteBytes'), 'vm_stat:Swapouts*page-size'), kind: 'estimated', method: 'page-equivalent bytes, not compressed disk transfer size' },
         diskReadDelta: reading(delta('diskReadBytes'), 'ioreg:IOBlockStorageDriver.Statistics'),
         diskWriteDelta: reading(delta('diskWriteBytes'), 'ioreg:IOBlockStorageDriver.Statistics'),
-        mlxHeldEnd: { ...reading(s.events.length && !s.logIssue ? s.events[s.events.length - 1].heldBytes : null, 'ollama-server-log:memory-held', 'process-tree'), attribution: 'ollama-server-unverified-model' },
-        mlxPeak: { ...reading(mlx, 'ollama-server-log:memory-peak', 'process-tree'),
-          attribution: 'ollama-server-unverified-model', eventCount: s.events.length,
-          logStatus: s.logIssue || (s.events.length ? 'observed' : 'no-event'),
-          observedAt: s.events.length ? s.events[s.events.length - 1].observedAt : current.observedAt },
+        mlxHeldEnd: mlxReading(lastEvent, true),
+        mlxPeak: mlxReading(maxEvent, false),
         samples: finish ? s.samples.map(item => ({
           observedAt: item.observedAt, swapUsedBytes: item.swapUsedBytes, compressedBytes: item.compressedBytes,
           swapReadBytes: item.swapReadBytes !== null && s.baseline.swapReadBytes !== null && item.swapReadBytes >= s.baseline.swapReadBytes ? item.swapReadBytes - s.baseline.swapReadBytes : null,

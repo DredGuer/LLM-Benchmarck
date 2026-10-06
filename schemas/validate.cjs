@@ -80,10 +80,28 @@ function validateReport(report) {
       if (!t.participatingNodeIds.includes(n.id)) throw new Error('Resource outside test topology');
       if (r.deviceId && ![...n.cpus, ...n.gpus, ...n.storage].some(d => d.id === r.deviceId)) throw new Error('Unknown resource device');
     }
+    if ((t.provenance || t.verdict || t.quality || t.protocol.campaignId) && report.schemaVersion !== '2.2.0') throw new Error('Provenance requires 2.2.0');
+    if (t.quality) {
+      unique(t.quality.criteria, 'quality criterion');
+      if (['pass','fail'].includes(t.quality.status)) {
+        if (!t.quality.criteria.length || !t.quality.evaluatorId || !t.quality.evaluatorVersion || !t.quality.taskId) throw new Error('Missing quality evaluator');
+        if ((t.quality.status === 'pass') !== t.quality.criteria.every(c => c.passed)) throw new Error('Quality disagrees with criteria');
+      }
+      if (t.quality.status === 'not-assessed' && (t.quality.criteria.length || t.quality.evaluatorId || t.quality.evaluatorVersion || t.quality.taskId)) throw new Error('Invalid unassessed quality');
+      if (t.quality.status === 'incomplete' && (!t.quality.evaluatorId || !t.quality.evaluatorVersion || !t.quality.taskId || t.quality.criteria.length)) throw new Error('Invalid incomplete quality');
+      if (t.verdict && t.verdict.quality !== t.quality.status) throw new Error('Quality verdict mismatch');
+    }
+    if (t.agentic && t.verdict && (t.verdict.conformity !== t.agentic.evaluation.taskSuccess || t.verdict.goalCompleted !== (t.agentic.evaluation.goalCompleted ?? null))) throw new Error('Agentic verdict mismatch');
+    if (t.protocol.campaignId) {
+      if (!t.protocol.contextValidation || !t.protocol.requestedContextTokens || !t.protocol.contextOrder) throw new Error('Incomplete controlled protocol');
+      if (t.protocol.contextValidation === 'verified' && t.parameters.contextTokens !== t.protocol.requestedContextTokens) throw new Error('Verified context mismatch');
+      if (t.protocol.contextValidation === 'mismatch' && (t.parameters.contextTokens === null || t.parameters.contextTokens === t.protocol.requestedContextTokens)) throw new Error('Invalid context mismatch');
+      if (t.protocol.contextValidation === 'unverified' && t.parameters.contextTokens !== null) throw new Error('Invalid unverified context');
+    }
     if (!t.agentic) continue;
     const a = t.agentic;
     if (a.scenario) {
-      if (report.schemaVersion !== '2.1.0') throw new Error('Agentic scenario metadata requires 2.1.0');
+      if (!['2.1.0','2.2.0'].includes(report.schemaVersion)) throw new Error('Agentic scenario metadata requires 2.1.0 or 2.2.0');
       if (!Array.isArray(a.evaluation.criteria) || !a.evaluation.criteria.length || typeof a.evaluation.goalCompleted !== 'boolean') throw new Error('Scenario requires criteria and functional outcome');
       unique(a.evaluation.criteria, 'criterion');
       if (a.evaluation.taskSuccess !== a.evaluation.criteria.every(c => c.passed !== false)) throw new Error('Task conformity disagrees with criteria');

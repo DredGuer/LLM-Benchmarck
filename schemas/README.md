@@ -1,10 +1,10 @@
 # Export communautaire v2 — contrat et collecte actuelle
 
-Statut : **export v2 actif pour les tests de génération et la batterie agentique 2.0**, dans le Markdown et via le bouton JSON v2.
+Statut : **export v2 actif pour les tests de génération et la batterie agentique 2.0.1**, dans le Markdown et via le bouton JSON v2.
 L'inventaire Apple, les métadonnées modèle, le contexte Auto observé, les métriques et la télémétrie disponible
 alimentent le rapport. Les champs non collectés restent inconnus ; la batterie dispose d’un exécuteur restreint, mais aucun cluster n’est lancé.
 
-Un seul runner/inventaire donne un objet `llm-benchmarker.community` 2.0.0.
+Un seul runner/inventaire donne un objet `llm-benchmarker.community` 2.2.0 pour les nouveaux résultats ; les anciens rapports 2.0.0/2.1.0 restent acceptés.
 Des résultats hétérogènes donnent un objet `llm-benchmarker.community.bundle` 1.0.0 avec `reports[]`.
 Chaque élément suit le schéma v2, et l'enveloppe suit [community-bundle.schema.json](community-bundle.schema.json).
 Le futur importeur doit identifier le champ `schema`, puis valider chaque rapport séparément.
@@ -123,7 +123,7 @@ Exemples : Apple génération, Apple agentique, cluster Exo Apple et Linux multi
 
 Le contrat, l’inventaire Apple, l’export v2, le contexte Auto et la télémétrie disponible sont intégrés. Le protocole de génération courant est **0.08** ; les anciennes sessions ne sont pas réécrites et gardent leurs inconnues. La migration persistante d’historique n’est pas une fonctionnalité livrée.
 
-La batterie agentique 2.0 est exécutée et exporté avec le contrat actuel. Les autres tâches, placements multi-GPU réellement observés et adaptateur Exo restent prévus. Les exemples sont synthétiques. Voir [la roadmap](../innovation.md).
+La batterie agentique 2.0.1 est exécutée et exporté avec le contrat actuel. Les autres tâches, placements multi-GPU réellement observés et adaptateur Exo restent prévus. Les exemples sont synthétiques. Voir [la roadmap](../innovation.md).
 
 ## Export runtime et télémétrie
 
@@ -184,3 +184,13 @@ node backend/agentic-integration.test.cjs
 ```
 
 Les tests combinent états fichiers réellement exécutés, réponses modèle simulées et fixtures synthétiques historiques. Un importeur communautaire doit préserver tâches/versions/conditions et distinguer objectif atteint de conformité.
+
+## Extension 2.2.0 : provenance, verdicts et campagnes contrôlées
+
+`producer.version` identifie l’application d’export ; `tests[].provenance.applicationVersion` identifie celle de la mesure. Ne pas déduire la seconde de la première pour les anciens résultats. Les exports conservent le client et la localisation configurée de l’endpoint, mais aucun moteur/backend n’est déduit d’une compatibilité API. Aucune URL d’endpoint n’est exportée.
+
+`verdict` sépare exécution, objectif, conformité et justesse. `quality` contient uniquement statut, ID/version d’évaluateur, ID de cas et critères ; il ne contient ni réponse brute ni code. `protocol.campaignId`, `contextOrder`, `requestedContextTokens` et `contextValidation` rendent les campagnes à deux contextes identifiables. `parameters` sépare contexte demandé et observé. Un contexte non vérifié/mismatched n’est pas une mesure contrôlée comparable.
+
+Les mesures MLX peuvent contenir collecte, horodatage réel, âge, fraîcheur, nombre d’événements et chevauchement de télémétrie. Elles restent des événements serveur non attribués au modèle. Le validateur vérifie la cohérence des critères/verdicts et des contextes, sans certifier l’authenticité de données soumises.
+
+Pour le futur site : identifier d’abord `schema` et `schemaVersion`, valider le document, puis appliquer une politique version/protocole par mesure. Accepter ou migrer les formats connus ; refuser les formats inconnus. Un résultat ancien peut être importable mais non comparable. Ne pas refuser automatiquement tous les anciens résultats simplement parce que le producteur est ancien. Les signatures ou preuves d’exécution ne sont pas mises en place.

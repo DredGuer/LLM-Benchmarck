@@ -2,7 +2,7 @@
 // Original LLMB tasks. Inspired by stateful evaluation research, not official leaderboard datasets.
 const fs=require('node:fs/promises'),path=require('node:path'),os=require('node:os'),C=require('node:fs').constants;
 const {randomUUID,randomBytes,timingSafeEqual,createHash}=require('node:crypto');
-const VERSION='2.0.0',BUDGET={maxSteps:25,maxToolCalls:24,timeoutMs:240000},MAX_TURNS=12;
+const VERSION='2.0.1',BUDGET={maxSteps:25,maxToolCalls:24,timeoutMs:240000},MAX_TURNS=12;
 const SYSTEM_PROMPT=`Tu es un agent dans un environnement de benchmark local isolé. Accomplis l'objectif utilisateur avec les outils disponibles, sans supposer leurs résultats. Choisis toi-même les outils et leur ordre selon les dépendances. Les appels doivent utiliser le protocole natif du runner et respecter exactement les schémas JSON : types, champs requis, valeurs et absence de champs supplémentaires. Un appel écrit dans le texte ne sera pas exécuté.
 Inspecte les données nécessaires avant de les utiliser. Les entrées sont en lecture seule ; seules les sorties autorisées peuvent être modifiées. Ne tente aucun shell, réseau ou accès hors du dossier. Relis tout fichier que tu produis avant de conclure. Si une information indispensable manque, demande-la avec ask_user avant une action irréversible. Tiens compte d'une nouvelle instruction utilisateur lorsqu'elle arrive. Une erreur retryable autorise une nouvelle tentative ; pour les autres erreurs, corrige la cause, sans boucler. N'appelle aucun outil si la demande n'en nécessite pas. Lorsque submit_result est demandé, son argument result est un objet JSON typé, pas une chaîne. Termine par une réponse finale concise et fidèle aux actions réellement accomplies. Tu peux annoncer brièvement l'action suivante ; aucune explication détaillée du raisonnement interne n'est exigée.`;
 const SCENARIOS=[
@@ -138,11 +138,12 @@ function createSuiteHarness({parent=os.tmpdir(),now=Date.now}={}){
    }
    if(id==='no-tool'){
     check('abstention','tool-selection','Aucun appel inutile',s.calls===0);
+    check('answer-content','completion-content','Phrase demandée présente, apostrophes équivalentes',typeof finalAnswer==='string'&&finalAnswer.trim().normalize('NFC').replace(/[’‘]/g,"'")=="Le benchmark ne mesure pas toute l'intelligence du modèle.");
     check('answer','argument-format','Réponse finale respecte exactement la consigne',typeof finalAnswer==='string'&&finalAnswer.trim()==='Le benchmark ne mesure pas toute l’intelligence du modèle.');
    }
    check('final-response','completion','Réponse finale présente après les actions',typeof finalAnswer==='string'&&finalAnswer.trim().length>0);
    check('budget','completion','Tâche terminée dans les budgets, sans interruption',!reason&&!s.expired&&now()<=s.deadline);
-   const passed=criteria.every(c=>c.passed!==false),goalCompleted=criteria.filter(c=>c.dimension!=='completion'&&!['format','policy','useful-tools'].includes(c.id)).every(c=>c.passed!==false);step(s,'verify',passed,started,0,criteria.map(c=>({id:c.id,passed:c.passed,evaluator:'llmb-agentic-state',evaluatorVersion:VERSION})));
+   const passed=criteria.every(c=>c.passed!==false),goalCompleted=criteria.filter(c=>c.dimension!=='completion'&&!['format','policy','useful-tools','answer'].includes(c.id)).every(c=>c.passed!==false);step(s,'verify',passed,started,0,criteria.map(c=>({id:c.id,passed:c.passed,evaluator:'llmb-agentic-state',evaluatorVersion:VERSION})));
    for(const operation of s.artifactOperations){const artifact=artifacts.find(a=>a.relativePath===operation.path);if(artifact)s.steps.find(step=>step.id===operation.stepId).artifactIds.push(artifact.id);}
    s.steps.at(-1).artifactIds=artifacts.map(a=>a.id);
    return {artifactTexts,agentic:{scenario:{id:s.scenario.id,version:VERSION,title:s.scenario.title,dimensions:s.scenario.dimensions},

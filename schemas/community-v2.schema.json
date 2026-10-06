@@ -11,7 +11,8 @@
     "schemaVersion": {
       "enum": [
         "2.0.0",
-        "2.1.0"
+        "2.1.0",
+        "2.2.0"
       ]
     },
     "reportId": {
@@ -176,6 +177,37 @@
             "string",
             "null"
           ]
+        },
+        "collectedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "attribution": {
+          "type": "string"
+        },
+        "freshness": {
+          "enum": [
+            "recent-in-session",
+            "historical-in-session",
+            "unavailable"
+          ]
+        },
+        "ageMs": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "eventCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "overlappingTelemetry": {
+          "type": "boolean"
+        },
+        "logStatus": {
+          "type": "string"
         }
       },
       "required": [
@@ -1063,6 +1095,20 @@
             "string",
             "null"
           ]
+        },
+        "requestedContextTokens": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "contextMode": {
+          "enum": [
+            "auto",
+            "explicit",
+            "unknown"
+          ]
         }
       },
       "required": [
@@ -1124,6 +1170,25 @@
           "type": [
             "string",
             "null"
+          ]
+        },
+        "campaignId": {
+          "type": "string"
+        },
+        "contextOrder": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2
+        },
+        "requestedContextTokens": {
+          "type": "integer",
+          "minimum": 1024
+        },
+        "contextValidation": {
+          "enum": [
+            "verified",
+            "unverified",
+            "mismatch"
           ]
         }
       },
@@ -1826,6 +1891,172 @@
             "limitReached",
             "state"
           ]
+        },
+        "provenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "applicationVersion",
+            "capturedAt",
+            "clientNodeId",
+            "inferenceEndpoint",
+            "runnerName",
+            "runnerVersion",
+            "engine",
+            "backend",
+            "attribution"
+          ],
+          "properties": {
+            "applicationVersion": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "capturedAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "clientNodeId": {
+              "type": "string"
+            },
+            "inferenceEndpoint": {
+              "enum": [
+                "loopback",
+                "remote",
+                "unknown"
+              ]
+            },
+            "runnerName": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "runnerVersion": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "engine": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "backend": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "attribution": {
+              "type": "string"
+            }
+          }
+        },
+        "verdict": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "execution",
+            "goalCompleted",
+            "conformity",
+            "quality"
+          ],
+          "properties": {
+            "execution": {
+              "enum": [
+                "completed",
+                "interrupted",
+                "failed",
+                "unknown"
+              ]
+            },
+            "goalCompleted": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "conformity": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "quality": {
+              "enum": [
+                "pass",
+                "fail",
+                "not-assessed",
+                "incomplete"
+              ]
+            }
+          }
+        },
+        "quality": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "evaluatorId",
+            "evaluatorVersion",
+            "taskId",
+            "criteria"
+          ],
+          "properties": {
+            "status": {
+              "enum": [
+                "pass",
+                "fail",
+                "not-assessed",
+                "incomplete"
+              ]
+            },
+            "evaluatorId": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "evaluatorVersion": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "taskId": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "criteria": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "id",
+                  "label",
+                  "passed"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "passed": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
         }
       },
       "required": [
