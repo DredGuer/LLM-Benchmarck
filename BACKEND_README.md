@@ -2,7 +2,7 @@
 
 [Guide de démarrage](README.md) · [Architecture](TECHNICAL_README.md)
 
-Le backend Node.js fournit à l’interface des mesures Ollama et des informations sur la machine où il s’exécute. Il exécute également les outils restreints de la batterie agentique. Il écrit aussi les exports locaux demandés par les campagnes automatiques. Il ne sert pas la page HTML et n’exécute pas les modèles. La version `package.json` 1.3.0 est distincte de l’interface v0.13.0 et du protocole 0.09.
+Le backend Node.js fournit à l’interface des mesures Ollama et des informations sur la machine où il s’exécute. Il exécute également les outils restreints de la batterie agentique. Il écrit aussi les exports locaux demandés par les campagnes automatiques. Il ne sert pas la page HTML et n’exécute pas les modèles. La version `package.json` 1.4.0 est distincte de l’interface v0.14.0 et du protocole 0.09.
 
 ## Lancement
 
@@ -144,18 +144,18 @@ Le serveur Python sert le répertoire du projet et donc potentiellement les expo
 
 Validation : `node backend/local-exports.test.cjs` et `node backend/batch-campaign.test.cjs`. Après `git pull`, **redémarrer le backend**, puis recharger la page pour utiliser ces nouvelles routes.
 
-## Interface Simple/Pro (0.13.0)
+## Interface Simple/Pro (0.14.0)
 
-Le backend est en 1.3.0 ; les routes de campagne existantes restent compatibles. Simple lance les campagnes Ollama dans la même file à **un modèle** que Pro utilise pour plusieurs modèles : les routes `/api/exports/*` doivent donc être disponibles dès ce parcours simplifié. Pro affiche la sélection multi-modèles directement dans « Modèles à tester ». Le bouton de récupération reste dans la carte Campagne ; les exports manuels se trouvent dans « Autres exports ».
+Le backend est en 1.4.0 ; les routes de campagne existantes restent compatibles. Simple lance les campagnes Ollama dans la même file à **un modèle** que Pro utilise pour plusieurs modèles : les routes `/api/exports/*` doivent donc être disponibles dès ce parcours simplifié. Pro affiche la sélection multi-modèles directement dans « Modèles à tester ». Le bouton de récupération reste dans la carte Campagne ; les exports manuels se trouvent dans « Autres exports ».
 
 Les profils nommés sont enregistrés dans le navigateur, pas dans le dossier `export/` ni sur le backend. Ils peuvent inclure un prompt personnalisé ; ils n’incluent pas de clés API, de résultats ni d’informations matérielles.
 
 
-## Ollama local ou proxy cloud (0.13.0)
+## Ollama local ou proxy cloud (0.14.0)
 
 Le backend mesure sa propre machine ; ces mesures ne décrivent pas le matériel Ollama cloud. L’interface ne démarre pas la télémétrie locale pour un modèle reconnu cloud, ne réclame pas de `/api/ps` correspondant et n’envoie pas de déchargement cloud. Les outils agentiques restent exécutés dans le sandbox du backend local, tandis que le modèle distant reçoit les messages et retours d’outils. Les exports conservent le client et un nœud d’inférence distant inconnu. Les routes de génération cloud restent inchangées. [Détails et dépannage](backend/OLLAMA_CLOUD.md).
 
-## Catalogue de modèles (application 0.13.0 / backend 1.3.0)
+## Catalogue de modèles (application 0.14.0 / backend 1.4.0)
 
 Le bouton **Trouver des modèles pour ma machine** utilise les routes `/api/models/advisor*` : session, analyse GET, création POST d’une file de téléchargement, suivi et annulation. Elles exigent une origine locale et le suivi/mutations un jeton de session ; elles sont documentées dans [MODEL_ADVISOR.md](backend/MODEL_ADVISOR.md).
 
@@ -170,3 +170,9 @@ node backend/model-advisor-ui.test.cjs
 ```
 
 Le répertoire et les capacités matériels sont présentés localement ; ces estimations ne sont pas des métriques exportées. Le téléchargement contacte Ollama et son registre. Le service reste distinct des routes de génération, du sandbox agentique et de l’export communautaire.
+
+## Installation des runners (application 0.14.0 / backend 1.4.0)
+
+`backend/local-runners.js` expose `/api/runners*` pour une détection passive et des plans/installations/démarrages explicites. Le pilote installe Ollama, llama.cpp et MLX LM dans l’espace utilisateur sur Apple Silicon ; il utilise des recettes fixes, sans sudo, shell client ou écrasement d’une installation existante. L’extracteur Python contrôlé vérifie chemins et liens d’archives. Origine locale et jeton requis pour agir ; file unique et processus lancés identifiés en mémoire.
+
+[Guide complet](backend/LOCAL_RUNNERS.md). Les serveurs existants Windows/Linux restent détectables aux ports usuels, mais aucun installateur n’y est lancé. Le backend démarre seulement les services demandés ; les poids HF demandent un choix explicite supplémentaire et ne sont pas estimés par le catalogue Ollama. Les télémétries Ollama existantes restent inchangées.

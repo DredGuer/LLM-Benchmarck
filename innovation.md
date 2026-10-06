@@ -8,6 +8,7 @@ Mise à jour : **6 octobre 2026**. Ce document distingue les fonctions exécuté
 
 | Domaine | État |
 |---|---|
+| Installation des runners | Pilote Apple Silicon Ollama/MLX/llama.cpp, plans acceptés, espace utilisateur et détection ; validation macOS réelle à faire |
 | Génération locale et API | Interface multi-runner ; options et accès dépendants du serveur |
 | Protocole 0.09 | Chauffe séparée, 1 répétition par défaut, limites de sortie, contexte Auto, chargement/cache observés |
 | Catalogue Ollama | 13 familles / 30 variantes, estimation Apple Silicon RAM/contexte/disque expliquée, sélection et téléchargement séquentiel ; confiance faible, validation réelle à faire |

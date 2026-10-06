@@ -6,8 +6,8 @@ Historique des changements de LLM Benchmarker. Les dates correspondent aux inté
 
 | Élément | Version | Référence |
 |---|---|---|
-| Application / interface / producteur des exports | **0.13.0** | `js/core/version.js` |
-| Backend Node | 1.3.0 | `package.json` |
+| Application / interface / producteur des exports | **0.14.0** | `js/core/version.js` |
+| Backend Node | 1.4.0 | `package.json` |
 | Protocole de génération | 0.09 | `js/core/benchmark.js` |
 | Batterie agentique | 2.0.1 | `backend/agentic-suite.js` |
 | Rapport communautaire | 2.2.0 ; compatibilité 2.0.0/2.1.0 | `schemas/community-v2.schema.json` |
@@ -16,6 +16,16 @@ Historique des changements de LLM Benchmarker. Les dates correspondent aux inté
 | Inventaire Apple | 1.0.0 | `backend/apple-inventory.js` |
 
 Ces numéros désignent des composants différents. Les résultats historiques et exemples synthétiques conservent leur version d’origine. Le suffixe des URL de scripts sert à invalider le cache ; il ne désigne pas nécessairement la version de l’application.
+
+## [0.14.0] — 2026-10-06
+
+- Runners locaux en premier : Ollama, MLX LM et llama.cpp. Fournisseurs API dans un volet repliable ; LM Studio/personnalisé conservés dans Autres connexions, profils compatibles.
+- Détection passive des API et installations usuelles ; installé, chargement, API joignable et moteur compatible non confirmé distingués. Aucun téléchargement ou lancement automatique au scan.
+- Backend 1.4.0 : plans d’installation acceptés, pilote Apple Silicon dans l’espace utilisateur, ZIP Ollama signé/Gatekeeper, archive llama.cpp b11429 avec SHA-256, MLX LM en venv avec version PyPI choisie au plan et wheels seulement. Sources/recettes fixes, origine locale/jeton, staging/extraction contrôlée, file unique, aucun sudo/shell client/remplacement.
+- Démarrage séparé : choix explicite du modèle HF pour MLX/llama.cpp, écoute loopback et contrôle de port ; arrêt uniquement des processus gérés. Les prérequis Python restent requis et les installateurs Linux/Windows sont reportés.
+- Runner MLX intégré à la génération streamée (TTFT/usage/réflexion observable), aux profils et au harness agentique selon capacités du modèle ; pas d’attribution de RAM Ollama. Version runner réinitialisée à la sélection pour éviter une provenance périmée.
+- Interface/caches/producteur des exports 0.14.0 ; contrat communautaire, protocole et versions historiques conservés. README, guides, contribution et roadmap actualisés.
+- Validation : 25 suites passent ; quatre suites ajoutées pour recettes/états/consentement/guards, extraction réelle de ZIP/tar avec rejets, UI et génération MLX. Réseau, signatures, installations, processus et DOM simulés : validation réelle macOS encore requise.
 
 ## [0.13.0] — 2026-10-06
 

@@ -180,12 +180,34 @@ async function executeTest(model, promptType, promptText, rep, signal, protocol)
     } finally { 
       currentTestState.isStreaming = false; 
     }
+  } else if (state.runner === 'mlx') {
+    currentTestState.isStreaming = true;
+    try {
+      var response = await fetchWithTimeout(RUNNERS.mlx.base + '/v1/chat/completions', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: signal,
+        body: JSON.stringify({model:model,messages:[{role:'user',content:promptText}],temperature:temperature,max_tokens:maxTokens,stream:true})
+      }, 180000);
+      var turn = await consumeAgenticChat(response, 'mlx', signal, function(type,text) {
+        if (type !== 'content' && type !== 'thinking') return;
+        if (firstTokenTime === null) firstTokenTime = performance.now() - t0;
+        if (type === 'thinking') thinkingObserved = true;
+        if (type === 'content' && firstAnswerTime === null) firstAnswerTime = performance.now() - t0;
+        updateThinkingOutput(text);
+      });
+      fullText = turn.message.content || '';
+      tokensGenerated = (Number.isInteger(turn.usage?.outputTokens) && turn.usage.outputTokens >= 0) ? turn.usage.outputTokens : estimateTokens(fullText);
+      inputTokens = (Number.isInteger(turn.usage?.inputTokens) && turn.usage.inputTokens >= 0) ? turn.usage.inputTokens : null;
+      finishReason = turn.finishReason;
+      tokenCountKind = (Number.isInteger(turn.usage?.outputTokens) && turn.usage.outputTokens >= 0) ? 'declared' : 'estimated';
+      tokenCountSource = tokenCountKind === 'declared' ? 'provider:output-token-usage' : 'text-token-estimate';
+      updateTokenProgress(tokensGenerated,maxTokens);
+    } finally { currentTestState.isStreaming = false; }
   } else {
     // Non-streaming runners
     var base, endpoint, body, headers = { 'Content-Type': 'application/json' };
     
-    if (state.runner === 'lmstudio' || state.runner === 'llamacpp') {
-      base = state.runner === 'lmstudio' ? RUNNERS.lmstudio.base : RUNNERS.llamacpp.base;
+    if (['lmstudio','llamacpp','mlx'].includes(state.runner)) {
+      base = RUNNERS[state.runner].base;
       endpoint = '/v1/chat/completions';
       body = { model: model, messages: [{ role: 'user', content: promptText }], temperature: temperature, max_tokens: maxTokens, stream: false };
     } else if (state.runner === 'openai') {

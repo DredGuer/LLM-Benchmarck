@@ -815,3 +815,8 @@ body[data-interface-mode="simple"][data-runner="custom"] .model-custom-control {
 .advisor-green{border-left-color:#3fb950}.advisor-orange{border-left-color:#d29922}.advisor-red{border-left-color:#f85149}
 .advisor-unavailable,.advisor-cloud{opacity:.7}.advisor-variant p{margin:8px 0}.advisor-variant details{margin-top:8px}
 #advisorMessage,#advisorJobs{white-space:pre-wrap;overflow-wrap:anywhere;margin:12px 0}
+
+.runner-disclosure{margin-top:12px;border:1px solid var(--border);border-radius:16px;padding:10px;font-size:.82rem;background:var(--surface)}
+.runner-disclosure summary{cursor:pointer;color:var(--text);font-weight:600}
+.runner-disclosure p,#localRunnerStatus,#runnerSetupDescription,#runnerOperationStatus,#runnerStartNotice{font-size:.8rem;color:var(--text2);margin:10px 0;overflow-wrap:anywhere}
+#runnerSetup button{margin:8px 4px 0 0}#runnerSetupModel{width:100%;margin:8px 0}

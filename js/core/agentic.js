@@ -115,7 +115,7 @@ async function executeAgenticTest(model,rep,externalSignal,warmupRuns,scenario){
 async function runAgenticBenchmark(inBatch){
   if(state.batchActive&&!inBatch)return;
   if(state.isRunning||state.analysisRunning)return;
-  if(!['ollama','lmstudio','llamacpp'].includes(state.runner)){showToast('La batterie agentique exige un runner local avec appels d’outils natifs.','error');return;}
+  if(!['ollama','lmstudio','llamacpp','mlx'].includes(state.runner)){showToast('La batterie agentique exige un runner local avec appels d’outils natifs.','error');return;}
   var scenarios=selectedAgenticScenarios(),generation=typeof campaignPromptTypes==='function'?campaignPromptTypes():PROMPT_TYPES.filter(pt=>state.selectedPrompts.has(pt.id)),model=getSelectedModel(),repetitions=getRepetitions(),runner=state.runner;
   if(!scenarios.length){showToast('Sélectionnez au moins une épreuve agentique.','error');return;}
   if(!model||model==='unknown-model'||!Number.isInteger(repetitions)||repetitions<1||repetitions>20){showToast('Choisissez un modèle et 1 à 20 répétitions.','error');return;}

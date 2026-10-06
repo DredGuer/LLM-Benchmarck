@@ -28,6 +28,10 @@ app.use(cors());
 require('./backend/local-exports').mountExportRoutes(app);
 app.use(express.json());
 require('./backend/model-advisor').mountAdvisorRoutes(app);
+const localRunnerManager=require('./backend/local-runners').mountRunnerRoutes(app);
+process.once('exit',()=>localRunnerManager.shutdown());
+process.once('SIGINT',()=>{localRunnerManager.shutdown();process.exit(130);});
+process.once('SIGTERM',()=>{localRunnerManager.shutdown();process.exit(143);});
 require('./backend/agentic-harness').mountAgenticRoutes(app);
 
 /**

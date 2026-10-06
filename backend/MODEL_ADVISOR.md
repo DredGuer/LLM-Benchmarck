@@ -1,4 +1,4 @@
-# Catalogue et estimation locale — application 0.13.0
+# Catalogue et estimation locale — application 0.14.0
 
 Le bouton **Trouver des modèles pour ma machine**, disponible en Simple et Pro, propose un catalogue limité pour **Apple Silicon + Ollama local**. Il ne prédit ni la qualité, ni les tokens/s, ni la réussite du chargement. Le catalogue et l’estimateur portent chacun la version 1.0.0 ; les estimations ne sont pas des résultats de benchmark et ne sont pas ajoutées aux exports communautaires.
 
