@@ -6,8 +6,8 @@ Historique des changements de LLM Benchmarker. Les dates correspondent aux inté
 
 | Élément | Version | Référence |
 |---|---|---|
-| Application / interface / producteur des exports | **0.14.0** | `js/core/version.js` |
-| Backend Node | 1.4.0 | `package.json` |
+| Application / interface / producteur des exports | **0.15.0** | `js/core/version.js` |
+| Backend Node | 1.5.0 | `package.json` |
 | Protocole de génération | 0.09 | `js/core/benchmark.js` |
 | Batterie agentique | 2.0.1 | `backend/agentic-suite.js` |
 | Rapport communautaire | 2.2.0 ; compatibilité 2.0.0/2.1.0 | `schemas/community-v2.schema.json` |
@@ -16,6 +16,16 @@ Historique des changements de LLM Benchmarker. Les dates correspondent aux inté
 | Inventaire Apple | 1.0.0 | `backend/apple-inventory.js` |
 
 Ces numéros désignent des composants différents. Les résultats historiques et exemples synthétiques conservent leur version d’origine. Le suffixe des URL de scripts sert à invalider le cache ; il ne désigne pas nécessairement la version de l’application.
+
+## [0.15.0] — 2026-10-06
+
+- SQLite local, backend 1.5.0, Node ≥ 22.13 : stockage hors dépôt, transactions, WAL et schéma local 1.
+- Sauvegarde après chaque passe ; campagnes avec ID stable, mesures originales immuables, annotations nom/notes/tags et exclusions statistiques persistantes.
+- CRUD des campagnes et profils, corbeille restaurable, confirmation de suppression définitive.
+- Migration transactionnelle et idempotente du navigateur, copie conservée ; historique, statistiques et assistant utilisent la vue SQLite.
+- Sauvegarde JSON locale versionnée avec annotations/corbeille, import fusionné avec détection des conflits ; exports communautaires inchangés.
+- Backend lié à 127.0.0.1 ; routes de données réservées aux origines et connexions locales. SQLite ne chiffre pas les résultats. Clés API exclues de la migration/base.
+- Versions interface/producteur 0.15.0 ; provenance des anciens tests préservée. Validation : 28 suites passent, dont 3 nouvelles suites SQLite/HTTP réels et frontend simulé ; validation utilisateur Mac à effectuer.
 
 ## [0.14.0] — 2026-10-06
 

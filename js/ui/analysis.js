@@ -111,7 +111,7 @@ function clearAnalysis() {
 }
 function analysisHistoryResults() {
   var sessions=[];
-  try { sessions=JSON.parse(localStorage.getItem(typeof HISTORY_KEY === 'string' ? HISTORY_KEY : 'llm_bench_history') || '[]'); } catch (_) {}
+  try { sessions=databaseHistory(); } catch (_) {}
   var all=[...(state.results || [])];
   if (Array.isArray(sessions)) sessions.forEach(s=>{if(Array.isArray(s.results))all.push(...s.results);});
   var seen=new Set();return all.filter(r=>{

@@ -1,4 +1,4 @@
-// Named campaign settings stay in this browser. Keys and hardware inventories are excluded.
+// Named campaign settings live in SQLite. Keys and hardware inventories are excluded.
 var PROFILE_STORAGE_KEY = 'llmb-campaign-profiles-v1';
 var INTERFACE_MODE_KEY = 'llmb-interface-mode';
 function configurationBusy() { return !!(state.isRunning || state.batchActive || state.analysisRunning || state.configuring); }
@@ -39,7 +39,7 @@ function captureCampaignSettings() {
     agentic:agenticEnabled(),agenticScenarios:selectedAgenticScenarios().map(s=>s.id),quality:profileField('qualityEnabled').checked,
     controlled:profileField('controlledEnabled').checked,contextA:Number(profileField('controlledContextA').value),contextB:Number(profileField('controlledContextB').value),continueErrors:profileField('batchContinueErrors').checked});
 }
-function storedCampaignProfiles() {
+function storedLegacyProfiles() {
   var value=JSON.parse(localStorage.getItem(PROFILE_STORAGE_KEY)||'[]');
   if(!Array.isArray(value)||value.length>40)throw new Error('Stockage des profils invalide.');
   return value.map(p=>{
@@ -47,13 +47,14 @@ function storedCampaignProfiles() {
     return {id:p.id,name:p.name,createdAt:p.createdAt,updatedAt:p.updatedAt,applicationVersion:p.applicationVersion,settings:validateCampaignSettings(p.settings)};
   });
 }
+function storedCampaignProfiles(){return databaseView.ready?databaseView.profiles.map(p=>({...p,settings:validateCampaignSettings(p.settings)})):[];}
 function renderCampaignProfiles(selected) {
   var select=profileField('campaignProfileSelect');if(!select)return;
   select.textContent='';var placeholder=document.createElement('option');placeholder.value='';placeholder.textContent='— Choisir un profil —';select.appendChild(placeholder);
   try {storedCampaignProfiles().forEach(p=>{var opt=document.createElement('option');opt.value=p.id;opt.textContent=p.name;select.appendChild(opt);});select.value=selected||'';}
   catch(error){showToast(error.message,'error');}
 }
-function saveCampaignProfile(update) {
+async function saveCampaignProfile(update) {
   if(configurationBusy()||state.interfaceMode!=='pro')return;
   try {
     var settings=captureCampaignSettings(),profiles=storedCampaignProfiles(),id=update?profileField('campaignProfileSelect').value:null;
@@ -64,7 +65,7 @@ function saveCampaignProfile(update) {
     if(profiles.some(p=>p.name===name&&p.id!==id))throw new Error('Ce nom existe déjà. Chargez le profil et utilisez Mettre à jour.');
     var now=new Date().toISOString(),profile={id:existing?.id||crypto.randomUUID(),name,createdAt:existing?.createdAt||now,updatedAt:now,applicationVersion:LLMB_VERSION,settings};
     if(existing)profiles[profiles.indexOf(existing)]=profile;else profiles.push(profile);
-    localStorage.setItem(PROFILE_STORAGE_KEY,JSON.stringify(profiles));renderCampaignProfiles(profile.id);showToast('Profil « '+name+' » sauvegardé dans ce navigateur.','success');
+    await databaseRequest('/profiles','POST',profile);await refreshDatabase();renderCampaignProfiles(profile.id);showToast('Profil « '+name+' » sauvegardé dans SQLite.','success');
   }catch(error){showToast(error.message,'error');}
 }
 async function applyCampaignSettings(settings) {
@@ -96,11 +97,11 @@ async function loadCampaignProfile() {
   }catch(error){showToast(error.message,'error');}
   finally{state.configuring=false;lockCampaignControls(false);renderInterfaceMode();}
 }
-function deleteCampaignProfile() {
+async function deleteCampaignProfile() {
   if(configurationBusy()||state.interfaceMode!=='pro')return;
   try{var id=profileField('campaignProfileSelect').value,profiles=storedCampaignProfiles(),p=profiles.find(p=>p.id===id);if(!p)return;
     if(!confirm('Supprimer le profil « '+p.name+' » ?'))return;
-    localStorage.setItem(PROFILE_STORAGE_KEY,JSON.stringify(profiles.filter(p=>p.id!==id)));renderCampaignProfiles();profileField('campaignProfileName').value='';showToast('Profil supprimé.','info');
+    await databaseRequest('/profiles/'+encodeURIComponent(id),'DELETE');await refreshDatabase();renderCampaignProfiles();profileField('campaignProfileName').value='';showToast('Profil supprimé.','info');
   }catch(error){showToast(error.message,'error');}
 }
 function prepareSimpleModel() {

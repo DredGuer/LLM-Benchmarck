@@ -24,16 +24,11 @@ async function campaign(fail) {
     assert.equal(rendered[0].protocol.loadState,'cold');assert.equal(rendered[1].protocol.loadState,'warm');
     assert.equal(rendered[1].protocol.warmupRuns,1);}
 }
-function historySafety() {
- const records = new Map();
- const scope = { HISTORY_KEY:'history',showToast(){},console,
-   localStorage:{getItem:k=>records.get(k) || null,setItem:(k,v)=>records.set(k,v)} };
- vm.createContext(scope);vm.runInContext(script('js/core/history.js'),scope);
- assert.equal(scope.saveSessionToHistory({results:[]}),true);
- assert.equal(JSON.parse(records.get('history')).length,1);
- scope.localStorage.setItem=()=>{const e=new Error('full');e.name='QuotaExceededError';throw e;};
- assert.equal(scope.saveSessionToHistory({results:[]}),false);
- assert.equal(JSON.parse(records.get('history')).length,1);
+async function historySafety() {
+ const scope={state:{},queueDatabaseSave:async()=>true};vm.createContext(scope);vm.runInContext(script('js/core/history.js'),scope);
+ assert.equal(await scope.saveSessionToHistory({id:'a'}),true);
+ scope.state.unsavedSession={id:'a'};await scope.saveSessionToHistory({id:'a'});assert.equal(scope.state.unsavedSession,null);
+ scope.queueDatabaseSave=async()=>false;assert.equal(await scope.saveSessionToHistory({id:'b'}),false);
 }
 async function stream() {
   const scope={TextDecoder,TextEncoder,crypto};vm.createContext(scope);vm.runInContext(script('js/core/protocol.js'),scope);
@@ -59,6 +54,6 @@ function statistics() {
  assert.equal(scope.buildStatistics([{results:[a,{...b,modelMetadata:{...b.modelMetadata,type:'moe'}}]}]).length,2);
  assert.equal(scope.buildStatistics([{results:[a,{...b,metrics:{...b.metrics,contextObservedTokens:4096}}]}]).length,2);
 }
-(async()=>{await campaign(false);await campaign(true);await stream();statistics();historySafety();
+(async()=>{await campaign(false);await campaign(true);await stream();statistics();await historySafety();
  console.log('PASS: cold warmup/warm measurements, no accumulation, saved failure/unlock, split NDJSON/errors, fingerprints and comparable statistics');
 })().catch(error=>{console.error(error);process.exitCode=1;});

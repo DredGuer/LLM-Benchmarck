@@ -21,6 +21,7 @@ document.getElementById("modelSelect").addEventListener("change", refreshModelMe
 document.getElementById("modelCustom").addEventListener("change", refreshModelMetadata);
 loadApiKeys();
 loadHistory();
+initializeDatabase();
 updateTime();
 setInterval(updateTime, 30000);
 

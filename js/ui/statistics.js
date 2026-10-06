@@ -125,7 +125,7 @@ function statisticsConditions(g) {
 }
 function renderStatistics() {
   var panel=document.getElementById('statisticsContent');if(!panel)return;
-  var history;try{history=JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]');}catch(_){history=[];}
+  var history;try{history=databaseHistory();}catch(_){history=[];}
   var groups=buildStatistics(history),selection=statisticsSelection;
   var metric=document.getElementById('statisticsMetric')?.value||'tps',unit=STATISTICS_UNITS[metric];
   var type=document.getElementById('statisticsChartType')?.value||'line',aggregate=document.getElementById('statisticsAggregate')?.value||'mean';

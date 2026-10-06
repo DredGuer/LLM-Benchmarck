@@ -119,13 +119,14 @@ async function runAgenticBenchmark(inBatch){
   var scenarios=selectedAgenticScenarios(),generation=typeof campaignPromptTypes==='function'?campaignPromptTypes():PROMPT_TYPES.filter(pt=>state.selectedPrompts.has(pt.id)),model=getSelectedModel(),repetitions=getRepetitions(),runner=state.runner;
   if(!scenarios.length){showToast('Sélectionnez au moins une épreuve agentique.','error');return;}
   if(!model||model==='unknown-model'||!Number.isInteger(repetitions)||repetitions<1||repetitions>20){showToast('Choisissez un modèle et 1 à 20 répétitions.','error');return;}
-  if(state.unsavedSession&&saveSessionToHistory(state.unsavedSession)===false)return;
+  if(state.unsavedSession&&(await saveSessionToHistory(state.unsavedSession))===false)return;
   state.unsavedSession=null;state.isRunning=true;lockCampaignControls(true);var controller=new AbortController();currentAbortController=controller;
+  var sessionId=crypto.randomUUID(),sessionSavedAt=new Date().toISOString();
   var results=[],warmups=0,button=document.getElementById('runBtn');button.disabled=true;document.getElementById('agenticStop').hidden=false;
-  function remember(r){if(typeof recordControlledResult==='function')recordControlledResult(r);results.push(r);state.results.unshift(r);renderResultCard(r);}
+  async function remember(r){if(typeof recordControlledResult==='function')recordControlledResult(r);results.push(r);state.results.unshift(r);renderResultCard(r);if(typeof queueDatabaseSave==='function' && await saveSessionToHistory({id:sessionId,savedAt:sessionSavedAt,model,runner,results,env:JSON.parse(JSON.stringify(state.env)),repetitions,warmupRuns:warmups})===false)throw Object.assign(new Error('Sauvegarde SQLite interrompue.'),{persistence:true});}
   async function warmup(){agenticLiveStart('Chargement / chauffe');agenticLive('warmup','Le runner charge le modèle et vérifie sa réponse ; cette passe reste hors des scores.');
     button.textContent='Chargement / chauffe…';var warm=await executeTest(model,{id:'warmup',name:'Chargement / chauffe',emoji:'🔥'},'Réponds uniquement par OK.',1,controller.signal,{warmup:true,loadState:await observeLoadedModel(model,controller.signal),warmupRuns:warmups});
-    if(controller.signal.aborted)throw new Error('Campagne annulée pendant la chauffe.');if(!warm.metrics.totalTokens&&!warm.response)throw new Error('Le modèle ne répond pas pendant la chauffe.');remember(warm);warmups++;if(state.controlledActive&&state.controlledStop)throw Object.assign(new Error('Contexte demandé non confirmé après la chauffe.'),{contextVerification:true});showLiveSections(false);setControlButtons(false);
+    if(controller.signal.aborted)throw new Error('Campagne annulée pendant la chauffe.');if(!warm.metrics.totalTokens&&!warm.response)throw new Error('Le modèle ne répond pas pendant la chauffe.');await remember(warm);warmups++;if(state.controlledActive&&state.controlledStop)throw Object.assign(new Error('Contexte demandé non confirmé après la chauffe.'),{contextVerification:true});showLiveSections(false);setControlButtons(false);
   }
   try{var info=await agenticRequest('/info',null,null,controller.signal);if(info.version!=='2.0.1'||!Array.isArray(info.scenarios))throw new Error('Redémarrez le backend mis à jour : batterie agentique v2 requise.');
     resetCampaignResults();switchTab('results');document.getElementById('progressSection').style.display='block';await refreshModelMetadata();state.runnerVersion=null;
@@ -138,17 +139,17 @@ async function runAgenticBenchmark(inBatch){
         var prompt=pt.id==='custom'?(document.getElementById('customPromptText').value.trim()||'Dis bonjour.'):pt.prompt;
         agenticLiveStart('Génération · '+pt.name);agenticLive('request','Mesure de génération ; le suivi texte est affiché dans la zone en direct.');
         button.textContent='Génération · '+pt.name+' · '+rep+'/'+repetitions;
-        try{remember(await executeTest(model,pt,prompt,rep,controller.signal,{loadState:await observeLoadedModel(model,controller.signal),warmupRuns:warmups}));}
-        catch(error){if(controller.signal.aborted)throw error;remember(buildErrorResult(model,pt,error.message,rep));}
+        try{await remember(await executeTest(model,pt,prompt,rep,controller.signal,{loadState:await observeLoadedModel(model,controller.signal),warmupRuns:warmups}));}
+        catch(error){if(controller.signal.aborted||error.persistence)throw error;await remember(buildErrorResult(model,pt,error.message,rep));}
         showLiveSections(false);setControlButtons(false);
       }
       for(var scenario of scenarios){if(state.batchAbort || controller.signal.aborted || (state.controlledActive && state.controlledStop))break;if(runner==='ollama'&&await observeLoadedModel(model,controller.signal)==='cold')await warmup();
-        button.textContent=scenario.title+' · '+rep+'/'+repetitions;remember(await executeAgenticTest(model,rep,controller.signal,warmups,scenario));}
+        button.textContent=scenario.title+' · '+rep+'/'+repetitions;await remember(await executeAgenticTest(model,rep,controller.signal,warmups,scenario));}
       if(state.batchAbort || controller.signal.aborted || (state.controlledActive && state.controlledStop))break;
     }
     showToast(controller.signal.aborted?'Campagne interrompue ; résultats conservés.':'Campagne terminée : génération et capacités agentiques.','info');
   }catch(error){if(state.batchActive&&!error.contextVerification)state.batchFailure=error.message;if(state.controlledActive)state.controlledStop=true;showToast(error.message,'error');}
-  finally{if(controller.signal.aborted&&state.controlledActive)state.controlledStop=true;if(results.length){var session={model,runner,results,env:JSON.parse(JSON.stringify(state.env)),repetitions,warmupRuns:warmups};if(saveSessionToHistory(session)===false)state.unsavedSession=session;}
+  finally{if(controller.signal.aborted&&state.controlledActive)state.controlledStop=true;if(results.length){var session={id:sessionId,savedAt:sessionSavedAt,model,runner,results,env:JSON.parse(JSON.stringify(state.env)),repetitions,warmupRuns:warmups};if((await saveSessionToHistory(session))===false)state.unsavedSession=session;}
     document.getElementById('exportBtn').disabled=!state.results.length;document.getElementById('progressSection').style.display='none';document.getElementById('agenticStop').hidden=true;
     currentAbortController=null;showLiveSections(false);setControlButtons(false);button.disabled=!!state.batchActive;button.textContent='⚡ Lancer le benchmark';state.isRunning=false;lockCampaignControls(false);renderStatistics();}
 }

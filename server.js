@@ -23,8 +23,12 @@ const app = express();
 const PORT = process.argv.includes('--port') ? 
   parseInt(process.argv[process.argv.indexOf('--port') + 1]) || 3001 : 3001;
 
-// Middleware
 app.use(cors());
+// Persistent local history; mounted before the general JSON parser.
+const databaseStore=require('./backend/database').mountDatabaseRoutes(app);
+process.once('exit',()=>databaseStore.close());
+
+// Middleware
 require('./backend/local-exports').mountExportRoutes(app);
 app.use(express.json());
 require('./backend/model-advisor').mountAdvisorRoutes(app);
@@ -723,7 +727,7 @@ app.get('/', (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, '127.0.0.1', () => {
   console.log(`🚀 LLM Benchmarker Backend`);
   console.log(`📍 Running on http://localhost:${PORT}`);
   console.log(`💡 Endpoints:`);

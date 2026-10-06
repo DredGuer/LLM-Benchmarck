@@ -5,7 +5,7 @@ const record=(id,model,tps,extra={})=>({id,model,runner:'Ollama',phase:'measurem
  timestamp:'2026-10-05T19:00:00Z',env:{chip:'M3',ram:'36 GiB',apiKeys:secret},metrics:{tokensPerSec:tps,totalTokens:100,prefillTimeMs:5},...extra});
 const a=record('a','hf.co/model:Q4',10),b=record('b','other:mlx',30);
 let history=[{results:[a,b]}],requests=[];
-const scope={state:{results:[],isRunning:false},HISTORY_KEY:'history',localStorage:{getItem:()=>JSON.stringify(history)},document:{getElementById:el,createElement:()=>({style:{},addEventListener(){}})},
+const scope={databaseHistory:()=>history,state:{results:[],isRunning:false},HISTORY_KEY:'history',localStorage:{getItem:()=>JSON.stringify(history)},document:{getElementById:el,createElement:()=>({style:{},addEventListener(){}})},
  URL,AbortController,RUNNERS:{ollama:{base:'http://localhost:11434'}},getSelectedModel:()=> 'analysis-model',showToast(){},
  fetchWithTimeout:async(url,options)=>{requests.push({url,options});return {ok:true,json:async()=>({message:{content:'conclusion'}})};}};
 vm.createContext(scope);vm.runInContext(fs.readFileSync('js/ui/analysis.js','utf8'),scope);vm.runInContext(fs.readFileSync('js/ui/statistics.js','utf8'),scope);

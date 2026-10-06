@@ -1,8 +1,8 @@
 # LLM Benchmarker
 
-Benchmarkez vos modèles locaux ou vos API, conservez les campagnes dans votre navigateur et comparez leurs performances sur votre machine.
+Benchmarkez vos modèles locaux ou vos API, conservez les campagnes dans une base SQLite locale et comparez leurs performances sur votre machine.
 
-**Interface v0.14.0 · protocole de mesure 0.09 · export communautaire 2.2.0 (anciens rapports 2.0.0/2.1.0 acceptés).** Documentation vérifiée le 6 octobre 2026. [Historique des versions et changements](CHANGELOG.md). Ces versions désignent des éléments différents ; la version 1.4.0 de `package.json` concerne le backend.
+**Interface v0.15.0 · protocole de mesure 0.09 · export communautaire 2.2.0 (anciens rapports 2.0.0/2.1.0 acceptés).** Documentation vérifiée le 6 octobre 2026. [Historique des versions et changements](CHANGELOG.md). Ces versions désignent des éléments différents ; la version 1.5.0 de `package.json` concerne le backend.
 
 Fonctions actuelles : runners locaux en premier, détection passive et installation/démarrage intégrés sur Apple Silicon, catalogue Ollama avec estimation RAM/disque et téléchargement local séquentiel, interface Simple/Pro et profils nommés de campagne, campagnes automatiques multi-modèles Ollama avec exports locaux classés, chauffe séparée, contexte Auto, identification Dense/MoE lorsqu’elle est disponible, inventaire Apple Silicon, suivi RSS/swap/MLX, exports Markdown/JSON, statistiques interactives, batterie de capacités agentiques et assistant d’analyse au choix. Les bulles **!** expliquent les réglages et mesures au clic, au clavier ou sur mobile.
 
@@ -14,9 +14,9 @@ Le sélecteur **Interface Simple / Interface Pro** est dans l’en-tête. Il s�
 
 **Pro** affiche directement les **cases à cocher des modèles Ollama** dans « Modèles à tester », avec un compteur : sélectionnez un ou plusieurs modèles, puis le bouton de lancement exécute la file. Pour les autres fournisseurs, la sélection reste à un modèle. Pro expose les catégories, prompt personnalisé, température par type, répétitions, épreuves agentiques précises, justesse et deux contextes contrôlés. Passer de Pro à Simple préserve votre configuration Pro pendant la session ; revenir en Pro la restaure. Pour la conserver après fermeture ou rechargement, utilisez un profil.
 
-Dans **Profils de campagne** (Pro) : faites vos réglages, donnez un nom, cliquez sur **Enregistrer un profil**. Plus tard, choisissez ce profil et cliquez sur **Charger**. **Mettre à jour** remplace les réglages du profil sélectionné ; **Supprimer** demande une confirmation. Charger un profil ne lance pas un test. Jusqu’à 40 profils sont stockés dans ce navigateur, pour cette adresse de page.
+Dans **Profils de campagne** (Pro) : faites vos réglages, donnez un nom, cliquez sur **Enregistrer un profil**. Plus tard, choisissez ce profil et cliquez sur **Charger**. **Mettre à jour** remplace les réglages du profil sélectionné ; **Supprimer** demande une confirmation. Charger un profil ne lance pas un test. Jusqu’à 40 profils peuvent être créés via l’interface ; ils sont sauvegardés dans SQLite sur la machine du backend.
 
-Un profil conserve runner, modèle(s), catégories, prompt personnalisé et sa température, mode Auto/Manuel, plafond de sortie, répétitions, températures par type, épreuves agentiques, justesse, contextes et politique d’erreur. L’URL du runner personnalisé peut être conservée si elle ne contient aucun identifiant ou paramètre secret. Les clés API, résultats, inventaire matériel et jetons de session ne sont pas inclus. Les profils peuvent contenir le **prompt personnalisé en clair** : le stockage navigateur n’est pas une sauvegarde externe ; vider ses données ou changer de port/origine peut les rendre indisponibles. Un modèle absent est signalé et bloque la file jusqu’à correction de la sélection ou disponibilité du modèle.
+Un profil conserve runner, modèle(s), catégories, prompt personnalisé et sa température, mode Auto/Manuel, plafond de sortie, répétitions, températures par type, épreuves agentiques, justesse, contextes et politique d’erreur. L’URL du runner personnalisé peut être conservée si elle ne contient aucun identifiant ou paramètre secret. Les clés API, résultats, inventaire matériel et jetons de session ne sont pas inclus. Les profils peuvent contenir le **prompt personnalisé en clair** : SQLite n’est pas une sauvegarde externe : utilisez la sauvegarde de la base dans Historique. Vider le navigateur ne supprime plus les profils migrés. Un modèle absent est signalé et bloque la file jusqu’à correction de la sélection ou disponibilité du modèle.
 
 ## Campagne automatique et exports par modèle
 
@@ -34,7 +34,7 @@ Les JSON excluent prompts, réponses, journaux et clés ; **les Markdown contien
 
 ## Premier lancement avec Ollama
 
-Prérequis : Git, Python 3, un navigateur récent et Ollama. Pour le backend matériel, utilisez Node.js et npm ; Node.js 22 est utilisé dans le parcours testé sur Mac.
+Prérequis : Git, Python 3, un navigateur récent et Ollama. Pour le backend matériel, utilisez Node.js et npm ; Node.js **≥ 22.13.0** est requis pour SQLite (Node 22.22.3 convient).
 
 ### 1. Préparer le runner
 
@@ -296,11 +296,19 @@ Utilisez `Ctrl+C` dans son terminal si possible. Modifier seulement le port du b
 
 Les captures d’écran seront ajoutées ensuite ; les commandes et comportements documentés peuvent déjà être utilisés.
 
+## Historique durable et CRUD (v0.15.0)
+
+Le backend enregistre désormais l’historique et les profils dans **SQLite**, indépendamment du cache du navigateur. Après la mise à jour, redémarrez `npm start`, ouvrez votre adresse habituelle et consultez le statut dans **Historique** : les anciennes données sont migrées automatiquement, leur copie navigateur est conservée.
+
+Sur Mac : `~/Library/Application Support/LLM-Benchmarker/benchmarks.sqlite`. Chaque passe terminée est sauvegardée. Historique/statistiques/assistant lisent la base ; le backend doit rester démarré. Une erreur de sauvegarde est signalée et arrête la campagne : gardez la page ouverte pour exporter les résultats.
+
+Dans Historique : **Modifier** (nom, notes, tags), inclusion/exclusion des passes des statistiques, **Corbeille**, restauration et suppression définitive confirmée. Les mesures originales restent intactes. Les profils Pro sont également sauvegardés dans SQLite. **Sauvegarder la base** et **Importer une sauvegarde** utilisent un JSON local complet, distinct de l’export communautaire ; import fusionné, pas remplacement. [Chemins, API, limites et tests SQLite](backend/DATABASE.md).
+
 ## Précautions d’utilisation et licence
 
 En téléchargeant ou en utilisant LLM Benchmarker, vous reconnaissez avoir pris connaissance des informations du projet et de sa [charte d’utilisation](CHARTE_UTILISATION.md).
 
-Les tests, historiques et clés API sauvegardées pour les benchmarks sont conservés dans le navigateur et peuvent être accessibles en clair. Le stockage local ne garantit pas leur sauvegarde. Vérifiez les exports avant partage ; avec une API externe, les données nécessaires aux requêtes sont transmises au fournisseur choisi.
+Les historiques et profils sont conservés dans une base SQLite locale, hors dépôt ; les clés API et préférences restent dans le navigateur. Ces données ne sont pas chiffrées par l’application. Effectuez des sauvegardes. Vérifiez les exports avant partage ; avec une API externe, les données nécessaires aux requêtes sont transmises au fournisseur choisi.
 
 Le logiciel est proposé gratuitement sous [licence Apache 2.0](LICENSE), avec les conditions de garantie et de responsabilité qu’elle prévoit.
 

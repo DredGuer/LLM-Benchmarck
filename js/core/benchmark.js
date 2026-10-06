@@ -12,8 +12,9 @@ async function runBenchmark(inBatch) {
   if (!model || model === 'unknown-model') { showToast('Veuillez sélectionner un modèle', 'error'); return; }
   var repetitions = getRepetitions();
   if (!Number.isInteger(repetitions) || repetitions < 1 || repetitions > 20) { showToast('Choisissez de 1 à 20 répétitions.', 'error'); return; }
-  if (state.unsavedSession && saveSessionToHistory(state.unsavedSession) === false) return;
+  if (state.unsavedSession && (await saveSessionToHistory(state.unsavedSession)) === false) return;
   state.unsavedSession = null;
+  var sessionId=crypto.randomUUID(),sessionSavedAt=new Date().toISOString();
   var runner = state.runner, sessionResults = [], warmupRuns = 0, completedTests = 0;
   var runBtn = document.getElementById('runBtn'), progressSection = document.getElementById('progressSection');
   var selectedTypes = typeof campaignPromptTypes === 'function' ? campaignPromptTypes() : PROMPT_TYPES.filter(pt => state.selectedPrompts.has(pt.id));
@@ -22,7 +23,7 @@ async function runBenchmark(inBatch) {
   state.isRunning = true; resetCampaignResults(); switchTab('results'); lockCampaignControls(true);
   runBtn.disabled = true; runBtn.innerHTML = '<div class="spinner"></div> Chargement / chauffe…';
   progressSection.style.display = 'block'; skipToNextFlag = false; retryCurrentFlag = false;
-  function remember(result) { if (typeof recordControlledResult === 'function') recordControlledResult(result); sessionResults.push(result); state.results.unshift(result); renderResultCard(result); }
+  async function remember(result) { if (typeof recordControlledResult === 'function') recordControlledResult(result); sessionResults.push(result); state.results.unshift(result); renderResultCard(result); if(typeof queueDatabaseSave==='function' && await saveSessionToHistory({id:sessionId,savedAt:sessionSavedAt,model,runner,results:sessionResults,env:JSON.parse(JSON.stringify(state.env)),repetitions,warmupRuns})===false) throw Object.assign(new Error('Sauvegarde SQLite interrompue.'),{persistence:true}); }
   async function warmup() {
     activeType = { id: 'warmup', name: 'Chargement / chauffe', emoji: '🔥' };
     activePrompt = 'Réponds uniquement par OK.'; activeRep = 1; activePhase = 'warmup';
@@ -32,7 +33,7 @@ async function runBenchmark(inBatch) {
     var result = await executeTest(model, activeType, activePrompt, 1, currentAbortController.signal,
       { warmup: true, loadState: loadState, warmupRuns: warmupRuns });
     if (!result.metrics.totalTokens && !result.response) throw new Error('Le modèle n’a généré aucun token pendant la chauffe.');
-    remember(result); warmupRuns++;
+    await remember(result); warmupRuns++;
     if (state.controlledActive && state.controlledStop) throw Object.assign(new Error('Le contexte demandé n’est pas confirmé après la chauffe.'),{contextVerification:true});
     if (runner === 'ollama' && await observeLoadedModel(model, currentAbortController.signal) === 'cold')
       throw new Error('Le modèle ne reste pas chargé après la chauffe.');
@@ -69,7 +70,7 @@ async function runBenchmark(inBatch) {
           var result = await executeTest(model, activeType, activePrompt, rep, currentAbortController.signal,
             { loadState: loadState, warmupRuns: warmupRuns });
           if (retryCurrentFlag) { rep--; continue; }
-          remember(result); completedTests++;
+          await remember(result); completedTests++;
           if (skipToNextFlag) break;
         } catch (error) {
           if (retryCurrentFlag) { rep--; continue; }
@@ -85,12 +86,12 @@ async function runBenchmark(inBatch) {
     if (state.controlledActive) state.controlledStop = true;
     var failed = buildErrorResult(model, activeType, error.message, activeRep);
     failed.phase = activePhase; failed.promptText = activePrompt;
-    if(!error.contextVerification)remember(failed); showToast(error.message, 'error');
+    if(!error.contextVerification&&!error.persistence)await remember(failed).catch(()=>{}); showToast(error.message, 'error');
   } finally {
     if (sessionResults.length) {
-      var session = { model: model, runner: runner, results: sessionResults,
+      var session = { id:sessionId,savedAt:sessionSavedAt,model: model, runner: runner, results: sessionResults,
         env: JSON.parse(JSON.stringify(state.env)), repetitions: repetitions, warmupRuns: warmupRuns };
-      if (saveSessionToHistory(session) === false) state.unsavedSession = session;
+      if ((await saveSessionToHistory(session)) === false) state.unsavedSession = session;
     }
     document.getElementById('exportBtn').disabled = !state.results.length;
     currentAbortController = null; showLiveSections(false); setControlButtons(false);

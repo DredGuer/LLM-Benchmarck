@@ -94,3 +94,7 @@ Toute évolution du catalogue doit vérifier les fiches officielles, conserver s
 ## Installation des runners locaux
 
 Conserver la détection passive, la différence installation/API et l’absence de remplacement automatique. Pas de shell/URL/exécutable arbitraire transmis par le client ; plans explicites, origines/jetons, sources fixes, signatures/digests et extraction contrôlée requis. Ne pas attribuer la télémétrie Ollama à MLX natif. Suites : `local-runners.test.cjs`, `runner-archive.test.cjs`, `local-runners-ui.test.cjs` et `mlx-runner.test.cjs` dans `backend/`. Les tests simulés ne remplacent pas une installation réelle macOS.
+
+### Persistance locale (0.15.0)
+
+Toute modification de l’historique/profils doit conserver l’immuabilité des mesures et la migration idempotente, et tester les échecs d’écriture/corbeille/restauration. Exécuter `node backend/database.test.cjs`, `node backend/database-http.test.cjs` et `node backend/database-ui.test.cjs` (SQLite/HTTP réels, frontend simulé). Le schéma local SQLite est indépendant des exports communautaires. Voir `backend/DATABASE.md`.

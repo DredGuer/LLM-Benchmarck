@@ -1,6 +1,6 @@
 {
   "name": "llm-benchmarker-memory-monitor",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Memory monitoring backend for LLM Benchmarker - tracks Ollama process RAM usage",
   "main": "server.js",
   "scripts": {
@@ -24,5 +24,8 @@
   },
   "devDependencies": {
     "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=22.13.0"
   }
 }

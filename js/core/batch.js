@@ -76,7 +76,7 @@ async function runBatchCampaign(explicitModels) {
   if (!state.selectedPrompts.size && !agenticEnabled()) { showToast('Choisissez les catégories ou épreuves à exécuter.', 'error'); return; }
   if (agenticEnabled() && !selectedAgenticScenarios().length) { showToast('Choisissez au moins une épreuve agentique.', 'error'); return; }
   if (!Number.isInteger(getRepetitions()) || getRepetitions() < 1 || getRepetitions() > 20) { showToast('Choisissez de 1 à 20 répétitions.', 'error'); return; }
-  if (state.unsavedSession && saveSessionToHistory(state.unsavedSession) === false) return;
+  if (state.unsavedSession && (await saveSessionToHistory(state.unsavedSession)) === false) return;
   state.unsavedSession = null;
   state.batchActive = true; state.batchStop = false; state.batchAbort = false;
   state.batchQueue = models.map(model => ({ model, status: 'en attente' }));

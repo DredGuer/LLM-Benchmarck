@@ -33,7 +33,7 @@ L'utilisateur choisit les données qu'il saisit et les serveurs auxquels il se c
   distante ou un runner configuré autrement peut entraîner un transfert hors de la machine.
 - Avec une API externe, les prompts et les informations d'authentification nécessaires
   sont envoyés au fournisseur. Son traitement des données relève de ses propres conditions.
-- Les clés API sauvegardées pour les benchmarks et l'historique sont stockés dans le navigateur. Le stockage local ne
+- L’historique et les profils sont stockés dans SQLite sur la machine du backend ; les clés API sauvegardées pour les benchmarks restent dans le navigateur. Le stockage local ne
   constitue pas une garantie de chiffrement, de confidentialité ou de sauvegarde.
 - Le backend peut exposer des informations sur la machine et les processus. Les logs
   peuvent contenir des informations techniques identifiantes.

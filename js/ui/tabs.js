@@ -18,10 +18,10 @@ function switchTab(name) {
     contents[j].classList.toggle('active', contents[j].id === 'tab-' + name);
   }
 
-  if (name === 'statistics') renderStatistics();
+  if (name === 'statistics') {renderStatistics();if(typeof refreshDatabase==='function')refreshDatabase().catch(e=>showToast('SQLite indisponible : '+e.message,'error'));}
 
   // Load history data when switching to history tab
   if (name === 'history') {
-    loadHistory();
+    loadHistory();if(typeof refreshDatabase==='function')refreshDatabase().catch(e=>showToast('SQLite indisponible : '+e.message,'error'));
   }
 }
