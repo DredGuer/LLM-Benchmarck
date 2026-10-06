@@ -30,3 +30,6 @@ if (typeof ollamaMemoryMonitor !== 'undefined') {
     // Silent fail - will use fallback methods
   });
 }
+
+// Apply the single shared Simple/Pro interface after all controls exist.
+initInterfaceModes();

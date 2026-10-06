@@ -2,19 +2,31 @@
 
 Benchmarkez vos modèles locaux ou vos API, conservez les campagnes dans votre navigateur et comparez leurs performances sur votre machine.
 
-**Interface v0.10.0 · protocole de mesure 0.09 · export communautaire 2.2.0 (anciens rapports 2.0.0/2.1.0 acceptés).** Documentation vérifiée le 6 octobre 2026. [Historique des versions et changements](CHANGELOG.md). Ces versions désignent des éléments différents ; la version 1.2.0 de `package.json` concerne le backend.
+**Interface v0.11.0 · protocole de mesure 0.09 · export communautaire 2.2.0 (anciens rapports 2.0.0/2.1.0 acceptés).** Documentation vérifiée le 6 octobre 2026. [Historique des versions et changements](CHANGELOG.md). Ces versions désignent des éléments différents ; la version 1.2.0 de `package.json` concerne le backend.
 
-Fonctions actuelles : campagnes automatiques multi-modèles Ollama avec exports locaux classés, chauffe séparée, contexte Auto, identification Dense/MoE lorsqu’elle est disponible, inventaire Apple Silicon, suivi RSS/swap/MLX, exports Markdown/JSON, statistiques interactives, batterie de capacités agentiques et assistant d’analyse au choix. Les bulles **!** expliquent les réglages et mesures au clic, au clavier ou sur mobile.
+Fonctions actuelles : interface Simple/Pro et profils nommés de campagne, campagnes automatiques multi-modèles Ollama avec exports locaux classés, chauffe séparée, contexte Auto, identification Dense/MoE lorsqu’elle est disponible, inventaire Apple Silicon, suivi RSS/swap/MLX, exports Markdown/JSON, statistiques interactives, batterie de capacités agentiques et assistant d’analyse au choix. Les bulles **!** expliquent les réglages et mesures au clic, au clavier ou sur mobile.
+
+## Interface Simple, Pro et profils
+
+Le sélecteur **Interface Simple / Interface Pro** est dans l’en-tête. Il s’agit de la même page, avec les réglages avancés masqués en Simple. Le choix d’interface est conservé dans le navigateur.
+
+**Simple** est proposé au premier lancement : choisissez votre runner et **un seul modèle**, ajustez si nécessaire le plafond de sortie (8 192 tokens par défaut), puis lancez le benchmark. Tous les tests classiques sont présélectionnés, avec les cas de justesse disponibles pour Mathématiques, Logique et Code. Le contexte reste Auto, les températures sont celles prévues pour chaque catégorie et il y a **1 répétition**. Cocher **Ajouter les capacités agentiques** active les six épreuves sans autre sélection ; cette option est disponible pour les runners locaux compatibles. Les campagnes Ollama passent par la file automatique à un modèle : backend requis pour sauvegarder les exports et confirmer le déchargement.
+
+**Pro** affiche directement les **cases à cocher des modèles Ollama** dans « Modèles à tester », avec un compteur : sélectionnez un ou plusieurs modèles, puis le bouton de lancement exécute la file. Pour les autres fournisseurs, la sélection reste à un modèle. Pro expose les catégories, prompt personnalisé, température par type, répétitions, épreuves agentiques précises, justesse et deux contextes contrôlés. Passer de Pro à Simple préserve votre configuration Pro pendant la session ; revenir en Pro la restaure. Pour la conserver après fermeture ou rechargement, utilisez un profil.
+
+Dans **Profils de campagne** (Pro) : faites vos réglages, donnez un nom, cliquez sur **Enregistrer un profil**. Plus tard, choisissez ce profil et cliquez sur **Charger**. **Mettre à jour** remplace les réglages du profil sélectionné ; **Supprimer** demande une confirmation. Charger un profil ne lance pas un test. Jusqu’à 40 profils sont stockés dans ce navigateur, pour cette adresse de page.
+
+Un profil conserve runner, modèle(s), catégories, prompt personnalisé et sa température, mode Auto/Manuel, plafond de sortie, répétitions, températures par type, épreuves agentiques, justesse, contextes et politique d’erreur. L’URL du runner personnalisé peut être conservée si elle ne contient aucun identifiant ou paramètre secret. Les clés API, résultats, inventaire matériel et jetons de session ne sont pas inclus. Les profils peuvent contenir le **prompt personnalisé en clair** : le stockage navigateur n’est pas une sauvegarde externe ; vider ses données ou changer de port/origine peut les rendre indisponibles. Un modèle absent est signalé et bloque la file jusqu’à correction de la sélection ou disponibilité du modèle.
 
 ## Campagne automatique et exports par modèle
 
-Après avoir lancé Ollama, le backend (`npm start`) et la page, ouvrez **Campagne automatique** dans la colonne de gauche. Cochez un ou plusieurs modèles détectés, puis choisissez les catégories et, si souhaité, les capacités agentiques et la justesse. Les mêmes réglages sont conservés pendant toute la file. Le mode normal garde **1 répétition par défaut** ; augmentez ce nombre en mode Manuel pour mieux estimer la variabilité. Le mode contrôlé garde **3 répétitions × 2 contextes** par modèle.
+Après avoir lancé Ollama, le backend (`npm start`) et la page, passez en **Interface Pro**, puis utilisez **Modèles à tester** dans la colonne de gauche. Cochez un ou plusieurs modèles détectés, puis choisissez les catégories et, si souhaité, les capacités agentiques et la justesse. Les mêmes réglages sont conservés pendant toute la file. Le mode normal garde **1 répétition par défaut** ; augmentez ce nombre en mode Manuel pour mieux estimer la variabilité. Le mode contrôlé garde **3 répétitions × 2 contextes** par modèle.
 
-Cliquez sur **Lancer la campagne automatique**. Pour chaque modèle : chargement/chauffe mesurée → catégories et épreuves → historique et exports → demande de déchargement Ollama → vérification de son absence dans `/api/ps` → modèle suivant. La chauffe reste séparée des scores. Aucun modèle n’est lancé en parallèle et aucun processus n’est tué. L’absence dans `/api/ps` confirme le déchargement rapporté par Ollama, pas la restitution instantanée de toute la RAM système.
+Cliquez sur **Lancer N modèle(s)**, en bas des réglages. Pour chaque modèle : chargement/chauffe mesurée → catégories et épreuves → historique et exports → demande de déchargement Ollama → vérification de son absence dans `/api/ps` → modèle suivant. La chauffe reste séparée des scores. Aucun modèle n’est lancé en parallèle et aucun processus n’est tué. L’absence dans `/api/ps` confirme le déchargement rapporté par Ollama, pas la restitution instantanée de toute la RAM système.
 
 Le backend crée **`export/` à la racine du projet**, puis un sous-dossier par **nom complet de modèle** : Qwen, Gemma et leurs différentes variantes restent séparés. Un suffixe stable évite les collisions entre noms contenant `:`, `/`, etc. Chaque passage dans la file crée un **JSON communautaire v2** et un **Markdown**, avec modèle, date, identifiant de campagne et position dans leurs noms. Les contextes d’une campagne contrôlée sont regroupés dans les exports du modèle. Le dossier est exclu de Git.
 
-**Récupérer les exports** ouvre le dossier dans le Finder sur macOS, l’Explorateur Windows ou le gestionnaire de fichiers Linux (`xdg-open`, si disponible). Si l’ouverture n’est pas disponible, ouvrez directement `export/`. Le navigateur seul ne peut pas ouvrir ce dossier : le backend local est requis. Les exports manuels de l’en-tête restent des téléchargements du navigateur.
+**Récupérer les exports** ouvre le dossier dans le Finder sur macOS, l’Explorateur Windows ou le gestionnaire de fichiers Linux (`xdg-open`, si disponible). Si l’ouverture n’est pas disponible, ouvrez directement `export/`. Le navigateur seul ne peut pas ouvrir ce dossier : le backend local est requis. Les téléchargements manuels sont dans **Campagne → Autres exports**, et ne sont plus dans l’en-tête.
 
 La file montre chaque étape et permet **Arrêter maintenant** (résultats partiels conservés) ou **Arrêter après ce modèle**. Par défaut, une erreur technique arrête la file ; une option permet de continuer après sauvegarde et déchargement réussis. Un critère de justesse ou une épreuve agentique échouée est un résultat, pas une erreur technique. Une sauvegarde ou un déchargement non confirmé bloque toujours le modèle suivant. En cas d’échec d’export, les données restent en mémoire : **Récupérer les exports** réessaie la sauvegarde. Ne fermez pas la page avant récupération. Les campagnes déjà exportées restent sur disque ; la file n’a pas de reprise automatique après fermeture du navigateur.
 
@@ -91,7 +103,7 @@ curl -fsS http://localhost:3001/api/memory
 
 ## Réglages et protocole
 
-| Réglage | Mode Manuel, par défaut | Mode Auto |
+| Réglage Pro | Mode Manuel, par défaut en Pro | Mode Auto en Pro |
 |---|---|---|
 | Température | 0,7 ; réglages par catégorie possibles | Valeur prédéfinie par catégorie |
 | Tokens maximum | **8 192** | **32 768** |

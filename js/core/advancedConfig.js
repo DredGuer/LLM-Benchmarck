@@ -91,6 +91,7 @@ function updateModeUI() {
   if (tempInput) tempInput.disabled = !isManualMode;
   if (tokensInput) tokensInput.disabled = !isManualMode;
   if (repsInput) repsInput.disabled = !isManualMode;
+  if (state.interfaceMode === 'simple' && tokensInput) tokensInput.disabled = !!(state.isRunning || state.batchActive);
 }
 
 /**
@@ -99,10 +100,12 @@ function updateModeUI() {
  */
 function getTemperatureForPromptType(promptTypeId) {
   if (state.controlledActive) return 0;
+  if (state.interfaceMode === 'simple') return window.DEFAULT_TEMPERATURES[promptTypeId] ?? 0.7;
   const parsedTemp = parseFloat(document.getElementById('temperature')?.value);
   const manualTemp = Number.isFinite(parsedTemp) ? parsedTemp : 0.7;
   
   if (isManualMode) {
+    if (promptTypeId === 'custom') { var customTemp = Number(document.getElementById('customTemp')?.value); if(Number.isFinite(customTemp))return customTemp; }
     // In Manual mode, check if we have per-type config
     const savedConfig = loadAdvancedConfig();
     if (savedConfig && savedConfig.temperatures && savedConfig.temperatures[promptTypeId] !== undefined) {
@@ -121,6 +124,7 @@ function getTemperatureForPromptType(promptTypeId) {
  */
 function getMaxTokens() {
   if (state.controlledActive && Number.isInteger(state.controlledMaxTokens)) return state.controlledMaxTokens;
+  if (state.interfaceMode === 'simple') return Number(document.getElementById('maxTokens')?.value) || 8192;
   if (isManualMode) {
     return parseInt(document.getElementById('maxTokens')?.value) || 8192;
   } else {
@@ -134,6 +138,7 @@ function getMaxTokens() {
  */
 function getRepetitions() {
   if (state.controlledActive) return 3;
+  if (state.interfaceMode === 'simple') return 1;
   if (isManualMode) {
     return parseInt(document.getElementById('repetitions')?.value) || 1;
   } else {

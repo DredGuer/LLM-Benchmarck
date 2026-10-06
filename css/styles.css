@@ -785,3 +785,18 @@ textarea { resize: vertical; min-height: 80px; }
 .batch-models label { display:flex; align-items:center; gap:8px; overflow-wrap:anywhere; }
 #batchQueue { padding-left:24px; font-size:0.85rem; }
 #batchQueue li { margin:8px 0; overflow-wrap:anywhere; }
+
+/* One shared interface: advanced configuration is hidden in Simple mode. */
+body[data-interface-mode="simple"] .pro-only,
+body[data-interface-mode="pro"] .simple-only,
+body[data-interface-mode="pro"][data-runner="ollama"] .single-model-controls,
+body:not([data-runner="ollama"]) .ollama-only { display:none !important; }
+.interface-switch { display:flex; gap:4px; padding:3px; border:1px solid var(--border); border-radius:10px; }
+.interface-switch [aria-pressed="true"] { background:var(--accent); color:white; }
+.profile-actions { display:flex; flex-wrap:wrap; gap:6px; margin:10px 0; }
+#campaignProfiles select, #campaignProfiles input { width:100%; margin:8px 0; }
+.model-full-name { font-size:0.85rem; overflow-wrap:anywhere; }
+.manual-export-options { margin-top:12px; }
+
+body[data-interface-mode="pro"][data-runner="ollama"] .model-custom-control { display:none !important; }
+body[data-interface-mode="simple"][data-runner="custom"] .model-custom-control { display:block !important; }

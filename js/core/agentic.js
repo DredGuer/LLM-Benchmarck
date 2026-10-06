@@ -13,7 +13,7 @@ function updateBenchmarkMode(){
   var panel=document.getElementById('agenticDescription');if(panel)panel.hidden=!agenticEnabled();
   // Generation categories remain available: both capabilities can share one campaign.
   var category=document.getElementById('promptCategoryCard');if(category)category.hidden=false;
-  updateCampaignPlan();
+  if(typeof renderInterfaceMode === "function" && state.interfaceMode)renderInterfaceMode();else updateCampaignPlan();
 }
 function initAgenticUI(){
   var list=document.getElementById('agenticScenarios');if(!list)return;list.textContent='';

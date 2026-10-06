@@ -22,7 +22,7 @@ function renderPromptTypes() {
 }
 
 function togglePromptType(id, el) {
-  if (state.isRunning || state.batchActive) return;
+  if (state.isRunning || state.batchActive || state.configuring) return;
   if (!state || !state.selectedPrompts) return;
   
   if (state.selectedPrompts.has(id)) {

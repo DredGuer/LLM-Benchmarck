@@ -18,7 +18,8 @@ function selectRunner(runner) {
   updateRunnerConfig();
   populateModelSelect();
   renderModelMetadata(null);
-  if (RUNNERS[runner].type === "local" || runner === "custom") fetchModels();
+  if (typeof renderInterfaceMode === "function" && state.interfaceMode) renderInterfaceMode();
+  if (RUNNERS[runner].type === "local" || runner === "custom") return fetchModels();
 }
 
 function updateRunnerConfig() {
@@ -124,6 +125,7 @@ function renderModelMetadata(metadata) {
   var panel = document.getElementById('modelMetadata');
   if (!panel) return;
   panel.textContent = '';
+  var fullName = document.getElementById('modelFullName'); if(fullName)fullName.textContent=getSelectedModel()==='unknown-model'?'':getSelectedModel();
   if (!metadata) { panel.textContent = 'Informations du modèle non disponibles.'; return; }
   var cards = [
     ['Architecture', modelArchitectureText(metadata)],

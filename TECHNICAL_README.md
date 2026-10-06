@@ -2,7 +2,7 @@
 
 [Prise en main](README.md) · [Backend](BACKEND_README.md) · [Contrat communautaire](schemas/README.md)
 
-État documenté le 6 octobre 2026 : interface v0.10.0, protocole de génération 0.09, exports 2.0.0/2.1.0/2.2.0 et bundle 1.0.0. La batterie `agentic-suite-2.0.1` est exécutée ; les fixtures de schéma agentiques/Exo restent synthétiques. Exo n’est pas exécuté.
+État documenté le 6 octobre 2026 : interface v0.11.0, protocole de génération 0.09, exports 2.0.0/2.1.0/2.2.0 et bundle 1.0.0. La batterie `agentic-suite-2.0.1` est exécutée ; les fixtures de schéma agentiques/Exo restent synthétiques. Exo n’est pas exécuté.
 
 ## Organisation
 
@@ -100,6 +100,16 @@ Validation supplémentaire : `node backend/provenance-quality-controlled.test.cj
 
 Chaque modèle est exporté avant la demande native `/api/generate` avec `keep_alive: 0`, puis son absence est vérifiée dans `/api/ps`. Une absence invérifiable ne vaut pas déchargement. Les sauvegardes échouées retiennent un payload stable en mémoire, réessayé par le bouton de récupération ; la file s’arrête. Les modèles d’autres utilisateurs ou applications ne sont pas déchargés volontairement, et aucun processus n’est tué. Il n’y a pas de verrou inter-applications ou de garantie sur la RAM système libérée.
 
-`buildMarkdownReport(results, now)` est partagé entre le téléchargement manuel et l’écriture locale. Les JSON utilisent le même `buildCommunityV2` que l’export manuel ; le producteur est 0.10.0, la provenance des passes reste capturée lors de leur exécution. Les formats communautaires 2.0/2.1/2.2 et bundle 1.0 ne changent pas : l’identifiant de file est dans le nom des fichiers et non ajouté au contrat communautaire. Les anciennes versions des résultats sont préservées lors d’un nouvel export.
+`buildMarkdownReport(results, now)` est partagé entre le téléchargement manuel et l’écriture locale. Les JSON utilisent le même `buildCommunityV2` que l’export manuel ; le producteur est actuellement 0.11.0, la provenance des passes reste capturée lors de leur exécution. Les formats communautaires 2.0/2.1/2.2 et bundle 1.0 ne changent pas : l’identifiant de file est dans le nom des fichiers et non ajouté au contrat communautaire. Les anciennes versions des résultats sont préservées lors d’un nouvel export.
 
 Validation : deux nouvelles suites testent le stockage réel en dossiers temporaires, les garde-fous locaux et les boucles des moteurs avec inférence simulée, y compris les deux contextes, interruptions, erreurs, sauvegarde avant déchargement et récupération. L’ouverture Finder et l’inférence réelle seront validées sur le Mac de l’utilisateur.
+
+## Interface partagée et profils (0.11.0)
+
+`js/core/profiles.js` gère le niveau Simple/Pro via `body[data-interface-mode]`, les préréglages et les profils nommés. Le niveau d’interface est indépendant du mode Auto/Manuel des paramètres. Simple impose une répétition, les six catégories classiques (hors prompt personnalisé), la justesse disponible, contexte Auto et températures par défaut ; l’agentique sélectionne les six épreuves et le plafond de sortie reste réglable. Pro conserve les contrôles existants et affiche les cases multi-modèles Ollama sans panneau replié. Le bouton de lancement partagé route Simple Ollama vers une file explicite d’un modèle, Pro Ollama vers la sélection cochée, les autres fournisseurs vers le moteur normal.
+
+Les brouillons Pro et Simple sont distincts pendant la session, avec restauration des champs au changement d’interface. Les profils sont versionnés `1.0.0` dans `llmb-campaign-profiles-v1`, au maximum 40 ; sauvegarde, remplacement et suppression explicites. L’application ayant sauvegardé le profil est renseignée séparément. Une allowlist de champs et des vérifications de bornes, runner, catégories et scénarios protègent leur restauration ; les clés API, résultats, machines et jetons ne sont jamais capturés. Une URL personnalisée est acceptée seulement en HTTP(S), sans identifiants, query ni fragment. Les prompts personnalisés restent en clair dans le stockage local.
+
+La sélection souhaitée d’un profil est conservée pendant les chargements asynchrones de modèles. Les modèles absents sont signalés et bloquent la file ; une modification explicite des cases remplace cette sélection. Le changement de mode et les opérations de profil sont bloqués pendant les mesures ou l’analyse. `initAgenticUI()` est appelé avant `js/main.js`, qui initialise les modes et profils ; les champs agentiques doivent exister avant la capture des réglages.
+
+Le producteur/interface est 0.11.0 ; backend, protocole et schémas communautaires inchangés. La suite `backend/profiles-interface.test.cjs` construit les contrôles à partir du HTML livré et vérifie démarrage, presets, sauvegarde/restauration après rechargement, commutation, modèle unique, modèles absents, données exclues et profils invalides. Ce test simule le DOM ; le rendu Safari/Chrome et l’inférence réelle restent à valider sur la machine de l’utilisateur.

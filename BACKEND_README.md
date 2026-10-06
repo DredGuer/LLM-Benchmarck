@@ -2,7 +2,7 @@
 
 [Guide de démarrage](README.md) · [Architecture](TECHNICAL_README.md)
 
-Le backend Node.js fournit à l’interface des mesures Ollama et des informations sur la machine où il s’exécute. Il exécute également les outils restreints de la batterie agentique. Il écrit aussi les exports locaux demandés par les campagnes automatiques. Il ne sert pas la page HTML et n’exécute pas les modèles. La version `package.json` 1.2.0 est distincte de l’interface v0.10.0 et du protocole 0.09.
+Le backend Node.js fournit à l’interface des mesures Ollama et des informations sur la machine où il s’exécute. Il exécute également les outils restreints de la batterie agentique. Il écrit aussi les exports locaux demandés par les campagnes automatiques. Il ne sert pas la page HTML et n’exécute pas les modèles. La version `package.json` 1.2.0 est distincte de l’interface v0.11.0 et du protocole 0.09.
 
 ## Lancement
 
@@ -143,3 +143,9 @@ L’ouverture utilise `execFile` sans shell et un chemin fixe : `open` sur macOS
 Le serveur Python sert le répertoire du projet et donc potentiellement les exports : utilisez `python3 -m http.server 8001 --bind 127.0.0.1` pour ce parcours local. `export/` est ignoré par Git, mais les Markdown peuvent contenir des données privées et ne sont pas chiffrés.
 
 Validation : `node backend/local-exports.test.cjs` et `node backend/batch-campaign.test.cjs`. Après `git pull`, **redémarrer le backend**, puis recharger la page pour utiliser ces nouvelles routes.
+
+## Interface Simple/Pro (0.11.0)
+
+Le backend reste en 1.2.0. Simple lance les campagnes Ollama dans la même file à **un modèle** que Pro utilise pour plusieurs modèles : les routes `/api/exports/*` doivent donc être disponibles dès ce parcours simplifié. Pro affiche la sélection multi-modèles directement dans « Modèles à tester ». Le bouton de récupération reste dans la carte Campagne ; les exports manuels se trouvent dans « Autres exports ».
+
+Les profils nommés sont enregistrés dans le navigateur, pas dans le dossier `export/` ni sur le backend. Ils peuvent inclure un prompt personnalisé ; ils n’incluent pas de clés API, de résultats ni d’informations matérielles.

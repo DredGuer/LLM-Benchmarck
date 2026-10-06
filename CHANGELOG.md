@@ -6,7 +6,7 @@ Historique des changements de LLM Benchmarker. Les dates correspondent aux inté
 
 | Élément | Version | Référence |
 |---|---|---|
-| Application / interface / producteur des exports | **0.10.0** | `js/core/version.js` |
+| Application / interface / producteur des exports | **0.11.0** | `js/core/version.js` |
 | Backend Node | 1.2.0 | `package.json` |
 | Protocole de génération | 0.09 | `js/core/benchmark.js` |
 | Batterie agentique | 2.0.1 | `backend/agentic-suite.js` |
@@ -15,6 +15,17 @@ Historique des changements de LLM Benchmarker. Les dates correspondent aux inté
 | Inventaire Apple | 1.0.0 | `backend/apple-inventory.js` |
 
 Ces numéros désignent des composants différents. Les résultats historiques et exemples synthétiques conservent leur version d’origine. Le suffixe des URL de scripts sert à invalider le cache ; il ne désigne pas nécessairement la version de l’application.
+
+## [0.11.0] — 2026-10-06
+
+- En-tête : sélecteur **Interface Simple / Interface Pro** remplaçant les exports JSON et Markdown. Une page partagée ; niveau d’interface mémorisé dans le navigateur.
+- Simple : un seul modèle, catégories classiques et justesse présélectionnées, contexte Auto, une répétition, températures par catégorie, tokens réglables. Le bouton agentique active les six épreuves. Ollama utilise la file à un modèle avec exports locaux et déchargement vérifié.
+- Pro : cases de sélection multi-modèles directement visibles dans « Modèles à tester », compteur et lancement partagé de la file ; noms complets lisibles. Les réglages avancés restent disponibles.
+- Profils nommés : sauvegarde, chargement, mise à jour et suppression, jusqu’à 40 profils locaux versionnés 1.0.0. Modèles, catégories, prompt personnalisé, températures, répétitions, agentique, justesse, contextes et politique d’erreur conservés ; aucune clé API, donnée matérielle ou résultat.
+- Les paramètres Pro sont préservés pendant les allers-retours en Simple. Les modèles absents d’un profil sont signalés et bloquent la file ; profils invalides rejetés avant application.
+- Exports manuels déplacés dans **Campagne → Autres exports** ; récupération du dossier local conservée. Initialisation des épreuves agentiques avant la capture des réglages et caches JS/CSS actualisés.
+- Producteur des exports 0.11.0 ; versions historiques, backend 1.2.0, protocole 0.09 et schéma communautaire inchangés. README, guides et règles de contribution actualisés.
+- Validation : 18 suites passent, dont une nouvelle suite basée sur les contrôles du HTML pour le démarrage, les profils après rechargement, Simple/Pro, les sélections, limites et exclusions de secrets. DOM/inférence simulés ; vérification visuelle et modèles réels à réaliser sur le Mac de l’utilisateur.
 
 ## [0.10.0] — 2026-10-06
 

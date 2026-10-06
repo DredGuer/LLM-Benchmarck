@@ -29,15 +29,26 @@ async function recoverLocalExports() {
 }
 function renderBatchModels(models) {
   var list = document.getElementById('batchModels'); if (!list || state.batchActive) return;
-  var selected = new Set(Array.from(list.querySelectorAll('input:checked')).map(el => el.value));
+  state.availableBatchModels = models.slice();
+  var selected = new Set(state.desiredBatchModels || Array.from(list.querySelectorAll('input:checked')).map(el => el.value));
+  state.missingBatchModels = Array.from(selected).filter(m => !models.includes(m));
   list.textContent = '';
   if (state.runner !== 'ollama') { list.textContent = 'Le mode multi-modèles est disponible pour Ollama.'; return; }
   models.forEach(model => {
     var label = document.createElement('label'), input = document.createElement('input');
     input.type = 'checkbox'; input.value = model; input.checked = selected.has(model); input.setAttribute('data-batch-model', '');
+    input.addEventListener('change', function(){ state.desiredBatchModels = null; state.missingBatchModels = []; updateBatchSelection(true); });
     label.append(input, document.createTextNode(' ' + model)); list.appendChild(label);
   });
+  if (state.missingBatchModels.length) { var warning=document.createElement('p');warning.textContent='Modèles du profil indisponibles : '+state.missingBatchModels.join(', ');list.appendChild(warning); }
+  if (typeof updateBatchSelection === 'function') updateBatchSelection(false);
   if (!models.length) list.textContent = 'Aucun modèle disponible. Lancez Ollama et rafraîchissez la liste.';
+}
+function updateBatchSelection(preview) {
+  var models=Array.from(document.querySelectorAll('#batchModels input:checked')).map(el=>el.value),count=document.getElementById('batchSelectionCount');
+  if(count)count.textContent=models.length+' modèle(s) sélectionné(s)'+(state.missingBatchModels?.length?' · '+state.missingBatchModels.length+' indisponible(s)':'');
+  var button=document.getElementById('runBtn');if(button&&!state.batchActive&&!state.isRunning)button.textContent=state.interfaceMode==='pro'&&models.length&&state.runner==='ollama'?'⚡ Lancer '+models.length+' modèle(s)':'⚡ Lancer le benchmark';
+  if(preview&&models.length){document.getElementById('modelSelect').value=models[0];document.getElementById('modelCustom').value='';refreshModelMetadata();}
 }
 function renderBatchQueue() {
   var list = document.getElementById('batchQueue'); if (!list) return;
@@ -68,10 +79,11 @@ async function unloadBatchModel(model) {
   }
   throw new Error('Le modèle reste chargé ; le suivant ne sera pas lancé.');
 }
-async function runBatchCampaign() {
+async function runBatchCampaign(explicitModels) {
   if (state.batchActive || state.isRunning || state.analysisRunning) return;
   if (state.pendingLocalExport) { showToast('Sauvegardez d’abord l’export en attente avec « Récupérer les exports ».', 'error'); return; }
-  var models = Array.from(document.querySelectorAll('#batchModels input:checked')).map(el => el.value);
+  var models = Array.isArray(explicitModels) ? explicitModels.slice() : Array.from(document.querySelectorAll('#batchModels input:checked')).map(el => el.value);
+  if (!explicitModels && state.missingBatchModels?.length) { showToast('Modèles du profil indisponibles : '+state.missingBatchModels.join(', ')+'. Rafraîchissez ou modifiez votre sélection.', 'error'); return; }
   if (state.runner !== 'ollama' || !models.length || models.length > 100) { showToast('Sélectionnez de 1 à 100 modèles Ollama.', 'error'); return; }
   if (!state.selectedPrompts.size && !agenticEnabled()) { showToast('Choisissez les catégories ou épreuves à exécuter.', 'error'); return; }
   if (agenticEnabled() && !selectedAgenticScenarios().length) { showToast('Choisissez au moins une épreuve agentique.', 'error'); return; }
@@ -127,5 +139,7 @@ async function runBatchCampaign() {
       state.results.forEach(renderResultCard); showResultsArea(true); document.getElementById('exportBtn').disabled = false;
     }
     renderBatchQueue(); loadHistory(); renderStatistics();
+    if(typeof renderInterfaceMode === "function")renderInterfaceMode();
+    updateBatchSelection(false);
   }
 }
