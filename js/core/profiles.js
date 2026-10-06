@@ -20,7 +20,7 @@ function validateCampaignSettings(c) {
   num(c.temperature,0,2);num(c.customTemperature,0,2);num(c.maxTokens,1,32768,true);num(c.repetitions,1,20,true);
   num(c.contextA,1024,262144,true);num(c.contextB,1024,262144,true);
   if(c.controlled && (c.contextA===c.contextB || c.runner!=='ollama'))fail();
-  if(c.agentic&&!['ollama','lmstudio','llamacpp'].includes(c.runner))fail();
+  if(c.agentic&&!['ollama','lmstudio','llamacpp','mlx'].includes(c.runner))fail();
   if(c.agentic&&!c.agenticScenarios.length)fail();
   if (!c.temperatures || typeof c.temperatures!=='object' || Array.isArray(c.temperatures))fail();
   for (var [id,temp] of Object.entries(c.temperatures)) { if(!PROMPT_TYPES.some(p=>p.id===id&&id!=='custom'))fail();num(temp,0,2); }
@@ -127,7 +127,7 @@ function renderInterfaceMode() {
   profileField('runBtn').disabled=configurationBusy();
   if(simple)profileField('maxTokens').disabled=configurationBusy();
   profileField('agenticSimpleNote').textContent=agenticEnabled()?'Les 6 épreuves agentiques seront exécutées automatiquement.':'Activez cette option pour ajouter les 6 épreuves agentiques.';
-  var available=['ollama','lmstudio','llamacpp'].includes(state.runner);
+  var available=['ollama','lmstudio','llamacpp','mlx'].includes(state.runner);
   profileField('agenticEnabled').disabled=configurationBusy()||!available;
   if(!available)profileField('agenticEnabled').checked=false;
   updateCampaignPlan();

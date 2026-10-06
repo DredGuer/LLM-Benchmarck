@@ -2,7 +2,7 @@
 
 [Prise en main](README.md) · [Backend](BACKEND_README.md) · [Contrat communautaire](schemas/README.md)
 
-État documenté le 6 octobre 2026 : interface v0.13.0, protocole de génération 0.09, exports 2.0.0/2.1.0/2.2.0 et bundle 1.0.0. La batterie `agentic-suite-2.0.1` est exécutée ; les fixtures de schéma agentiques/Exo restent synthétiques. Exo n’est pas exécuté.
+État documenté le 6 octobre 2026 : interface v0.14.0, protocole de génération 0.09, exports 2.0.0/2.1.0/2.2.0 et bundle 1.0.0. La batterie `agentic-suite-2.0.1` est exécutée ; les fixtures de schéma agentiques/Exo restent synthétiques. Exo n’est pas exécuté.
 
 ## Organisation
 
@@ -100,11 +100,11 @@ Validation supplémentaire : `node backend/provenance-quality-controlled.test.cj
 
 Chaque modèle local est exporté avant la demande native `/api/generate` avec `keep_alive: 0`, puis son absence est vérifiée dans `/api/ps`. Une absence invérifiable ne vaut pas déchargement. Les sauvegardes échouées retiennent un payload stable en mémoire, réessayé par le bouton de récupération ; la file s’arrête. Les modèles d’autres utilisateurs ou applications ne sont pas déchargés volontairement, et aucun processus n’est tué. Il n’y a pas de verrou inter-applications ou de garantie sur la RAM système libérée.
 
-`buildMarkdownReport(results, now)` est partagé entre le téléchargement manuel et l’écriture locale. Les JSON utilisent le même `buildCommunityV2` que l’export manuel ; le producteur est actuellement 0.13.0, la provenance des passes reste capturée lors de leur exécution. Les formats communautaires 2.0/2.1/2.2 et bundle 1.0 ne changent pas : l’identifiant de file est dans le nom des fichiers et non ajouté au contrat communautaire. Les anciennes versions des résultats sont préservées lors d’un nouvel export.
+`buildMarkdownReport(results, now)` est partagé entre le téléchargement manuel et l’écriture locale. Les JSON utilisent le même `buildCommunityV2` que l’export manuel ; le producteur est actuellement 0.14.0, la provenance des passes reste capturée lors de leur exécution. Les formats communautaires 2.0/2.1/2.2 et bundle 1.0 ne changent pas : l’identifiant de file est dans le nom des fichiers et non ajouté au contrat communautaire. Les anciennes versions des résultats sont préservées lors d’un nouvel export.
 
 Validation : deux nouvelles suites testent le stockage réel en dossiers temporaires, les garde-fous locaux et les boucles des moteurs avec inférence simulée, y compris les deux contextes, interruptions, erreurs, sauvegarde avant déchargement et récupération. L’ouverture Finder et l’inférence réelle seront validées sur le Mac de l’utilisateur.
 
-## Interface partagée et profils (0.13.0)
+## Interface partagée et profils (0.14.0)
 
 `js/core/profiles.js` gère le niveau Simple/Pro via `body[data-interface-mode]`, les préréglages et les profils nommés. Le niveau d’interface est indépendant du mode Auto/Manuel des paramètres. Simple impose une répétition, les six catégories classiques (hors prompt personnalisé), la justesse disponible, contexte Auto et températures par défaut ; l’agentique sélectionne les six épreuves et le plafond de sortie reste réglable. Pro conserve les contrôles existants et affiche les cases multi-modèles Ollama sans panneau replié. Le bouton de lancement partagé route Simple Ollama vers une file explicite d’un modèle, Pro Ollama vers la sélection cochée, les autres fournisseurs vers le moteur normal.
 
@@ -112,10 +112,10 @@ Les brouillons Pro et Simple sont distincts pendant la session, avec restauratio
 
 La sélection souhaitée d’un profil est conservée pendant les chargements asynchrones de modèles. Les modèles absents sont signalés et bloquent la file ; une modification explicite des cases remplace cette sélection. Le changement de mode et les opérations de profil sont bloqués pendant les mesures ou l’analyse. `initAgenticUI()` est appelé avant `js/main.js`, qui initialise les modes et profils ; les champs agentiques doivent exister avant la capture des réglages.
 
-Le producteur/interface est 0.13.0 ; backend 1.3.0, protocole et schémas communautaires inchangés. La suite `backend/profiles-interface.test.cjs` construit les contrôles à partir du HTML livré et vérifie démarrage, presets, sauvegarde/restauration après rechargement, commutation, modèle unique, modèles absents, données exclues et profils invalides. Ce test simule le DOM ; le rendu Safari/Chrome et l’inférence réelle restent à valider sur la machine de l’utilisateur.
+Le producteur/interface est 0.14.0 ; backend 1.4.0, protocole et schémas communautaires inchangés. La suite `backend/profiles-interface.test.cjs` construit les contrôles à partir du HTML livré et vérifie démarrage, presets, sauvegarde/restauration après rechargement, commutation, modèle unique, modèles absents, données exclues et profils invalides. Ce test simule le DOM ; le rendu Safari/Chrome et l’inférence réelle restent à valider sur la machine de l’utilisateur.
 
 
-## Routage cloud et contexte local (0.13.0)
+## Routage cloud et contexte local (0.14.0)
 
 `protocol.js` distingue le proxy client et l’inférence distante. `noteOllamaDeployment` conserve seulement le nom de la source API lorsqu’un champ `remote_host` ou `remote_model` est présent ; aucune adresse distante n’est stockée. `isOllamaCloud` utilise cette preuve ou, à défaut, les suffixes `:cloud`/`-cloud` explicitement qualifiés d’inférés. Le flux natif de génération et de chat peut confirmer le routage pendant la réponse. La provenance garde `inferenceEndpoint: loopback` pour le proxy et renseigne `attribution: remote-inference: …` pour l’inférence.
 
@@ -126,14 +126,20 @@ Pour le local, `unloadOllamaModel` vérifie une confirmation finale et l’absen
 `buildCommunityV2` sépare les groupes local/cloud, conserve l’inventaire du client et crée un nœud d’inférence inconnu pour le cloud, sans RSS/swap/MLX locaux. Le contrat communautaire reste 2.2.0 : seuls les champs existants sont utilisés. L’assistant IA reçoit l’attribution et un matériel distant inconnu ; les statistiques n’affichent pas le CPU client comme moteur cloud. Voir `backend/OLLAMA_CLOUD.md`. Tests dédiés : `node backend/cloud-context.test.cjs` ; tests de rechargement dans `backend/provenance-quality-controlled.test.cjs` et `backend/batch-campaign.test.cjs`.
 
 
-### Rapports et mesures partielles (0.13.0)
+### Rapports et mesures partielles (0.14.0)
 
 `buildMarkdownReport` écrit le titre du test avant verdict/évaluateur/provenance. La présence de `error` seule n’identifie plus une erreur technique : une exécution terminée non conforme garde son diagnostic distinct ; un arrêt conserve ses métriques finies et son évaluation agentique. Les mesures absentes ne sont pas converties en zéro. Le JSON communautaire reste inchangé, avec version du producteur actualisée et provenance historique conservée. Le swap occupé est distingué des deltas d’échanges et reste système entier. Budgets/scénarios inchangés ; conception des balayages granulaires enregistrée dans `innovation.md`.
 
-## Catalogue et estimateur (0.13.0)
+## Catalogue et estimateur (0.14.0)
 
 `backend/model-catalog.json` est un instantané versionné des variantes autorisées et de leurs fiches sources. `backend/model-advisor.js` fournit une estimation à confiance faible, les instantanés RAM/espace libre et une seule file de pulls séquentiels. Le client `js/ui/model-advisor.js` partage la même interface Simple/Pro : filtres, sélection explicite, recalcul de contexte, confirmation du volume et progression par couche. Les campagnes sont verrouillées pendant l’installation ; la file n’altère pas leurs paramètres.
 
 L’analyse ne contacte pas un catalogue externe et n’envoie pas le matériel. Le téléchargement relit un manifeste officiel à URL calculée depuis l’allowlist, réévalue le budget et appelle uniquement Ollama local. La taille publiée, la RAM estimée, la RAM mesurée et la RAM déclarée par Ollama restent des notions distinctes. Pas de consommation MoE calculée sur les seuls experts actifs. Les variantes cloud ne reçoivent pas de fausse compatibilité matérielle locale.
 
-Application/producteur 0.13.0 et backend 1.3.0 ; catalogue/estimateur 1.0.0. Formats/protocoles inchangés et versions historiques préservées. Voir [les formules, les routes et les limites](backend/MODEL_ADVISOR.md). Deux suites dédiées testent moteur et interface avec réseau, matériel et DOM simulés ; validation réelle sur Mac encore requise.
+Application/producteur 0.14.0 et backend 1.4.0 ; catalogue/estimateur 1.0.0. Formats/protocoles inchangés et versions historiques préservées. Voir [les formules, les routes et les limites](backend/MODEL_ADVISOR.md). Deux suites dédiées testent moteur et interface avec réseau, matériel et DOM simulés ; validation réelle sur Mac encore requise.
+
+## Runners locaux et installation (0.14.0)
+
+La présentation priorise trois runners locaux ; les fournisseurs API et anciens endpoints restent repliables, sans supprimer leurs configurations/profils. `js/ui/local-runners.js` effectue un scan au démarrage et propose des actions explicites. `backend/local-runners.js` dissocie recherche de commande/module/app et disponibilité API ; MLX à 8080 n’est identifié qu’avec un processus correspondant, sinon l’API compatible reste non confirmée.
+
+Plans temporaires, recettes allowlistées, staging, signatures/digest, venv/wheels, ports loopback fixes et arrêt limité aux processus enfants : voir [LOCAL_RUNNERS.md](backend/LOCAL_RUNNERS.md). La génération MLX utilise le parseur SSE commun pour TTFT, réflexion observable et tokens déclarés ; les appels d’outils suivent le harness existant. Aucune attribution de mémoire Ollama à MLX natif. Versions historiques, contrat d’export et protocole 0.09 conservés ; producteur/application 0.14.0 et backend 1.4.0.

@@ -10,6 +10,7 @@ function selectRunner(runner) {
   modelListGeneration++;
   modelMetadataGeneration++;
   state.modelMetadata = null;
+  state.runnerVersion = null;
   state.runner = runner;
   var buttons = document.querySelectorAll(".runner-btn");
   for (var i = 0; i < buttons.length; i++) {
@@ -23,6 +24,7 @@ function selectRunner(runner) {
 }
 
 function updateRunnerConfig() {
+  if(typeof renderLocalRunnerSetup==='function')renderLocalRunnerSetup();
   var cfg = document.getElementById('runnerConfig');
   var r = RUNNERS[state.runner];
   if (state.runner === 'custom') {

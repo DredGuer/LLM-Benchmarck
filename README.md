@@ -2,9 +2,9 @@
 
 Benchmarkez vos modèles locaux ou vos API, conservez les campagnes dans votre navigateur et comparez leurs performances sur votre machine.
 
-**Interface v0.13.0 · protocole de mesure 0.09 · export communautaire 2.2.0 (anciens rapports 2.0.0/2.1.0 acceptés).** Documentation vérifiée le 6 octobre 2026. [Historique des versions et changements](CHANGELOG.md). Ces versions désignent des éléments différents ; la version 1.3.0 de `package.json` concerne le backend.
+**Interface v0.14.0 · protocole de mesure 0.09 · export communautaire 2.2.0 (anciens rapports 2.0.0/2.1.0 acceptés).** Documentation vérifiée le 6 octobre 2026. [Historique des versions et changements](CHANGELOG.md). Ces versions désignent des éléments différents ; la version 1.4.0 de `package.json` concerne le backend.
 
-Fonctions actuelles : catalogue Ollama avec estimation RAM/disque et téléchargement local séquentiel, interface Simple/Pro et profils nommés de campagne, campagnes automatiques multi-modèles Ollama avec exports locaux classés, chauffe séparée, contexte Auto, identification Dense/MoE lorsqu’elle est disponible, inventaire Apple Silicon, suivi RSS/swap/MLX, exports Markdown/JSON, statistiques interactives, batterie de capacités agentiques et assistant d’analyse au choix. Les bulles **!** expliquent les réglages et mesures au clic, au clavier ou sur mobile.
+Fonctions actuelles : runners locaux en premier, détection passive et installation/démarrage intégrés sur Apple Silicon, catalogue Ollama avec estimation RAM/disque et téléchargement local séquentiel, interface Simple/Pro et profils nommés de campagne, campagnes automatiques multi-modèles Ollama avec exports locaux classés, chauffe séparée, contexte Auto, identification Dense/MoE lorsqu’elle est disponible, inventaire Apple Silicon, suivi RSS/swap/MLX, exports Markdown/JSON, statistiques interactives, batterie de capacités agentiques et assistant d’analyse au choix. Les bulles **!** expliquent les réglages et mesures au clic, au clavier ou sur mobile.
 
 ## Interface Simple, Pro et profils
 
@@ -36,16 +36,16 @@ Les JSON excluent prompts, réponses, journaux et clés ; **les Markdown contien
 
 Prérequis : Git, Python 3, un navigateur récent et Ollama. Pour le backend matériel, utilisez Node.js et npm ; Node.js 22 est utilisé dans le parcours testé sur Mac.
 
-### 1. Préparer le modèle
+### 1. Préparer le runner
 
-Lancez l’application Ollama, puis vérifiez son API :
+Si Ollama est déjà installé, lancez-le puis vérifiez son API :
 
 ```bash
 ollama list
 curl -fsS http://localhost:11434/api/version
 ```
 
-Si aucun modèle n’est installé, vous pouvez utiliser le catalogue dans l’interface après les étapes 2 et 3, ou télécharger un modèle avec `ollama pull NOM_DU_MODELE`. Si vous utilisez `ollama serve`, gardez ce terminal ouvert ; ne lancez pas un second serveur si l’application Ollama fournit déjà l’API.
+Si Ollama n’est pas installé sur votre Mac Apple Silicon, passez aux étapes 2 et 3, puis utilisez **Runners locaux → Ollama → Préparer l’installation**. Si aucun modèle n’est installé, vous pouvez utiliser le catalogue dans l’interface après les étapes 2 et 3, ou télécharger un modèle avec `ollama pull NOM_DU_MODELE`. Si vous utilisez `ollama serve`, gardez ce terminal ouvert ; ne lancez pas un second serveur si l’application Ollama fournit déjà l’API.
 
 ### 2. Télécharger le projet et lancer le backend
 
@@ -76,6 +76,16 @@ Ouvrez **http://localhost:8001/llm-benchmarker.html**. Gardez aussi ce terminal 
 4. Vérifiez le récapitulatif du nombre de mesures, puis lancez le benchmark.
 
 Pour un runner local, une chauffe courte précède les mesures. Les modèles cloud via Ollama ont une courte vérification séparée. Ses résultats restent visibles, mais sont exclus des statistiques. Une campagne avec les six catégories et une répétition produit normalement **1 chauffe + 6 mesures**.
+
+## Runners : détection et installation intégrées
+
+La carte **Runners locaux** affiche Ollama, MLX et llama.cpp. Les API restent dans la bulle repliable **Fournisseurs distants** ; LM Studio et l’endpoint personnalisé dans **Autres connexions**. Les profils existants restent compatibles. Ollama peut toujours servir de proxy cloud : endpoint local ne signifie pas nécessairement modèle local.
+
+Au lancement, le backend vérifie les API et installations usuelles. **Installé** et **API détectée** sont distincts ; rien n’est installé ou démarré automatiquement. Si le runner manque, sélectionnez-le, cliquez sur **Préparer l’installation**, vérifiez le plan et acceptez-le, puis **Installer ce runner**. Le pilote Apple Silicon installe dans l’espace utilisateur, sans sudo ni remplacement d’une installation existante. Ollama/llama.cpp demandent Python ≥ 3.9 ; MLX demande Python arm64 ≥ 3.10 avec venv/pip et des wheels compatibles.
+
+Après installation, cliquez sur **Démarrer le service local**. Pour MLX/llama.cpp, renseignez un modèle public Hugging Face adapté ; le démarrage peut en télécharger les poids. MLX écoute sur 8081, llama.cpp sur 8080, Ollama sur 11434. Un service déjà présent bloque un doublon. **Arrêter le service géré** ne coupe que les processus lancés par ce backend. La génération MLX est streamée ; la mémoire spécifique d’Ollama n’est pas attribuée à MLX.
+
+Node/npm et le serveur Python de la page restent nécessaires : ce parcours n’est pas encore un paquet d’installation autonome du benchmark. Les signatures, Python, dépendances et téléchargements peuvent échouer avec un état visible ; les installateurs Linux/Windows sont reportés. [Recettes, ports, sources et limites](backend/LOCAL_RUNNERS.md).
 
 ## Trouver des modèles pour votre Mac
 
@@ -142,7 +152,7 @@ Le cache est géré par le runner et n’est pas vidé automatiquement. Des toke
 
 ## Capacités agentiques dans la même campagne
 
-Cochez **Ajouter les capacités agentiques à cette campagne**. Gardez les catégories de texte souhaitées, puis sélectionnez les épreuves agentiques : le même lancement peut tester les deux, avec une chauffe séparée. Le backend à jour est requis, ainsi qu’un modèle/template compatible avec les appels d’outils natifs sur **Ollama**, **LM Studio** ou **llama.cpp** local.
+Cochez **Ajouter les capacités agentiques à cette campagne**. Gardez les catégories de texte souhaitées, puis sélectionnez les épreuves agentiques : le même lancement peut tester les deux, avec une chauffe séparée. Le backend à jour est requis, ainsi qu’un modèle/template compatible avec les appels d’outils natifs sur **Ollama**, **MLX LM**, **LM Studio** ou **llama.cpp** local.
 
 La batterie comporte six épreuves : choix/format des outils, création d’un rapport depuis des données, reprise après panne, clarification avant écriture, objectif modifié sur plusieurs tours et abstention lorsqu’aucun outil n’est nécessaire. Le modèle reçoit un **cadre système**, les schémas JSON et un objectif ; il choisit les actions. Le backend vérifie données, dépendances, états et fichiers réels.
 
@@ -246,7 +256,7 @@ Le futur site et l’envoi automatique ne sont pas implémentés. Voir [le contr
 
 ## Autres runners et plateformes
 
-Les benchmarks de génération proposent Ollama, LM Studio, llama.cpp, OpenAI, Mistral, Claude, Gemini et un endpoint personnalisé compatible. Les versions, noms de modèles, droits CORS et options acceptées dépendent du serveur choisi. Le backend Node suit Ollama, pas la RAM des modèles exécutés par tous ces autres runners.
+Les benchmarks de génération proposent Ollama, MLX LM, LM Studio, llama.cpp, OpenAI, Mistral, Claude, Gemini et un endpoint personnalisé compatible. Les versions, noms de modèles, droits CORS et options acceptées dépendent du serveur choisi. Le backend Node suit Ollama, pas la RAM des modèles exécutés par tous ces autres runners.
 
 L’inventaire général Windows/Linux peut détecter CPU/GPU selon les commandes disponibles. L’inventaire structuré Apple et la télémétrie swap/disques/MLX décrite ci-dessus sont réservés à macOS. Une liste de GPU détectés ne prouve pas leur utilisation simultanée. Le sélecteur GPU affiche une consigne de redémarrage manuel ; il ne reconfigure pas Ollama automatiquement.
 

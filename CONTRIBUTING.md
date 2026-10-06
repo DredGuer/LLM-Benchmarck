@@ -90,3 +90,7 @@ Distinguer endpoint client et lieu de l’inférence : une URL localhost Ollama 
 ## Catalogue et estimation
 
 Toute évolution du catalogue doit vérifier les fiches officielles, conserver sources/date, augmenter sa version et laisser les architectures ou capacités incertaines comme inconnues. Ne pas confondre téléchargement, estimation, chargement réel et mesure. Le MoE exige tous les poids pour l’estimation ; aucune prédiction de qualité ou débit sans validation. Les pulls restent explicitement sélectionnés, limités à l’allowlist et au serveur Ollama local. Tester les budgets, les erreurs, la concurrence, l’annulation, la provenance disque et les contrôles d’origine/jeton : `node backend/model-advisor.test.cjs` et `node backend/model-advisor-ui.test.cjs`.
+
+## Installation des runners locaux
+
+Conserver la détection passive, la différence installation/API et l’absence de remplacement automatique. Pas de shell/URL/exécutable arbitraire transmis par le client ; plans explicites, origines/jetons, sources fixes, signatures/digests et extraction contrôlée requis. Ne pas attribuer la télémétrie Ollama à MLX natif. Suites : `local-runners.test.cjs`, `runner-archive.test.cjs`, `local-runners-ui.test.cjs` et `mlx-runner.test.cjs` dans `backend/`. Les tests simulés ne remplacent pas une installation réelle macOS.

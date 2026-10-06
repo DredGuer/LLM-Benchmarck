@@ -33,3 +33,6 @@ if (typeof ollamaMemoryMonitor !== 'undefined') {
 
 // Apply the single shared Simple/Pro interface after all controls exist.
 initInterfaceModes();
+
+// Detection observes services; it never installs or starts software automatically.
+if(typeof detectLocalRunners==='function')detectLocalRunners();
