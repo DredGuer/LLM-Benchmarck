@@ -6,6 +6,7 @@ var modelListGeneration = 0;
 var modelMetadataGeneration = 0;
 
 function selectRunner(runner) {
+  if (state.isRunning || state.batchActive) return;
   modelListGeneration++;
   modelMetadataGeneration++;
   state.modelMetadata = null;
@@ -47,9 +48,11 @@ function populateModelSelect() {
     sel.appendChild(opt);
   }
   if (models.length > 0) sel.value = models[0];
+  if (typeof renderBatchModels === "function") renderBatchModels(models);
 }
 
 async function fetchModels() {
+  if (state.batchActive || state.isRunning) return;
   var status = document.getElementById('modelStatus');
   status.textContent = '⏳ Récupération des modèles…';
   var runner = state.runner, generation = ++modelListGeneration;
@@ -72,7 +75,7 @@ async function fetchModels() {
       var data = await res.json();
       models = data.data ? data.data.map(function(m) { return m.id; }) : [];
     }
-    if (generation !== modelListGeneration || runner !== state.runner) return;
+    if (state.batchActive || generation !== modelListGeneration || runner !== state.runner) return;
     if (models.length === 0) { status.textContent = '⚠️ Aucun modèle trouvé.'; return; }
     var sel = document.getElementById('modelSelect');
     sel.innerHTML = '<option value="">— Choisir —</option>';
@@ -83,11 +86,12 @@ async function fetchModels() {
       sel.appendChild(opt);
     }
     sel.value = models.includes(previous) ? previous : models[0];
+    if (typeof renderBatchModels === "function") renderBatchModels(models);
     refreshModelMetadata();
     status.textContent = '✅ ' + models.length + ' modèle(s) trouvé(s)';
     showToast(models.length + ' modèles détectés', 'success');
   } catch (e) {
-    if (generation !== modelListGeneration || runner !== state.runner) return;
+    if (state.batchActive || generation !== modelListGeneration || runner !== state.runner) return;
     status.textContent = "❌ Impossible de contacter le runner. Vérifiez que le service est lancé ou servez ce fichier via un serveur web (ex: `python -m http.server`).";
     showToast('Runner inaccessible', 'error');
   }

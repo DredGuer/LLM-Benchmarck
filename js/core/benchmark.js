@@ -2,9 +2,10 @@
  * LLM Benchmarker - Benchmark Engine
  */
 
-async function runBenchmark() {
-  if (typeof controlledEnabled === 'function' && controlledEnabled() && !state.controlledActive) return runControlledCampaign();
-  if (typeof agenticEnabled === 'function' && agenticEnabled()) return runAgenticBenchmark();
+async function runBenchmark(inBatch) {
+  if (state.batchActive && !inBatch) return;
+  if (typeof controlledEnabled === 'function' && controlledEnabled() && !state.controlledActive) return runControlledCampaign(inBatch);
+  if (typeof agenticEnabled === 'function' && agenticEnabled()) return runAgenticBenchmark(inBatch);
   if (state.isRunning || state.analysisRunning) return;
   if (!state.selectedPrompts.size) { showToast('Sélectionnez un type de prompt', 'error'); return; }
   var model = getSelectedModel();
@@ -44,11 +45,12 @@ async function runBenchmark() {
         if (v.ok) { var data = await v.json(); state.runnerVersion = typeof data.version === "string" ? data.version : null; }
       } catch (_) {}
     }
+    if (state.batchAbort) throw new Error("Campagne automatique interrompue.");
     if (RUNNERS[runner].type === 'local') await warmup();
     for (var i = 0; i < selectedTypes.length; i++) {
-      if (state.controlledStop && state.controlledActive) break;
+      if (state.batchAbort || (state.controlledStop && state.controlledActive)) break;
       for (var rep = 1; rep <= repetitions; rep++) {
-        if (state.controlledStop && state.controlledActive) break;
+        if (state.batchAbort || (state.controlledStop && state.controlledActive)) break;
         activeType = selectedTypes[i]; activeRep = rep; activePhase = 'measurement';
         activePrompt = activeType.id === 'custom' ? (document.getElementById('customPromptText').value.trim() || 'Dis bonjour.') : activeType.prompt;
         skipToNextFlag = false; retryCurrentFlag = false;
@@ -79,6 +81,7 @@ async function runBenchmark() {
     setProgress(100, 'Terminé : chauffe séparée et ' + completedTests + ' mesure(s)');
     showToast('Campagne terminée : ' + completedTests + ' mesure(s)', 'success');
   } catch (error) {
+    if (state.batchActive) state.batchFailure = error.message;
     if (state.controlledActive) state.controlledStop = true;
     var failed = buildErrorResult(model, activeType, error.message, activeRep);
     failed.phase = activePhase; failed.promptText = activePrompt;
@@ -91,7 +94,7 @@ async function runBenchmark() {
     }
     document.getElementById('exportBtn').disabled = !state.results.length;
     currentAbortController = null; showLiveSections(false); setControlButtons(false);
-    progressSection.style.display = 'none'; runBtn.disabled = false; runBtn.innerHTML = '⚡ Lancer le benchmark';
+    progressSection.style.display = 'none'; runBtn.disabled = !!state.batchActive; runBtn.innerHTML = '⚡ Lancer le benchmark';
     state.isRunning = false; skipToNextFlag = false; retryCurrentFlag = false; lockCampaignControls(false);
     if (typeof renderStatistics === 'function') renderStatistics();
   }
@@ -119,7 +122,7 @@ async function executeTest(model, promptType, promptText, rep, signal, protocol)
   resetLiveOutput(); 
   showLiveSections(true); 
   setControlButtons(true);
-  if (state.controlledActive || (typeof agenticEnabled === 'function' && agenticEnabled())) {
+  if (state.batchActive || state.controlledActive || (typeof agenticEnabled === 'function' && agenticEnabled())) {
     document.getElementById('nextBtn').disabled = true; document.getElementById('retryBtn').disabled = true;
   }
   addDebugLog('Démarrage du test: ' + model + ' - ' + promptType.name, 'info');

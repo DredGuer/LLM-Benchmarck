@@ -45,7 +45,7 @@ function toggleAnalysis() {
   if (!panel.hidden) refreshAnalysisScope();
 }
 async function loadAnalysisModels() {
-  if (state.isRunning || state.analysisRunning) { showToast('Attendez la fin de la tâche en cours.', 'info'); return; }
+  if (state.isRunning || state.batchActive || state.analysisRunning) { showToast('Attendez la fin de la tâche en cours.', 'info'); return; }
   try {
     var provider = document.getElementById('analysisProvider').value, base = analysisEndpoint(document.getElementById('analysisBase').value);
     var headers = {}, key = document.getElementById('analysisKey').value.trim();
@@ -60,7 +60,7 @@ async function loadAnalysisModels() {
   } catch (_) { showToast('Impossible de récupérer les modèles. Vérifiez URL, clé et autorisations CORS ; saisie manuelle possible.', 'error'); }
 }
 async function askAnalysis(conclusion) {
-  if (state.isRunning || state.analysisRunning) { showToast('Analyse disponible après la fin des tests.', 'info'); return; }
+  if (state.isRunning || state.batchActive || state.analysisRunning) { showToast('Analyse disponible après la fin des tests.', 'info'); return; }
 
   var provider = document.getElementById('analysisProvider').value;
   var model = document.getElementById('analysisModel').value.trim();

@@ -45,6 +45,7 @@ function loadHistory() {
 }
 
 function restoreSession(idx) {
+  if (state.isRunning || state.batchActive) return;
   try {
     var history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
     var session = history[idx];
@@ -62,6 +63,7 @@ function restoreSession(idx) {
 }
 
 function clearHistory() {
+  if (state.isRunning || state.batchActive) return;
   if (!confirm('Vider tout l\'historique ?')) return;
   localStorage.removeItem(HISTORY_KEY);
   loadHistory();
@@ -70,7 +72,7 @@ function clearHistory() {
 }
 
 function clearAllResults() {
-  if (state.isRunning || state.results.length === 0) return;
+  if (state.isRunning || state.batchActive || state.results.length === 0) return;
   if (!confirm('Vider les résultats actuels ?')) return;
   state.results = [];
   state.unsavedSession = null;

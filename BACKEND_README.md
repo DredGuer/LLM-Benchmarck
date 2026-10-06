@@ -2,7 +2,7 @@
 
 [Guide de démarrage](README.md) · [Architecture](TECHNICAL_README.md)
 
-Le backend Node.js fournit à l’interface des mesures Ollama et des informations sur la machine où il s’exécute. Il exécute également les outils restreints de la batterie agentique. Il ne sert pas la page HTML et n’exécute pas les modèles. La version `package.json` 1.1.0 est distincte de l’interface v0.09.0 et du protocole 0.09.
+Le backend Node.js fournit à l’interface des mesures Ollama et des informations sur la machine où il s’exécute. Il exécute également les outils restreints de la batterie agentique. Il écrit aussi les exports locaux demandés par les campagnes automatiques. Il ne sert pas la page HTML et n’exécute pas les modèles. La version `package.json` 1.2.0 est distincte de l’interface v0.10.0 et du protocole 0.09.
 
 ## Lancement
 
@@ -113,7 +113,7 @@ Les opérations fichiers sont réellement exécutées en test ; les réponses de
 
 `backend/agentic-suite.js` contient six tâches versionnées, le cadre système, les outils restreints et les évaluateurs d’état. `POST /api/agentic/start` reçoit par exemple `{"scenario":"tool-selection"}` ; la session v2 possède son propre jeton et expire après quatre minutes. `finish` reçoit `finalAnswer` pour les contrôles de réponse et `reason` en cas d’interruption. Il retourne critères, objectif atteint, conformité, étapes et contenus locaux de fichiers avant nettoyage. L’interface exclut ces contenus des exports communautaires.
 
-Le chemin fichiers v1 reste compatible pour les sessions démarrées sans scénario ; il n’est plus proposé par l’interface. Les sessions v1 et v2 sont routées vers leurs harness respectifs. Ne pas confondre la version de paquet backend 1.1.0 et le protocole agentique 2.0.1.
+Le chemin fichiers v1 reste compatible pour les sessions démarrées sans scénario ; il n’est plus proposé par l’interface. Les sessions v1 et v2 sont routées vers leurs harness respectifs. Ne pas confondre la version de paquet backend 1.2.0 et le protocole agentique 2.0.1.
 
 ```bash
 node backend/agentic-suite.test.cjs
@@ -122,6 +122,24 @@ node backend/agentic-stream.test.cjs
 
 [Principes et sources de la méthodologie](backend/AGENTIC_METHODOLOGY.md). Les entrées sont synthétiques, les conversations utilisateur scriptées, le périmètre applicatif restreint ; aucun shell réseau ou Exo n’est ajouté.
 
-## Provenance et MLX (application 0.09.0 / backend 1.1.0)
+## Provenance et MLX (application 0.09.0 / backend 1.2.0)
 
 La batterie courante est 2.0.1 ; redémarrer Node après la mise à jour. Les journaux MLX ne fournissent pas de preuve d’attribution à un modèle. Chaque lecture indique `observedAt` (événement), `collectedAt` (collecte), âge, fraîcheur et chevauchement des sessions de télémétrie. Le pic utilise l’heure de l’événement maximal ; l’allocation conservée utilise celle du dernier événement. Les lignes antérieures au curseur/session, futures, incomplètes, ou provenant d’un fichier tourné ne deviennent pas des mesures fraîches valides. Les sessions externes non observées restent possibles.
+
+## Exports locaux (application 0.10.0 / backend 1.2.0)
+
+Le module `backend/local-exports.js` crée `export/` dans le dossier du projet, indépendamment du répertoire depuis lequel Node est lancé. Chaque modèle reçoit un sous-dossier basé sur son nom complet et un hash court ; fichiers JSON et Markdown datés, identifiés par campagne et position. Les exports ne remplacent pas ceux d’une campagne précédente. Les relances d’une même sauvegarde sont idempotentes si le contenu correspond exactement. Une réponse réussie n’est envoyée qu’après écriture et synchronisation des deux fichiers. Si le second échoue, une nouvelle tentative complète la paire ; le premier reste récupérable. Aucun nettoyage automatique n’efface ces fichiers.
+
+| Endpoint | Fonction |
+|---|---|
+| `GET /api/exports/session` | Vérifier le dossier et obtenir le jeton de la session backend |
+| `POST /api/exports/save` | Valider le JSON communautaire et écrire la paire JSON/Markdown |
+| `POST /api/exports/open` | Ouvrir le dossier fixe dans le gestionnaire de fichiers |
+
+Ces routes exigent une connexion de bouclage, un Host local et un Origin HTTP(S) local. Les mutations exigent en plus `X-LLMB-Export-Token`, aléatoire et renouvelé à chaque démarrage backend. Les pages externes et Origin `null` sont refusés ; servez la page avec Python plutôt que `file://`. Le jeton ne figure pas dans les rapports. Le corps des sauvegardes est limité à 50 MiB, chaque fichier à 24 MiB ; les limites existantes de télémétrie/outils restent inchangées. Les noms de chemins sont calculés côté serveur ; traversées, liens symboliques, conflits et remplacements sont refusés. Les JSON/bundles sont validés avec le validateur du projet avant écriture, et tous leurs tests doivent concerner le modèle demandé.
+
+L’ouverture utilise `execFile` sans shell et un chemin fixe : `open` sur macOS, `explorer.exe` sur Windows, `xdg-open` sur Linux. Cela ouvre le dossier sur **la machine du backend**, qui doit donc être votre machine locale. L’ouverture native sur Windows/Linux reste à vérifier sur ces systèmes ; aucun test matériel réel n’est réalisé par les tests automatiques.
+
+Le serveur Python sert le répertoire du projet et donc potentiellement les exports : utilisez `python3 -m http.server 8001 --bind 127.0.0.1` pour ce parcours local. `export/` est ignoré par Git, mais les Markdown peuvent contenir des données privées et ne sont pas chiffrés.
+
+Validation : `node backend/local-exports.test.cjs` et `node backend/batch-campaign.test.cjs`. Après `git pull`, **redémarrer le backend**, puis recharger la page pour utiliser ces nouvelles routes.

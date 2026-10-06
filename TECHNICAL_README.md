@@ -2,7 +2,7 @@
 
 [Prise en main](README.md) · [Backend](BACKEND_README.md) · [Contrat communautaire](schemas/README.md)
 
-État documenté le 6 octobre 2026 : interface v0.09.0, protocole de génération 0.09, exports 2.0.0/2.1.0/2.2.0 et bundle 1.0.0. La batterie `agentic-suite-2.0.1` est exécutée ; les fixtures de schéma agentiques/Exo restent synthétiques. Exo n’est pas exécuté.
+État documenté le 6 octobre 2026 : interface v0.10.0, protocole de génération 0.09, exports 2.0.0/2.1.0/2.2.0 et bundle 1.0.0. La batterie `agentic-suite-2.0.1` est exécutée ; les fixtures de schéma agentiques/Exo restent synthétiques. Exo n’est pas exécuté.
 
 ## Organisation
 
@@ -93,3 +93,13 @@ Tests : `agentic-harness.test.cjs` (compatibilité v1), `agentic-suite.test.cjs`
 `quality.js` définit six cas structurés et leurs évaluateurs déterministes 1.0.0. Une réponse invalide échoue, une réponse tronquée est incomplète ; les autres catégories sont non évaluées. `controlled.js` orchestre deux campagnes existantes avec trois répétitions, chauffe par contexte, température 0 et plafond stable ; les contrôles restent verrouillés, l’arrêt et un contexte non confirmé empêchent la série suivante. Les contextes 8192/16384 sont des valeurs proposées, pas une optimisation matérielle garantie. Les groupes statistiques séparent versions, cas, prompts et conditions ; la justesse reste distincte du débit.
 
 Validation supplémentaire : `node backend/provenance-quality-controlled.test.cjs`. Les tests de campagne et adaptateurs ne remplacent pas les essais sur Ollama/MLX réels.
+
+## Orchestration multi-modèles (0.10.0)
+
+`js/core/batch.js` orchestre des campagnes Ollama séquentielles via les moteurs existants (`benchmark.js`, `agentic.js`, `controlled.js`). Le modèle actif est surchargé par `getSelectedModel()` sans modifier la saisie utilisateur. Les catégories et réglages restent verrouillés ; l’assistant IA et la restauration d’historique sont bloqués pendant la file. Les moteurs conservent leurs propres sessions d’historique ; le bilan affiché regroupe les modèles sans créer un deuxième historique dupliqué.
+
+Chaque modèle est exporté avant la demande native `/api/generate` avec `keep_alive: 0`, puis son absence est vérifiée dans `/api/ps`. Une absence invérifiable ne vaut pas déchargement. Les sauvegardes échouées retiennent un payload stable en mémoire, réessayé par le bouton de récupération ; la file s’arrête. Les modèles d’autres utilisateurs ou applications ne sont pas déchargés volontairement, et aucun processus n’est tué. Il n’y a pas de verrou inter-applications ou de garantie sur la RAM système libérée.
+
+`buildMarkdownReport(results, now)` est partagé entre le téléchargement manuel et l’écriture locale. Les JSON utilisent le même `buildCommunityV2` que l’export manuel ; le producteur est 0.10.0, la provenance des passes reste capturée lors de leur exécution. Les formats communautaires 2.0/2.1/2.2 et bundle 1.0 ne changent pas : l’identifiant de file est dans le nom des fichiers et non ajouté au contrat communautaire. Les anciennes versions des résultats sont préservées lors d’un nouvel export.
+
+Validation : deux nouvelles suites testent le stockage réel en dossiers temporaires, les garde-fous locaux et les boucles des moteurs avec inférence simulée, y compris les deux contextes, interruptions, erreurs, sauvegarde avant déchargement et récupération. L’ouverture Finder et l’inférence réelle seront validées sur le Mac de l’utilisateur.

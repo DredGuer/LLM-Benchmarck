@@ -55,8 +55,8 @@ function resetCampaignResults() {
 }
 
 function lockCampaignControls(lock) {
-  var elements = Array.from(document.querySelectorAll('.runner-btn, #agenticEnabled, #agenticScenarios input, #modelSelect, #modelCustom, #manualModeToggle, #temperature, #maxTokens, #repetitions, #customPromptText, #qualityEnabled, #controlledEnabled, #controlledContextA, #controlledContextB'));
-  if (state.controlledActive && !lock) return;
+  var elements = Array.from(document.querySelectorAll('.runner-btn, #agenticEnabled, #agenticScenarios input, #modelSelect, #modelCustom, #manualModeToggle, #temperature, #maxTokens, #repetitions, #customPromptText, #qualityEnabled, #controlledEnabled, #controlledContextA, #controlledContextB, #customTemp, #batchStart, #batchModels input, #batchContinueErrors, #selectedGPU, #hardwareModal input, #hardwareModal button, #hardwareModal select, #advancedConfigModal input, #advancedConfigModal button, .sidebar button:not([data-batch-available])'));
+  if ((state.controlledActive || state.batchActive) && !lock) return;
   if (lock) {
     if (window.campaignControls?.length) return;
     window.campaignControls = elements.map(el => [el, el.disabled]);

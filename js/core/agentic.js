@@ -110,7 +110,8 @@ async function executeAgenticTest(model,rep,externalSignal,warmupRuns,scenario){
       tokenCountKind:!turnOpen&&declared?'declared':'estimated',tokenCountSource:turnOpen?'native-chat:incomplete-token-total-unavailable':declared?'native-chat:sum-output-token-counts':'native-chat:mixed-estimates',generationTimeMs:!turnOpen&&timingKnown&&timingReports?genMs:null,prefillTimeMs:!turnOpen&&timingKnown&&timingReports?prefillMs:null,generationTokensPerSec:!turnOpen&&timingKnown&&genMs>0?tokens/(genMs/1000):null,
       temperature,maxTokens,thinkingObserved:thinkingSeen,contextMode:getRequestedContextTokens()===null?'auto':'explicit',contextRequestedTokens:getRequestedContextTokens(),contextObservedTokens:memory?.loadedModel?.contextTokens??null},env:JSON.parse(JSON.stringify(state.env)),...(memory?{memory}:{})};
 }
-async function runAgenticBenchmark(){
+async function runAgenticBenchmark(inBatch){
+  if(state.batchActive&&!inBatch)return;
   if(state.isRunning||state.analysisRunning)return;
   if(!['ollama','lmstudio','llamacpp'].includes(state.runner)){showToast('La batterie agentique exige un runner local avec appels d’outils natifs.','error');return;}
   var scenarios=selectedAgenticScenarios(),generation=typeof campaignPromptTypes==='function'?campaignPromptTypes():PROMPT_TYPES.filter(pt=>state.selectedPrompts.has(pt.id)),model=getSelectedModel(),repetitions=getRepetitions(),runner=state.runner;
@@ -127,9 +128,10 @@ async function runAgenticBenchmark(){
   try{var info=await agenticRequest('/info',null,null,controller.signal);if(info.version!=='2.0.1'||!Array.isArray(info.scenarios))throw new Error('Redémarrez le backend mis à jour : batterie agentique v2 requise.');
     resetCampaignResults();switchTab('results');document.getElementById('progressSection').style.display='block';await refreshModelMetadata();state.runnerVersion=null;
     if(runner==='ollama'){var v=await fetchWithTimeout(RUNNERS.ollama.base+'/api/version',{signal:controller.signal},5000);if(v.ok)state.runnerVersion=(await v.json()).version||null;}
+    if(state.batchAbort)throw new Error("Campagne automatique interrompue.");
     await warmup();
     for(var rep=1;rep<=repetitions;rep++){
-      for(var pt of generation){if(controller.signal.aborted || (state.controlledActive && state.controlledStop))break;
+      for(var pt of generation){if(state.batchAbort || controller.signal.aborted || (state.controlledActive && state.controlledStop))break;
         if(runner==='ollama'&&await observeLoadedModel(model,controller.signal)==='cold')await warmup();
         var prompt=pt.id==='custom'?(document.getElementById('customPromptText').value.trim()||'Dis bonjour.'):pt.prompt;
         agenticLiveStart('Génération · '+pt.name);agenticLive('request','Mesure de génération ; le suivi texte est affiché dans la zone en direct.');
@@ -138,17 +140,17 @@ async function runAgenticBenchmark(){
         catch(error){if(controller.signal.aborted)throw error;remember(buildErrorResult(model,pt,error.message,rep));}
         showLiveSections(false);setControlButtons(false);
       }
-      for(var scenario of scenarios){if(controller.signal.aborted || (state.controlledActive && state.controlledStop))break;if(runner==='ollama'&&await observeLoadedModel(model,controller.signal)==='cold')await warmup();
+      for(var scenario of scenarios){if(state.batchAbort || controller.signal.aborted || (state.controlledActive && state.controlledStop))break;if(runner==='ollama'&&await observeLoadedModel(model,controller.signal)==='cold')await warmup();
         button.textContent=scenario.title+' · '+rep+'/'+repetitions;remember(await executeAgenticTest(model,rep,controller.signal,warmups,scenario));}
-      if(controller.signal.aborted || (state.controlledActive && state.controlledStop))break;
+      if(state.batchAbort || controller.signal.aborted || (state.controlledActive && state.controlledStop))break;
     }
     showToast(controller.signal.aborted?'Campagne interrompue ; résultats conservés.':'Campagne terminée : génération et capacités agentiques.','info');
-  }catch(error){if(state.controlledActive)state.controlledStop=true;showToast(error.message,'error');}
+  }catch(error){if(state.batchActive)state.batchFailure=error.message;if(state.controlledActive)state.controlledStop=true;showToast(error.message,'error');}
   finally{if(controller.signal.aborted&&state.controlledActive)state.controlledStop=true;if(results.length){var session={model,runner,results,env:JSON.parse(JSON.stringify(state.env)),repetitions,warmupRuns:warmups};if(saveSessionToHistory(session)===false)state.unsavedSession=session;}
     document.getElementById('exportBtn').disabled=!state.results.length;document.getElementById('progressSection').style.display='none';document.getElementById('agenticStop').hidden=true;
-    currentAbortController=null;showLiveSections(false);setControlButtons(false);button.disabled=false;button.textContent='⚡ Lancer le benchmark';state.isRunning=false;lockCampaignControls(false);renderStatistics();}
+    currentAbortController=null;showLiveSections(false);setControlButtons(false);button.disabled=!!state.batchActive;button.textContent='⚡ Lancer le benchmark';state.isRunning=false;lockCampaignControls(false);renderStatistics();}
 }
-function stopAgenticBenchmark(){currentAbortController?.abort();}
+function stopAgenticBenchmark(){if(state.batchActive)requestBatchStop(true);else currentAbortController?.abort();}
 function downloadAgenticArtifact(id,relative){var result=state.results.find(r=>r.id===id),text=relative?result?.agenticArtifacts?.[relative]:result?.agenticArtifactText;if(typeof text!=='string')return;
   var json=relative?.endsWith('.json'),url=URL.createObjectURL(new Blob([text],{type:json?'application/json':'text/markdown;charset=utf-8'})),link=document.createElement('a');
   link.href=url;link.download='LLMB-'+result.model.replace(/[^a-zA-Z0-9._-]/g,'-')+'-'+(relative?relative.split('/').pop():'agentic-answer.md');link.click();URL.revokeObjectURL(url);}

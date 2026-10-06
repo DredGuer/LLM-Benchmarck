@@ -25,6 +25,7 @@ const PORT = process.argv.includes('--port') ?
 
 // Middleware
 app.use(cors());
+require('./backend/local-exports').mountExportRoutes(app);
 app.use(express.json());
 require('./backend/agentic-harness').mountAgenticRoutes(app);
 

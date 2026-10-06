@@ -54,6 +54,7 @@ function escapeHtmlForMarkdown(str) {
 
 // Get the currently selected model from the UI
 function getSelectedModel() {
+  if (state.batchActive && state.batchModel) return state.batchModel;
   var custom = document.getElementById('modelCustom');
   if (custom && custom.value && custom.value.trim()) return custom.value.trim();
   var select = document.getElementById('modelSelect');

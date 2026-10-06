@@ -6,8 +6,8 @@ Historique des changements de LLM Benchmarker. Les dates correspondent aux inté
 
 | Élément | Version | Référence |
 |---|---|---|
-| Application / interface / producteur des exports | **0.09.0** | `js/core/version.js` |
-| Backend Node | 1.1.0 | `package.json` |
+| Application / interface / producteur des exports | **0.10.0** | `js/core/version.js` |
+| Backend Node | 1.2.0 | `package.json` |
 | Protocole de génération | 0.09 | `js/core/benchmark.js` |
 | Batterie agentique | 2.0.1 | `backend/agentic-suite.js` |
 | Rapport communautaire | 2.2.0 ; compatibilité 2.0.0/2.1.0 | `schemas/community-v2.schema.json` |
@@ -15,6 +15,18 @@ Historique des changements de LLM Benchmarker. Les dates correspondent aux inté
 | Inventaire Apple | 1.0.0 | `backend/apple-inventory.js` |
 
 Ces numéros désignent des composants différents. Les résultats historiques et exemples synthétiques conservent leur version d’origine. Le suffixe des URL de scripts sert à invalider le cache ; il ne désigne pas nécessairement la version de l’application.
+
+## [0.10.0] — 2026-10-06
+
+- Campagnes automatiques Ollama : sélection de plusieurs modèles, mêmes catégories/réglages, chauffe distincte, répétitions normales ou campagne contrôlée à deux contextes. Exécution séquentielle, sans tuer de processus.
+- Sauvegarde JSON communautaire et Markdown dans `export/`, tri par nom complet de modèle ; noms datés avec identifiant de file, position et suffixe stable anticollision. Dossier exclu de Git.
+- Bouton **Récupérer les exports** : ouvre le dossier local via le backend et réessaie une sauvegarde en attente. Les téléchargements manuels restent disponibles.
+- File visible, interruption immédiate ou après le modèle, politique d’erreur technique configurable. Les échecs de justesse/conformité restent des résultats. Les erreurs de sauvegarde, d’historique ou de déchargement bloquent le passage au suivant.
+- Déchargement explicite Ollama et vérification `/api/ps` avant le modèle suivant. Pas de garantie sur la RAM instantanément restituée ni de synchronisation avec d’autres applications.
+- Backend 1.2.0 : nouvelles routes d’export local limitées au bouclage et aux origines locales avec jeton pour les mutations, chemins calculés, validation du JSON et limites de taille ; refus des traversées, liens symboliques et écrasements.
+- Génération Markdown factorisée ; interface et producteur d’export 0.10.0, provenance historique préservée. Protocole de génération et formats communautaires inchangés.
+- README et guides actualisés, commandes Python liées au bouclage local, limites de confidentialité des Markdown précisées.
+- Validation : 17 suites passent ; suites stockage/export et campagne multi-modèles ajoutées ; moteurs et inférence simulés, fichiers réellement écrits dans des dossiers temporaires. Tests matériel/gestionnaire de fichiers natif à réaliser sur la machine de l’utilisateur.
 
 ## [0.09.0] — 2026-10-06
 

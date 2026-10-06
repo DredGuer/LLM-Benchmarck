@@ -2,9 +2,23 @@
 
 Benchmarkez vos modèles locaux ou vos API, conservez les campagnes dans votre navigateur et comparez leurs performances sur votre machine.
 
-**Interface v0.09.0 · protocole de mesure 0.09 · export communautaire 2.2.0 (anciens rapports 2.0.0/2.1.0 acceptés).** Documentation vérifiée le 6 octobre 2026. [Historique des versions et changements](CHANGELOG.md). Ces versions désignent des éléments différents ; la version 1.1.0 de `package.json` concerne le backend.
+**Interface v0.10.0 · protocole de mesure 0.09 · export communautaire 2.2.0 (anciens rapports 2.0.0/2.1.0 acceptés).** Documentation vérifiée le 6 octobre 2026. [Historique des versions et changements](CHANGELOG.md). Ces versions désignent des éléments différents ; la version 1.2.0 de `package.json` concerne le backend.
 
-Fonctions actuelles : chauffe séparée, contexte Auto, identification Dense/MoE lorsqu’elle est disponible, inventaire Apple Silicon, suivi RSS/swap/MLX, exports Markdown/JSON, statistiques interactives, batterie de capacités agentiques et assistant d’analyse au choix. Les bulles **!** expliquent les réglages et mesures au clic, au clavier ou sur mobile.
+Fonctions actuelles : campagnes automatiques multi-modèles Ollama avec exports locaux classés, chauffe séparée, contexte Auto, identification Dense/MoE lorsqu’elle est disponible, inventaire Apple Silicon, suivi RSS/swap/MLX, exports Markdown/JSON, statistiques interactives, batterie de capacités agentiques et assistant d’analyse au choix. Les bulles **!** expliquent les réglages et mesures au clic, au clavier ou sur mobile.
+
+## Campagne automatique et exports par modèle
+
+Après avoir lancé Ollama, le backend (`npm start`) et la page, ouvrez **Campagne automatique** dans la colonne de gauche. Cochez un ou plusieurs modèles détectés, puis choisissez les catégories et, si souhaité, les capacités agentiques et la justesse. Les mêmes réglages sont conservés pendant toute la file. Le mode normal garde **1 répétition par défaut** ; augmentez ce nombre en mode Manuel pour mieux estimer la variabilité. Le mode contrôlé garde **3 répétitions × 2 contextes** par modèle.
+
+Cliquez sur **Lancer la campagne automatique**. Pour chaque modèle : chargement/chauffe mesurée → catégories et épreuves → historique et exports → demande de déchargement Ollama → vérification de son absence dans `/api/ps` → modèle suivant. La chauffe reste séparée des scores. Aucun modèle n’est lancé en parallèle et aucun processus n’est tué. L’absence dans `/api/ps` confirme le déchargement rapporté par Ollama, pas la restitution instantanée de toute la RAM système.
+
+Le backend crée **`export/` à la racine du projet**, puis un sous-dossier par **nom complet de modèle** : Qwen, Gemma et leurs différentes variantes restent séparés. Un suffixe stable évite les collisions entre noms contenant `:`, `/`, etc. Chaque passage dans la file crée un **JSON communautaire v2** et un **Markdown**, avec modèle, date, identifiant de campagne et position dans leurs noms. Les contextes d’une campagne contrôlée sont regroupés dans les exports du modèle. Le dossier est exclu de Git.
+
+**Récupérer les exports** ouvre le dossier dans le Finder sur macOS, l’Explorateur Windows ou le gestionnaire de fichiers Linux (`xdg-open`, si disponible). Si l’ouverture n’est pas disponible, ouvrez directement `export/`. Le navigateur seul ne peut pas ouvrir ce dossier : le backend local est requis. Les exports manuels de l’en-tête restent des téléchargements du navigateur.
+
+La file montre chaque étape et permet **Arrêter maintenant** (résultats partiels conservés) ou **Arrêter après ce modèle**. Par défaut, une erreur technique arrête la file ; une option permet de continuer après sauvegarde et déchargement réussis. Un critère de justesse ou une épreuve agentique échouée est un résultat, pas une erreur technique. Une sauvegarde ou un déchargement non confirmé bloque toujours le modèle suivant. En cas d’échec d’export, les données restent en mémoire : **Récupérer les exports** réessaie la sauvegarde. Ne fermez pas la page avant récupération. Les campagnes déjà exportées restent sur disque ; la file n’a pas de reprise automatique après fermeture du navigateur.
+
+Les JSON excluent prompts, réponses, journaux et clés ; **les Markdown contiennent les prompts et réponses classiques**. Vérifiez-les avant partage. Gardez l’onglet ouvert pendant une campagne : le navigateur peut ralentir ou suspendre les tâches en arrière-plan. Le backend et Ollama doivent rester actifs. Les autres applications utilisant Ollama ne sont pas synchronisées avec la file.
 
 ## Premier lancement avec Ollama
 
@@ -37,7 +51,7 @@ Gardez ce terminal ouvert. Le backend écoute sur **http://localhost:3001**. Il 
 Depuis la racine du même dépôt :
 
 ```bash
-python3 -m http.server 8001 --bind 127.0.0.1
+python3 -m http.server 8001 --bind 127.0.0.1 --bind 127.0.0.1
 ```
 
 Ouvrez **http://localhost:8001/llm-benchmarker.html**. Gardez aussi ce terminal ouvert. Le serveur Python fournit les fichiers de l’interface ; le backend Node fournit les mesures ; Ollama exécute le modèle. Aucun build frontend n’est nécessaire.

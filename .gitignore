@@ -39,3 +39,6 @@ npm-debug.log*
 # Documentation locale
 amelioration.md
 FUSION_NOTES.md
+
+# Local benchmark exports may contain private prompts and responses.
+/export/

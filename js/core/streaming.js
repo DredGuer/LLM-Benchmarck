@@ -44,6 +44,7 @@ function clearDebugLogs() {
 }
 
 function stopCurrentTest() {
+  if (state.batchActive) { requestBatchStop(true); return; }
   if (currentAbortController) {
     addDebugLog('Arrêt demandé par l utilisateur', 'warn');
     currentAbortController.abort();
@@ -80,3 +81,4 @@ function showLiveSections(show) {
   if (debugLogs) debugLogs.style.display = show ? 'block' : 'none';
   if (controls) controls.style.display = show ? 'flex' : 'none';
 }
+

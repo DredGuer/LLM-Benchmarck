@@ -249,12 +249,11 @@ function renderResultCard(result) {
   }
 }
 
-function exportMarkdown() {
-  if (state.results.length === 0) { showToast('Aucun résultat à exporter', 'error'); return; }
-  var now = new Date();
+function buildMarkdownReport(results, now, communityExport) {
+  now = now || new Date();
   var dateStr = now.toLocaleDateString('fr-FR', { year:'numeric', month:'long', day:'numeric' });
   var timeStr = now.toLocaleTimeString('fr-FR');
-  var env = state.results[0]?.env || {};
+  var env = results[0]?.env || {};
   
   var md = '# 📊 Rapport de Benchmark LLM\n\n';
   md += '> Généré le ' + dateStr + ' à ' + timeStr + ' par **LLM Benchmarker v' + (typeof LLMB_VERSION === 'string' ? LLMB_VERSION : 'unknown') + '**\n\n';
@@ -290,8 +289,8 @@ function exportMarkdown() {
   md += '| # | Modèle | Runner | Type | Tokens | Tok/s moyen | TTFT (ms) | Temps total (s) | Source mémoire échantillonnée | Pic (MiB) | Moyenne (MiB) | Modèle chargé (GiB) | Source modèle chargé | Architecture | Contexte Auto · runner chargé (tokens) | Contexte max déclaré (tokens) | Statut |\n';
   md += '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|\n';
 
-  for (var i = 0; i < state.results.length; i++) {
-    var r = state.results[i], m = r.metrics || {}, memory = r.memory || {}, loaded = memory.loadedModel;
+  for (var i = 0; i < results.length; i++) {
+    var r = results[i], m = r.metrics || {}, memory = r.memory || {}, loaded = memory.loadedModel;
     var cells = [
       i + 1, r.model, r.runner, r.promptTypeName,
       m.totalTokens, m.tokensPerSec,
@@ -308,15 +307,15 @@ function exportMarkdown() {
   }
   md += '\nLe débit moyen inclut toute la durée du test. La mémoire échantillonnée dépend de sa source (RSS cumulée ou tas JS navigateur). La taille du modèle déclarée par Ollama est distincte du pic RAM ; ne pas additionner size et size_vram sur mémoire unifiée. N/A signifie inconnu.\n';
   md += '\n## Données structurées pour import communautaire\n\n';
-  var communityExport = buildCommunityV2(state.results, now.toISOString());
+  communityExport = communityExport || buildCommunityV2(results, now.toISOString());
   var schemaDescription = communityExport.schema === 'llm-benchmarker.community' ? 'Schéma llm-benchmarker.community, version ' + communityExport.schemaVersion : 'Bundle ' + communityExport.schema + ', version ' + communityExport.schemaVersion + ' ; versions des rapports : ' + Array.from(new Set(communityExport.reports.map(function(report) { return report.schemaVersion; }))).join(', ');
   md += schemaDescription + '. Bloc limité aux paramètres, mesures et environnement sélectionné ; sans clés API, logs, prompts ni réponses. Le reste du rapport contient les prompts et réponses : vérifier avant partage.\n\n';
   md += '\x60\x60\x60json\n' + JSON.stringify(communityExport, null, 2).replace(/\x60/g, '\\u0060') + '\n\x60\x60\x60\n';
   md += '\n---\n\n';
   md += '## 🔍 Détail des tests\n\n';
   
-  for (var i = 0; i < state.results.length; i++) {
-    var r = state.results[i];
+  for (var i = 0; i < results.length; i++) {
+    var r = results[i];
     var m = r.metrics;
     md += '**Exécution :** ' + markdownCell(resultVerdict(r).execution) + ' · **Justesse :** ' + markdownCell(r.quality?.status || 'non évaluée') + '\n\n';
     if (r.quality?.taskId) { md += '**Évaluateur :** ' + markdownCell(r.quality.evaluatorId + ' v' + r.quality.evaluatorVersion + ' · ' + r.quality.taskId) + '\n\n'; r.quality.criteria.forEach(c=>{md += '- ' + markdownCell(c.label) + ' : ' + (c.passed ? 'réussi' : 'échoué') + '\n';}); md += '\n'; }
@@ -377,6 +376,12 @@ function exportMarkdown() {
   
   md += '*Rapport généré automatiquement par LLM Benchmarker v' + (typeof LLMB_VERSION === 'string' ? LLMB_VERSION : 'unknown') + '*\n';
   
+  return md;
+}
+
+function exportMarkdown() {
+  if (!state.results.length) { showToast("Aucun résultat à exporter", "error"); return; }
+  var now = new Date(), md = buildMarkdownReport(state.results, now);
   var blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
   var url = URL.createObjectURL(blob);
   var a = document.createElement('a');
