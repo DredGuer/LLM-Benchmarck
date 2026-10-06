@@ -2,7 +2,7 @@
 
 Benchmarkez vos modèles locaux ou vos API, conservez les campagnes dans votre navigateur et comparez leurs performances sur votre machine.
 
-**Interface v0.07 · protocole de mesure 0.08 · export communautaire v2 (2.1 pour les nouvelles épreuves agentiques).** Documentation vérifiée le 6 octobre 2026. [Historique des versions et changements](CHANGELOG.md). Ces versions désignent des éléments différents ; la version 1.0.0 de `package.json` concerne le backend.
+**Interface v0.08 · protocole de mesure 0.08 · export communautaire v2 (2.1 pour les nouvelles épreuves agentiques).** Documentation vérifiée le 6 octobre 2026. [Historique des versions et changements](CHANGELOG.md). Ces versions désignent des éléments différents ; la version 1.0.0 de `package.json` concerne le backend.
 
 Fonctions actuelles : chauffe séparée, contexte Auto, identification Dense/MoE lorsqu’elle est disponible, inventaire Apple Silicon, suivi RSS/swap/MLX, exports Markdown/JSON, statistiques interactives, batterie de capacités agentiques et assistant d’analyse au choix. Les bulles **!** expliquent les réglages et mesures au clic, au clavier ou sur mobile.
 
@@ -125,6 +125,12 @@ Les mesures mémoire ne s’additionnent pas. Sur Apple Silicon, CPU et GPU part
 Pour les API sans streaming, le TTFT n’est pas mesuré ; il reste indisponible dans l’export v2. Les comptes thinking/réponse séparés et la version interne de MLX ne sont pas déduits lorsqu’ils ne sont pas rapportés.
 
 L’inventaire Apple indique CPU exact, cœurs physiques/logiques et performance/efficacité disponibles, RAM unifiée, GPU/cœurs, SSD physiques et sources. Les fréquences non exposées restent inconnues. L’inventaire et la télémétrie ont été observés sur un M3 Pro ; cela ne valide pas toutes les machines et versions.
+
+## Lire les résultats
+
+Chaque carte affiche quatre mesures : **TTFT**, **tokens/s sur la durée totale**, **pic de mémoire échantillonnée** et **temps total**. La mémoire conserve son libellé de source (RSS cumulée ou tas du navigateur) ; ce n’est pas une garantie de pic RAM complet. Une valeur inconnue reste `N/A`.
+
+Dépliez **Toutes les métriques et conditions** pour les tokens générés, réponse finale, mémoire moyenne, allocation déclarée, MLX, swap, E/S, contexte et état de chargement/cache. Les critères, appels, traces et artefacts agentiques sont dans **Critères, outils et détails agentiques** ; l’objectif atteint et la conformité restent visibles. Ces volets sont fermés au départ et utilisables au clavier. Les exports et l’historique conservent les données complètes.
 
 ## Historique et statistiques
 

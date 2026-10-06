@@ -766,3 +766,14 @@ textarea { resize: vertical; min-height: 80px; }
   border-radius: 4px;
   border: 1px solid var(--border);
 }
+
+
+/* Compact result cards: four primary measurements, details closed by default. */
+.primary-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 12px; }
+.primary-metrics .metric-value { overflow-wrap: anywhere; }
+.result-metric-details { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; margin: 12px 0; }
+.result-metric-details > summary { cursor: pointer; font-weight: 600; color: var(--text); }
+.result-metric-details > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.result-metric-details[open] > summary { margin-bottom: 16px; }
+@media (max-width: 700px) { .primary-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 360px) { .primary-metrics { grid-template-columns: minmax(0, 1fr); } }

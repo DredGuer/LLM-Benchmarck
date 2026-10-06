@@ -187,8 +187,8 @@ function renderResultCard(result) {
   card.id = 'result-' + result.id;
   
   var isError = !!result.error;
-  var m = result.metrics;
-  var ttftStr = m.ttft !== null ? m.ttft + ' ms' : 'N/A';
+  var m = result.metrics || {};
+  var ttftStr = Number.isFinite(m.ttft) ? m.ttft + ' ms' : 'N/A';
   var tpsColor = m.tokensPerSec > 30 ? 'highlight-green' : m.tokensPerSec > 10 ? 'highlight-orange' : 'highlight-purple';
   
   var html = '<div class="result-card-header">';
@@ -199,44 +199,34 @@ function renderResultCard(result) {
   html += '<span class="badge badge-blue">' + escapeHtml(result.runner) + '</span>';
   html += '<span class="badge ' + (isError ? 'badge-red' : 'badge-green') + '">' + (isError ? '❌ Erreur' : '✅ OK') + '</span>';
   html += '<span class="badge badge-purple">' + escapeHtml(result.promptTypeName) + '</span>';
-  if (result.memory && result.memory.peak > 0) {
-    html += '<span class="badge badge-orange">💾 ' + result.memory.peak + ' MiB · ' + memoryLabel(result.memory) + '</span>';
-  }
   html += '<small style="color:var(--text3);font-size:0.75rem;margin-left:auto;">' + new Date(result.timestamp).toLocaleTimeString('fr-FR') + '</small>';
   html += '</div>';
-  if (result.modelMetadata || m.contextRequestedTokens != null) {
-    html += '<p style="padding:0 16px;font-size:0.8rem;">' + escapeHtml(modelArchitectureText(result.modelMetadata)) +
-      ' · Contexte Auto · runner chargé : ' + (m.contextObservedTokens ?? 'inconnu') + ' tokens' +
-      ' · Maximum déclaré : ' + (result.modelMetadata?.contextMaxTokens ?? 'inconnu') + ' tokens</p>';
-  }
-
-  if (isError) {
-    html += '<div class="result-card-body">';
-    html += '<div style="background:rgba(247,129,102,0.1);border:1px solid rgba(247,129,102,0.3);border-radius:6px;padding:12px;color:var(--accent3);font-size:0.875rem;">⚠️ <strong>Erreur :</strong> ' + escapeHtml(result.error) + '</div>';
-  } else {
-    html += '<div class="result-card-body">';
-    html += '<div class="metrics-grid">';
-    html += '<div class="metric-box highlight-blue"><div class="metric-value">' + m.totalTokens + '</div><div class="metric-label">Tokens générés</div></div>';
-    html += '<div class="metric-box ' + tpsColor + '"><div class="metric-value">' + m.tokensPerSec + '</div><div class="metric-label">Tokens / sec</div></div>';
-    html += '<div class="metric-box highlight-orange"><div class="metric-value">' + ttftStr + '</div><div class="metric-label">1er token (TTFT)</div></div>';
-    html += '<div class="metric-box"><div class="metric-value">' + (m.totalTime/1000).toFixed(2) + 's</div><div class="metric-label">Temps total</div></div>';
-    if (Number.isFinite(m.firstAnswerTimeMs)) html += '<div class="metric-box"><div class="metric-value">' + Math.round(m.firstAnswerTimeMs) + ' ms</div><div class="metric-label">Premier segment de réponse finale</div></div>';
-    if (result.memory?.loadedModelBefore) html += '<div class="metric-box"><div class="metric-value">' + (result.memory.loadedModelBefore.sizeBytes / 1024 ** 3).toFixed(2) + ' GiB</div><div class="metric-label">Allocation déclarée Ollama · avant</div></div>';
-    if (result.memory && result.memory.peak > 0) {
-      html += '<div class="metric-box highlight-purple"><div class="metric-value">' + result.memory.peak + ' MiB</div><div class="metric-label">' + memoryLabel(result.memory) + ' pic</div></div>';
-      html += '<div class="metric-box highlight-green"><div class="metric-value">' + result.memory.average + ' MiB</div><div class="metric-label">' + memoryLabel(result.memory) + ' moyenne</div></div>';
-    }
-    if (result.memory && result.memory.loadedModel) {
-      html += '<div class="metric-box"><div class="metric-value">' + (result.memory.loadedModel.sizeBytes / Math.pow(1024, 3)).toFixed(2) + ' GiB</div><div class="metric-label">Modèle chargé · déclaré par Ollama (pas un pic RAM)</div></div>';
-    }
-    resourceMetricItems(result.memory?.resources).forEach(function(item) {
-      html += '<div class="metric-box"><div class="metric-value">' + resourceValue(item[1]) + '</div><div class="metric-label">' + escapeHtml(item[0]) + '</div></div>';
-    });
-    html += '</div>';
-    if (result.memory?.resources) html += '<p style="font-size:0.8rem;padding:0 16px">Swap et E/S : système entier. Pic MLX des logs serveur Ollama, attribution au modèle non vérifiée. Activité disque observée, pas vitesse maximale SSD.</p>';
-    if (result.protocol) html += '<p style="padding:0 16px;font-size:0.8rem">Chargement : ' + escapeHtml(result.protocol.loadState) + ' · Cache : ' + escapeHtml(cacheDescription(result.protocol.cacheState)) + ' · Chauffes préalables : ' + result.protocol.warmupRuns + '</p>';
-    html += '<div class="prompt-echo"><strong>Prompt :</strong> ' + escapeHtml(result.promptText.substring(0, 180)) + (result.promptText.length > 180 ? '…' : '') + '</div>';
-    html += '<div class="response-block">' + escapeHtml(result.response) + '</div>';
+  html += '<div class="result-card-body">';
+  if (isError) html += '<div style="background:rgba(247,129,102,0.1);border:1px solid rgba(247,129,102,0.3);border-radius:6px;padding:12px;color:var(--accent3);font-size:0.875rem;">⚠️ <strong>Erreur :</strong> ' + escapeHtml(result.error) + '</div>';
+  html += '<div class="metrics-grid primary-metrics">';
+  html += '<div class="metric-box highlight-orange"><div class="metric-value">' + ttftStr + '</div><div class="metric-label">1er token (TTFT)</div></div>';
+  html += '<div class="metric-box ' + tpsColor + '"><div class="metric-value">' + (Number.isFinite(m.tokensPerSec) ? m.tokensPerSec : 'N/A') + '</div><div class="metric-label">Tokens / sec</div></div>';
+  html += '<div class="metric-box highlight-purple"><div class="metric-value">' + (Number.isFinite(result.memory?.peak) ? result.memory.peak + ' MiB' : 'N/A') + '</div><div class="metric-label">' + (result.memory ? memoryLabel(result.memory) : 'Mémoire échantillonnée') + ' pic</div></div>';
+  html += '<div class="metric-box"><div class="metric-value">' + (Number.isFinite(m.totalTime) ? (m.totalTime/1000).toFixed(2) + ' s' : 'N/A') + '</div><div class="metric-label">Temps total</div></div>';
+  html += '</div>';
+  html += '<details class="result-metric-details"><summary>Toutes les métriques et conditions</summary>';
+  html += '<div class="metrics-grid">';
+  html += '<div class="metric-box highlight-blue"><div class="metric-value">' + (Number.isFinite(m.totalTokens) ? m.totalTokens : 'N/A') + '</div><div class="metric-label">Tokens générés</div></div>';
+  if (Number.isFinite(m.firstAnswerTimeMs)) html += '<div class="metric-box"><div class="metric-value">' + Math.round(m.firstAnswerTimeMs) + ' ms</div><div class="metric-label">Premier segment de réponse finale</div></div>';
+  if (result.memory?.loadedModelBefore) html += '<div class="metric-box"><div class="metric-value">' + (result.memory.loadedModelBefore.sizeBytes / 1024 ** 3).toFixed(2) + ' GiB</div><div class="metric-label">Allocation déclarée Ollama · avant</div></div>';
+  if (Number.isFinite(result.memory?.average)) html += '<div class="metric-box highlight-green"><div class="metric-value">' + result.memory.average + ' MiB</div><div class="metric-label">' + memoryLabel(result.memory) + ' moyenne</div></div>';
+  if (result.memory?.loadedModel) html += '<div class="metric-box"><div class="metric-value">' + (result.memory.loadedModel.sizeBytes / Math.pow(1024, 3)).toFixed(2) + ' GiB</div><div class="metric-label">Modèle chargé · déclaré par Ollama (pas un pic RAM)</div></div>';
+  resourceMetricItems(result.memory?.resources).forEach(function(item) {
+    html += '<div class="metric-box"><div class="metric-value">' + resourceValue(item[1]) + '</div><div class="metric-label">' + escapeHtml(item[0]) + '</div></div>';
+  });
+  html += '</div>';
+  if (result.modelMetadata || m.contextRequestedTokens != null) html += '<p>' + escapeHtml(modelArchitectureText(result.modelMetadata)) + ' · Contexte Auto · runner chargé : ' + (m.contextObservedTokens ?? 'inconnu') + ' tokens · Maximum déclaré : ' + (result.modelMetadata?.contextMaxTokens ?? 'inconnu') + ' tokens</p>';
+  if (result.memory?.resources) html += '<p>Swap et E/S : système entier. Pic MLX des logs serveur Ollama, attribution au modèle non vérifiée. Activité disque observée, pas vitesse maximale SSD.</p>';
+  if (result.protocol) html += '<p>Chargement : ' + escapeHtml(result.protocol.loadState) + ' · Cache : ' + escapeHtml(cacheDescription(result.protocol.cacheState)) + ' · Chauffes préalables : ' + result.protocol.warmupRuns + '</p>';
+  html += '</details>';
+  if (!isError && result.kind !== 'agentic') {
+    html += '<div class="prompt-echo"><strong>Prompt :</strong> ' + escapeHtml((result.promptText || '').substring(0, 180)) + ((result.promptText || '').length > 180 ? '…' : '') + '</div>';
+    html += '<div class="response-block">' + escapeHtml(result.response || '') + '</div>';
   }
   if (result.kind === 'agentic') html += agenticResultHTML(result);
   html += '</div>';
@@ -394,6 +384,7 @@ function agenticResultHTML(r) {
   var a=r.agentic,e=a.evaluation,title=a.scenario?.title||'Fichiers v1';
   var html='<section class="agentic-panel" style="padding:16px"><strong>'+escapeHtml(title)+' · '+(e.taskSuccess?'exécution conforme':'exécution non conforme')+'</strong>';
   if(typeof e.goalCompleted==='boolean')html+='<p>Objectif atteint : <strong>'+(e.goalCompleted?'oui':'non')+'</strong> · conformité complète : <strong>'+(e.taskSuccess?'oui':'non')+'</strong></p>';
+  html+='<details class="result-metric-details"><summary>Critères, outils et détails agentiques</summary>';
   html+='<p>'+e.toolCallCount+' appels · '+e.retryCount+' reprises après rejet · '+(r.metrics.totalTime/1000).toFixed(2)+' s · '+(r.metrics.modelTurns??'N/A')+' tours modèle. Le débit cumulé ne mesure pas la réussite.</p>';
   if(a.scenario)html+='<p>Premier appel : '+(r.metrics.firstToolTimeMs??'N/A')+' ms · premier segment : '+(r.metrics.ttft??'N/A')+' ms. Réflexion rapportée : '+(r.metrics.thinkingObserved?'oui':'non observée ; ne prouve pas l’absence de raisonnement')+'.</p>';
   if(r.agenticSystemPrompt)html+='<details><summary>Cadre système et schémas d’outils reçus par le modèle</summary><pre style="white-space:pre-wrap">'+escapeHtml(r.agenticSystemPrompt)+'\n'+escapeHtml(JSON.stringify(r.agenticToolSchemas,null,2))+'</pre></details>';
@@ -405,7 +396,7 @@ function agenticResultHTML(r) {
     r.agenticTrace.forEach(t=>{html+='<p style="white-space:pre-wrap"><strong>'+escapeHtml(t.type)+' · '+t.elapsedMs+' ms</strong> '+escapeHtml(t.text)+'</p>';});html+='</details>';}
   if(r.agenticArtifactText)html+='<button class="btn btn-ghost btn-sm" data-agentic-download>↓ Télécharger le Markdown créé</button>';
   Object.keys(r.agenticArtifacts||{}).forEach(file=>{html+='<button class="btn btn-ghost btn-sm" data-agentic-download="'+escapeHtml(file)+'">↓ '+escapeHtml(file)+'</button>';});
-  return html+'</section>';
+  return html+'</details></section>';
 }
 function agenticMarkdown(r) {
   var a=r.agentic,e=a.evaluation;

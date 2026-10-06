@@ -6,7 +6,7 @@ Historique des changements de LLM Benchmarker. Les dates correspondent aux inté
 
 | Élément | Version | Référence |
 |---|---|---|
-| Application / interface / producteur des exports | **0.07** | `js/core/version.js` |
+| Application / interface / producteur des exports | **0.08** | `js/core/version.js` |
 | Backend Node | 1.0.0 | `package.json` |
 | Protocole de génération | 0.08 | `js/core/benchmark.js` |
 | Batterie agentique | 2.0.0 | `backend/agentic-suite.js` |
@@ -15,6 +15,21 @@ Historique des changements de LLM Benchmarker. Les dates correspondent aux inté
 | Inventaire Apple | 1.0.0 | `backend/apple-inventory.js` |
 
 Ces numéros désignent des composants différents. Les résultats historiques et exemples synthétiques conservent leur version d’origine. Le suffixe des URL de scripts sert à invalider le cache ; il ne désigne pas nécessairement la version de l’application.
+
+## [0.08] — 2026-10-06
+
+### Interface
+
+- Quatre mesures principales par carte : TTFT, tokens/s moyens sur la durée totale, pic mémoire échantillonné avec sa source et temps total. Les valeurs inconnues restent `N/A`, y compris sur les essais en erreur.
+- Volet **Toutes les métriques et conditions**, fermé au départ : tokens générés, réponse finale, mémoire moyenne/allocation déclarée, MLX, swap, E/S, contexte et chargement/cache.
+- Bilan agentique visible ; critères, compteurs, cadre système, traces et téléchargements regroupés dans **Critères, outils et détails agentiques**.
+- Suppression du badge mémoire redondant et grille adaptée aux petits écrans. Navigation native des volets à la souris, au toucher et au clavier.
+- Collecte, historique, statistiques et contenus des exports préservés ; version producteur actualisée en 0.08.
+
+### Documentation et maintenance
+
+- README et guide technique actualisés. Les consignes imposent désormais une hausse de version, le changelog et les guides concernés à chaque implémentation validée.
+- Validation : suites exports, agentique et schémas ; syntaxe JavaScript et contrôles de structure HTML. Pas de certification visuelle sur tous les navigateurs.
 
 ## [0.07] — 2026-10-06
 

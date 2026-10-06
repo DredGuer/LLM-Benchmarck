@@ -2,7 +2,7 @@
 
 [Prise en main](README.md) · [Backend](BACKEND_README.md) · [Contrat communautaire](schemas/README.md)
 
-État documenté le 6 octobre 2026 : interface v0.07, protocole de génération 0.08, exports 2.0.0/2.1.0 et bundle 1.0.0. La batterie `agentic-suite-2.0.0` est exécutée ; les fixtures de schéma agentiques/Exo restent synthétiques. Exo n’est pas exécuté.
+État documenté le 6 octobre 2026 : interface v0.08, protocole de génération 0.08, exports 2.0.0/2.1.0 et bundle 1.0.0. La batterie `agentic-suite-2.0.0` est exécutée ; les fixtures de schéma agentiques/Exo restent synthétiques. Exo n’est pas exécuté.
 
 ## Organisation
 
@@ -81,3 +81,7 @@ L’export 2.1.0 ajoute scénario, critères, objectif atteint, premier outil et
 `fetchWithTimeout` propage le signal externe ; le contrôleur global de l’épreuve couvre aussi la lecture du flux. Annulation et tour incomplet n’exécutent pas les appels non confirmés. Le compteur total de tokens reste inconnu si le dernier tour n’a pas fourni son compteur final.
 
 Tests : `agentic-harness.test.cjs` (compatibilité v1), `agentic-suite.test.cjs` (états réels), `agentic-stream.test.cjs` (assemblage/fin de flux), `agentic-integration.test.cjs` (campagne mixte/export/AI), puis suites existantes. Réponses modèle simulées ; validation modèles/runner réels encore requise. Les restrictions fichiers sont applicatives, pas une sandbox OS. Aucun Exo n’est intégré.
+
+### Présentation compacte des résultats (0.08)
+
+`js/ui/results.js` affiche quatre métriques principales et regroupe les autres mesures/conditions dans un élément HTML `details` fermé par défaut. Le bilan agentique reste visible ; ses critères et traces ont leur propre volet. `css/styles.css` adapte les quatre colonnes à deux puis une sur petits écrans. Cette présentation ne modifie ni la collecte, ni les statistiques, ni les données exportées.
