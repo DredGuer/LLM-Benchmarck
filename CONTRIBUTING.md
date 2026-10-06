@@ -86,3 +86,7 @@ Le mode d’interface Simple/Pro est distinct du mode de génération Auto/Manue
 
 
 Distinguer endpoint client et lieu de l’inférence : une URL localhost Ollama peut proxyfier le cloud. Ne jamais imposer des mesures RAM ou un contexte chargé localement à ce parcours, ni attribuer le matériel client au moteur distant. Tester noms cloud, aliases déclarés par API, erreurs fournisseur et exports avec `node backend/cloud-context.test.cjs`. Le déchargement confirmé reste exigé pour les modèles locaux, y compris avant chaque contexte contrôlé ; il ne prouve pas un cache système vide.
+
+## Catalogue et estimation
+
+Toute évolution du catalogue doit vérifier les fiches officielles, conserver sources/date, augmenter sa version et laisser les architectures ou capacités incertaines comme inconnues. Ne pas confondre téléchargement, estimation, chargement réel et mesure. Le MoE exige tous les poids pour l’estimation ; aucune prédiction de qualité ou débit sans validation. Les pulls restent explicitement sélectionnés, limités à l’allowlist et au serveur Ollama local. Tester les budgets, les erreurs, la concurrence, l’annulation, la provenance disque et les contrôles d’origine/jeton : `node backend/model-advisor.test.cjs` et `node backend/model-advisor-ui.test.cjs`.

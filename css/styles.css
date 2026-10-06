@@ -800,3 +800,18 @@ body:not([data-runner="ollama"]) .ollama-only { display:none !important; }
 
 body[data-interface-mode="pro"][data-runner="ollama"] .model-custom-control { display:none !important; }
 body[data-interface-mode="simple"][data-runner="custom"] .model-custom-control { display:block !important; }
+
+/* Local model advisor: status is expressed in words as well as colors. */
+#modelAdvisorModal[hidden]{display:none!important}
+#modelAdvisorModal{position:fixed;inset:0;z-index:1200;background:rgba(0,0,0,.65);padding:24px;overflow:auto}
+.advisor-panel{max-width:1000px;margin:auto;padding:24px;border-radius:12px;background:var(--surface,#161b22);color:var(--text,#e6edf3);border:1px solid var(--border,#30363d)}
+.advisor-controls{display:flex;gap:12px;flex-wrap:wrap;margin:16px 0}
+.advisor-controls label{min-width:140px;flex:1}
+.advisor-controls select,.advisor-controls input{display:block;width:100%;margin-top:6px}
+#advisorVariants{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin:16px 0}
+.advisor-variant{border:1px solid var(--border,#30363d);border-left:5px solid #889099;padding:12px;border-radius:8px;font-size:.85rem}
+.advisor-variant label{font-weight:700;overflow-wrap:anywhere;display:block}
+.advisor-status{display:block;margin-top:8px}
+.advisor-green{border-left-color:#3fb950}.advisor-orange{border-left-color:#d29922}.advisor-red{border-left-color:#f85149}
+.advisor-unavailable,.advisor-cloud{opacity:.7}.advisor-variant p{margin:8px 0}.advisor-variant details{margin-top:8px}
+#advisorMessage,#advisorJobs{white-space:pre-wrap;overflow-wrap:anywhere;margin:12px 0}

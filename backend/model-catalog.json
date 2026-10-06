@@ -1,0 +1,452 @@
+{
+  "version": "1.0.0",
+  "verifiedAt": "2026-10-06",
+  "sizeUnit": "decimal-GB",
+  "variants": [
+    {
+      "id": "qwen3.8:27b",
+      "family": "qwen3.8",
+      "tag": "27b",
+      "downloadGB": 18,
+      "format": "ollama",
+      "architecture": "dense",
+      "modalities": [
+        "text",
+        "vision"
+      ],
+      "source": "https://ollama.com/library/qwen3.8",
+      "notes": "Taille arrondie publiée par Ollama ; tag mutable, quantification à confirmer après installation.",
+      "deployment": "local"
+    },
+    {
+      "id": "qwen3.8:27b-mlx",
+      "family": "qwen3.8",
+      "tag": "27b-mlx",
+      "downloadGB": 18,
+      "format": "mlx",
+      "architecture": "dense",
+      "modalities": [
+        "text",
+        "vision"
+      ],
+      "source": "https://ollama.com/library/qwen3.8",
+      "notes": "Taille arrondie publiée par Ollama ; tag mutable, quantification à confirmer après installation.",
+      "deployment": "local"
+    },
+    {
+      "id": "qwen3.6:27b",
+      "family": "qwen3.6",
+      "tag": "27b",
+      "downloadGB": 19,
+      "format": "ollama",
+      "architecture": "dense",
+      "modalities": [
+        "text",
+        "vision"
+      ],
+      "source": "https://ollama.com/library/qwen3.6",
+      "notes": "Taille arrondie publiée par Ollama ; tag mutable, quantification à confirmer après installation.",
+      "deployment": "local"
+    },
+    {
+      "id": "qwen3.6:27b-mlx",
+      "family": "qwen3.6",
+      "tag": "27b-mlx",
+      "downloadGB": 19,
+      "format": "mlx",
+      "architecture": "dense",
+      "modalities": [
+        "text",
+        "vision"
+      ],
+      "source": "https://ollama.com/library/qwen3.6",
+      "notes": "Taille arrondie publiée par Ollama ; tag mutable, quantification à confirmer après installation.",
+      "deployment": "local"
+    },
+    {
+      "id": "qwen3.6:35b",
+      "family": "qwen3.6",
+      "tag": "35b",
+      "downloadGB": 24,
+      "format": "ollama",
+      "architecture": "moe",
+      "modalities": [
+        "text",
+        "vision"
+      ],
+      "source": "https://ollama.com/library/qwen3.6",
+      "notes": "Taille arrondie publiée par Ollama ; tag mutable, quantification à confirmer après installation.",
+      "deployment": "local"
+    },
+    {
+      "id": "qwen3.6:35b-mlx",
+      "family": "qwen3.6",
+      "tag": "35b-mlx",
+      "downloadGB": 24,
+      "format": "mlx",
+      "architecture": "moe",
+      "modalities": [
+        "text",
+        "vision"
+      ],
+      "source": "https://ollama.com/library/qwen3.6",
+      "notes": "Taille arrondie publiée par Ollama ; tag mutable, quantification à confirmer après installation.",
+      "deployment": "local"
+    },
+    {
+      "id": "qwen3.8-flash-next:125b-mlx",
+      "family": "qwen3.8-flash-next",
+      "tag": "125b-mlx",
+      "downloadGB": 105,
+      "format": "mlx",
+      "architecture": "moe",
+      "modalities": [
+        "text",
+        "vision"
+      ],
+      "source": "https://ollama.com/library/qwen3.8-flash-next",
+      "notes": "125B + embeddings supplémentaires ; 6B actifs ne représentent pas tous les poids. Architecture hybride : estimation heuristique incertaine.",
+      "deployment": "local"
+    },
+    {
+      "id": "gemma4:e2b",
+      "family": "gemma4",
+      "tag": "e2b",
+      "downloadGB": 7.5,
+      "format": "ollama",
+      "architecture": "dense",
+      "modalities": [
+        "text",
+        "vision"
+      ],
+      "source": "https://ollama.com/library/gemma4",
+      "notes": "Taille arrondie publiée par Ollama ; tag mutable, quantification à confirmer après installation.",
+      "deployment": "local"
+    },
+    {
+      "id": "gemma4:e4b",
+      "family": "gemma4",
+      "tag": "e4b",
+      "downloadGB": 9.5,
+      "format": "ollama",
+      "architecture": "dense",
+      "modalities": [
+        "text",
+        "vision"
+      ],
+      "source": "https://ollama.com/library/gemma4",
+      "notes": "Taille arrondie publiée par Ollama ; tag mutable, quantification à confirmer après installation.",
+      "deployment": "local"
+    },
+    {
+      "id": "gemma4:12b",
+      "family": "gemma4",
+      "tag": "12b",
+      "downloadGB": 8,
+      "format": "ollama",
+      "architecture": "dense",
+      "modalities": [
+        "text",
+        "vision"
+      ],
+      "source": "https://ollama.com/library/gemma4",
+      "notes": "Taille arrondie publiée par Ollama ; tag mutable, quantification à confirmer après installation.",
+      "deployment": "local"
+    },
+    {
+      "id": "gemma4:e2b-mlx",
+      "family": "gemma4",
+      "tag": "e2b-mlx",
+      "downloadGB": 7.5,
+      "format": "mlx",
+      "architecture": "dense",
+      "modalities": [
+        "text",
+        "vision"
+      ],
+      "source": "https://ollama.com/library/gemma4",
+      "notes": "Taille arrondie publiée par Ollama ; tag mutable, quantification à confirmer après installation.",
+      "deployment": "local"
+    },
+    {
+      "id": "gemma4:e4b-mlx",
+      "family": "gemma4",
+      "tag": "e4b-mlx",
+      "downloadGB": 9.5,
+      "format": "mlx",
+      "architecture": "dense",
+      "modalities": [
+        "text",
+        "vision"
+      ],
+      "source": "https://ollama.com/library/gemma4",
+      "notes": "Taille arrondie publiée par Ollama ; tag mutable, quantification à confirmer après installation.",
+      "deployment": "local"
+    },
+    {
+      "id": "gemma4:12b-mlx",
+      "family": "gemma4",
+      "tag": "12b-mlx",
+      "downloadGB": 7.7,
+      "format": "mlx",
+      "architecture": "dense",
+      "modalities": [
+        "text",
+        "vision"
+      ],
+      "source": "https://ollama.com/library/gemma4",
+      "notes": "Taille arrondie publiée par Ollama ; tag mutable, quantification à confirmer après installation.",
+      "deployment": "local"
+    },
+    {
+      "id": "gemma4:31b",
+      "family": "gemma4",
+      "tag": "31b",
+      "downloadGB": 20,
+      "format": "ollama",
+      "architecture": "dense",
+      "modalities": [
+        "text",
+        "vision"
+      ],
+      "source": "https://ollama.com/library/gemma4",
+      "notes": "Taille arrondie publiée par Ollama ; tag mutable, quantification à confirmer après installation.",
+      "deployment": "local"
+    },
+    {
+      "id": "gemma4:31b-mlx",
+      "family": "gemma4",
+      "tag": "31b-mlx",
+      "downloadGB": 19,
+      "format": "mlx",
+      "architecture": "dense",
+      "modalities": [
+        "text",
+        "vision"
+      ],
+      "source": "https://ollama.com/library/gemma4",
+      "notes": "Taille arrondie publiée par Ollama ; tag mutable, quantification à confirmer après installation.",
+      "deployment": "local"
+    },
+    {
+      "id": "gemma4:26b",
+      "family": "gemma4",
+      "tag": "26b",
+      "downloadGB": 19,
+      "format": "ollama",
+      "architecture": "moe",
+      "modalities": [
+        "text",
+        "vision"
+      ],
+      "source": "https://ollama.com/library/gemma4",
+      "notes": "Taille arrondie publiée par Ollama ; tag mutable, quantification à confirmer après installation.",
+      "deployment": "local"
+    },
+    {
+      "id": "gemma4:26b-mlx",
+      "family": "gemma4",
+      "tag": "26b-mlx",
+      "downloadGB": 18,
+      "format": "mlx",
+      "architecture": "moe",
+      "modalities": [
+        "text",
+        "vision"
+      ],
+      "source": "https://ollama.com/library/gemma4",
+      "notes": "Taille arrondie publiée par Ollama ; tag mutable, quantification à confirmer après installation.",
+      "deployment": "local"
+    },
+    {
+      "id": "ornith:9b",
+      "family": "ornith",
+      "tag": "9b",
+      "downloadGB": 5.6,
+      "format": "ollama",
+      "architecture": "unknown",
+      "modalities": [
+        "text"
+      ],
+      "source": "https://ollama.com/library/ornith",
+      "notes": "Taille arrondie publiée par Ollama ; tag mutable, quantification à confirmer après installation.",
+      "deployment": "local"
+    },
+    {
+      "id": "ornith:35b",
+      "family": "ornith",
+      "tag": "35b",
+      "downloadGB": 21,
+      "format": "ollama",
+      "architecture": "unknown",
+      "modalities": [
+        "text"
+      ],
+      "source": "https://ollama.com/library/ornith",
+      "notes": "Taille arrondie publiée par Ollama ; tag mutable, quantification à confirmer après installation.",
+      "deployment": "local"
+    },
+    {
+      "id": "ornith-1.5:9b",
+      "family": "ornith-1.5",
+      "tag": "9b",
+      "downloadGB": 6.6,
+      "format": "ollama",
+      "architecture": "unknown",
+      "modalities": [
+        "text",
+        "vision"
+      ],
+      "source": "https://ollama.com/library/ornith-1.5",
+      "notes": "Taille arrondie publiée par Ollama ; tag mutable, quantification à confirmer après installation.",
+      "deployment": "local"
+    },
+    {
+      "id": "ornith-1.5:35b",
+      "family": "ornith-1.5",
+      "tag": "35b",
+      "downloadGB": 23,
+      "format": "ollama",
+      "architecture": "moe",
+      "modalities": [
+        "text",
+        "vision"
+      ],
+      "source": "https://ollama.com/library/ornith-1.5",
+      "notes": "Taille arrondie publiée par Ollama ; tag mutable, quantification à confirmer après installation.",
+      "deployment": "local"
+    },
+    {
+      "id": "ornith-1.5:397b",
+      "family": "ornith-1.5",
+      "tag": "397b",
+      "downloadGB": 242,
+      "format": "ollama",
+      "architecture": "unknown",
+      "modalities": [
+        "text",
+        "vision"
+      ],
+      "source": "https://ollama.com/library/ornith-1.5",
+      "notes": "Taille arrondie publiée par Ollama ; tag mutable, quantification à confirmer après installation.",
+      "deployment": "local"
+    },
+    {
+      "id": "nemotron3:33b",
+      "family": "nemotron3",
+      "tag": "33b",
+      "downloadGB": 28,
+      "format": "ollama",
+      "architecture": "unknown",
+      "modalities": [
+        "text",
+        "vision",
+        "audio"
+      ],
+      "source": "https://ollama.com/library/nemotron3",
+      "notes": "Audio déclaré par la fiche du modèle ; support des requêtes audio dans Ollama à vérifier. Aucun test audio intégré.",
+      "deployment": "local"
+    },
+    {
+      "id": "nemotron-3.5-lightning:30b",
+      "family": "nemotron-3.5-lightning",
+      "tag": "30b",
+      "downloadGB": 25,
+      "format": "ollama",
+      "architecture": "moe",
+      "modalities": [
+        "text"
+      ],
+      "source": "https://ollama.com/library/nemotron-3.5-lightning",
+      "notes": "Taille arrondie publiée par Ollama ; tag mutable, quantification à confirmer après installation.",
+      "deployment": "local"
+    },
+    {
+      "id": "nemotron-3.5-lightning:30b-mlx",
+      "family": "nemotron-3.5-lightning",
+      "tag": "30b-mlx",
+      "downloadGB": 23,
+      "format": "mlx",
+      "architecture": "moe",
+      "modalities": [
+        "text"
+      ],
+      "source": "https://ollama.com/library/nemotron-3.5-lightning",
+      "notes": "Taille arrondie publiée par Ollama ; tag mutable, quantification à confirmer après installation.",
+      "deployment": "local"
+    },
+    {
+      "id": "minimax-m3:cloud",
+      "family": "minimax-m3",
+      "tag": "cloud",
+      "downloadGB": null,
+      "format": "ollama",
+      "architecture": "unknown",
+      "modalities": [
+        "text",
+        "vision"
+      ],
+      "source": "https://ollama.com/library/minimax-m3",
+      "notes": "Cloud uniquement dans la bibliothèque vérifiée ; aucun téléchargement local ni estimation RAM du serveur.",
+      "deployment": "cloud"
+    },
+    {
+      "id": "mistral-medium-3.5:128b",
+      "family": "mistral-medium-3.5",
+      "tag": "128b",
+      "downloadGB": 80,
+      "format": "ollama",
+      "architecture": "dense",
+      "modalities": [
+        "text",
+        "vision"
+      ],
+      "source": "https://ollama.com/library/mistral-medium-3.5",
+      "notes": "Taille arrondie publiée par Ollama ; tag mutable, quantification à confirmer après installation.",
+      "deployment": "local"
+    },
+    {
+      "id": "mistral:7b",
+      "family": "mistral",
+      "tag": "7b",
+      "downloadGB": 4.4,
+      "format": "ollama",
+      "architecture": "dense",
+      "modalities": [
+        "text"
+      ],
+      "source": "https://ollama.com/library/mistral",
+      "notes": "Taille arrondie publiée par Ollama ; tag mutable, quantification à confirmer après installation.",
+      "deployment": "local"
+    },
+    {
+      "id": "mistral-nemo:12b",
+      "family": "mistral-nemo",
+      "tag": "12b",
+      "downloadGB": 7.1,
+      "format": "ollama",
+      "architecture": "dense",
+      "modalities": [
+        "text"
+      ],
+      "source": "https://ollama.com/library/mistral-nemo",
+      "notes": "Taille arrondie publiée par Ollama ; tag mutable, quantification à confirmer après installation.",
+      "deployment": "local"
+    },
+    {
+      "id": "mistral-small3.2:24b",
+      "family": "mistral-small3.2",
+      "tag": "24b",
+      "downloadGB": 15,
+      "format": "ollama",
+      "architecture": "dense",
+      "modalities": [
+        "text",
+        "vision"
+      ],
+      "source": "https://ollama.com/library/mistral-small3.2",
+      "notes": "Taille arrondie publiée par Ollama ; tag mutable, quantification à confirmer après installation.",
+      "deployment": "local"
+    }
+  ]
+}

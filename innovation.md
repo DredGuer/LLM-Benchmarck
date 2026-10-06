@@ -10,6 +10,7 @@ Mise à jour : **6 octobre 2026**. Ce document distingue les fonctions exécuté
 |---|---|
 | Génération locale et API | Interface multi-runner ; options et accès dépendants du serveur |
 | Protocole 0.09 | Chauffe séparée, 1 répétition par défaut, limites de sortie, contexte Auto, chargement/cache observés |
+| Catalogue Ollama | 13 familles / 30 variantes, estimation Apple Silicon RAM/contexte/disque expliquée, sélection et téléchargement séquentiel ; confiance faible, validation réelle à faire |
 | Inventaire Apple Silicon | CPU/cœurs, RAM unifiée, GPU/cœurs, disques physiques et provenance ; observé sur un M3 Pro |
 | Mémoire Ollama | RSS cumulée et allocation déclarée ; mesures distinctes |
 | Télémétrie macOS | Swap/compression avant/après, deltas disque, nouveaux événements MLX peak/held si disponibles |

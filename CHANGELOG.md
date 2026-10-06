@@ -6,15 +6,26 @@ Historique des changements de LLM Benchmarker. Les dates correspondent aux inté
 
 | Élément | Version | Référence |
 |---|---|---|
-| Application / interface / producteur des exports | **0.12.1** | `js/core/version.js` |
-| Backend Node | 1.2.0 | `package.json` |
+| Application / interface / producteur des exports | **0.13.0** | `js/core/version.js` |
+| Backend Node | 1.3.0 | `package.json` |
 | Protocole de génération | 0.09 | `js/core/benchmark.js` |
 | Batterie agentique | 2.0.1 | `backend/agentic-suite.js` |
 | Rapport communautaire | 2.2.0 ; compatibilité 2.0.0/2.1.0 | `schemas/community-v2.schema.json` |
 | Bundle de rapports communautaires | 1.0.0 | `schemas/community-bundle.schema.json` |
+| Catalogue / estimateur | 1.0.0 / 1.0.0 | `backend/model-catalog.json` / `backend/model-advisor.js` |
 | Inventaire Apple | 1.0.0 | `backend/apple-inventory.js` |
 
 Ces numéros désignent des composants différents. Les résultats historiques et exemples synthétiques conservent leur version d’origine. Le suffixe des URL de scripts sert à invalider le cache ; il ne désigne pas nécessairement la version de l’application.
+
+## [0.13.0] — 2026-10-06
+
+- Bouton **Trouver des modèles pour ma machine**, en Simple et Pro : pilote Apple Silicon/Ollama avec RAM physique, réserve et espace libre du volume présumé des modèles ; provenance et hypothèses visibles.
+- Catalogue 1.0.0 : 13 familles demandées, 30 variantes standard/MLX et sources datées ; filtres famille, architecture et modalités déclarées. MiniMax-M3 cloud reste visible sans estimation mémoire locale ni installation de poids.
+- Estimateur 1.0.0 : fourchette heuristique à confiance faible, contexte recalculable, badges vert/orange/rouge/grisé, inconnues explicites ; tous les poids MoE comptés, sans promesse de qualité/débit/chargement. Estimations exclues des exports de benchmark.
+- Backend 1.3.0 : installation explicite séquentielle dans Ollama local, confirmation du chemin, contrôle espace/RAM avec manifeste frais, progression par couche, arrêt sur erreur et annulation. Origine locale, jeton, allowlist, URLs fixes, file unique ; aucun shell ou effacement de modèle.
+- Verrouillage des campagnes pendant installation, prévention du contexte périmé, récupération d’une file serveur active à la réouverture et rafraîchissement des modèles après installation. Interface, caches et producteur d’exports 0.13.0 ; formats/protocoles et versions historiques inchangés.
+- README, guides backend/technique, contribution et roadmap actualisés ; guide catalogue/formule ajouté.
+- Validation : 21 suites passent, dont deux nouvelles suites catalogue/estimation/pull/origine/token et interface/filtres/contexte/verrouillage. Matériel, téléchargement et DOM simulés ; aucun téléchargement multi-GB, chargement réel ni validation visuelle Safari/Chrome dans cet environnement.
 
 ## [0.12.1] — 2026-10-06
 

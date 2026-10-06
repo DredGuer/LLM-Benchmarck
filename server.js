@@ -27,6 +27,7 @@ const PORT = process.argv.includes('--port') ?
 app.use(cors());
 require('./backend/local-exports').mountExportRoutes(app);
 app.use(express.json());
+require('./backend/model-advisor').mountAdvisorRoutes(app);
 require('./backend/agentic-harness').mountAgenticRoutes(app);
 
 /**
@@ -711,7 +712,8 @@ app.get('/', (req, res) => {
       '/api/environment - Get full system environment info',
       '/api/memory - Get Ollama memory usage',
       '/api/ollama/status - Check if Ollama is running',
-      '/api/ollama/pid - Get Ollama PID'
+      '/api/ollama/pid - Get Ollama PID',
+      '/api/models/advisor - Apple Silicon model estimates (local Origin required)'
     ]
   });
 });
@@ -725,5 +727,6 @@ app.listen(PORT, () => {
   console.log(`   - GET /api/memory - Ollama memory usage`);
   console.log(`   - GET /api/ollama/status - Check if Ollama is running`);
   console.log(`   - GET /api/ollama/pid - Get Ollama PID`);
+  console.log(`   - GET /api/models/advisor - Apple Silicon model catalog/estimates`);
   console.log(`\nPress Ctrl+C to stop\n`);
 });

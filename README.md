@@ -2,9 +2,9 @@
 
 Benchmarkez vos modèles locaux ou vos API, conservez les campagnes dans votre navigateur et comparez leurs performances sur votre machine.
 
-**Interface v0.12.1 · protocole de mesure 0.09 · export communautaire 2.2.0 (anciens rapports 2.0.0/2.1.0 acceptés).** Documentation vérifiée le 6 octobre 2026. [Historique des versions et changements](CHANGELOG.md). Ces versions désignent des éléments différents ; la version 1.2.0 de `package.json` concerne le backend.
+**Interface v0.13.0 · protocole de mesure 0.09 · export communautaire 2.2.0 (anciens rapports 2.0.0/2.1.0 acceptés).** Documentation vérifiée le 6 octobre 2026. [Historique des versions et changements](CHANGELOG.md). Ces versions désignent des éléments différents ; la version 1.3.0 de `package.json` concerne le backend.
 
-Fonctions actuelles : interface Simple/Pro et profils nommés de campagne, campagnes automatiques multi-modèles Ollama avec exports locaux classés, chauffe séparée, contexte Auto, identification Dense/MoE lorsqu’elle est disponible, inventaire Apple Silicon, suivi RSS/swap/MLX, exports Markdown/JSON, statistiques interactives, batterie de capacités agentiques et assistant d’analyse au choix. Les bulles **!** expliquent les réglages et mesures au clic, au clavier ou sur mobile.
+Fonctions actuelles : catalogue Ollama avec estimation RAM/disque et téléchargement local séquentiel, interface Simple/Pro et profils nommés de campagne, campagnes automatiques multi-modèles Ollama avec exports locaux classés, chauffe séparée, contexte Auto, identification Dense/MoE lorsqu’elle est disponible, inventaire Apple Silicon, suivi RSS/swap/MLX, exports Markdown/JSON, statistiques interactives, batterie de capacités agentiques et assistant d’analyse au choix. Les bulles **!** expliquent les réglages et mesures au clic, au clavier ou sur mobile.
 
 ## Interface Simple, Pro et profils
 
@@ -45,7 +45,7 @@ ollama list
 curl -fsS http://localhost:11434/api/version
 ```
 
-Si aucun modèle n’est installé, téléchargez celui que vous souhaitez tester avec `ollama pull NOM_DU_MODELE`. Si vous utilisez `ollama serve`, gardez ce terminal ouvert ; ne lancez pas un second serveur si l’application Ollama fournit déjà l’API.
+Si aucun modèle n’est installé, vous pouvez utiliser le catalogue dans l’interface après les étapes 2 et 3, ou télécharger un modèle avec `ollama pull NOM_DU_MODELE`. Si vous utilisez `ollama serve`, gardez ce terminal ouvert ; ne lancez pas un second serveur si l’application Ollama fournit déjà l’API.
 
 ### 2. Télécharger le projet et lancer le backend
 
@@ -76,6 +76,18 @@ Ouvrez **http://localhost:8001/llm-benchmarker.html**. Gardez aussi ce terminal 
 4. Vérifiez le récapitulatif du nombre de mesures, puis lancez le benchmark.
 
 Pour un runner local, une chauffe courte précède les mesures. Les modèles cloud via Ollama ont une courte vérification séparée. Ses résultats restent visibles, mais sont exclus des statistiques. Une campagne avec les six catégories et une répétition produit normalement **1 chauffe + 6 mesures**.
+
+## Trouver des modèles pour votre Mac
+
+En Simple ou Pro, cliquez sur **Trouver des modèles pour ma machine**. Le pilote Apple Silicon analyse la RAM physique et l’espace libre du volume présumé des modèles Ollama. Le catalogue initial contient les **13 familles demandées et 30 variantes**, avec filtres famille, Dense/MoE, MLX/standard et modalités déclarées.
+
+Les badges **vert / orange / rouge / grisé** donnent une estimation expliquée, de confiance faible, au contexte choisi. Vert indique une marge estimée ; il ne garantit ni chargement ni qualité. Modifiez le contexte et cliquez sur **Recalculer** avant de télécharger. Une architecture inconnue reste signalée ; un modèle MoE n’est pas évalué avec ses seuls paramètres actifs. MiniMax-M3 reste visible en **Cloud uniquement**, sans estimation RAM locale.
+
+Cochez vos variantes, confirmez le **dossier présumé Ollama** affiché, puis cliquez sur **Télécharger les variantes sélectionnées**. Le backend installe dans Ollama local (`127.0.0.1:11434`) un modèle à la fois, relit les tailles du manifeste avant chaque installation et vérifie le disque. Une variante rouge exige un accord explicite. La progression est par couche ; une erreur arrête la file et les modèles déjà installés restent conservés. Vous pouvez annuler la requête active et les suivantes.
+
+Une fois installés, choisissez les modèles dans le runner **Ollama** pour lancer votre campagne. Le catalogue ne lance pas de benchmark automatiquement : la chauffe existante confirme le chargement. Gardez Ollama et `npm start` actifs ; le scan seul ne télécharge rien. Si Ollama stocke ses modèles ailleurs, renseignez le même `OLLAMA_MODELS` pour lui et pour le backend, puis relancez-les. La déduction des couches en cache et la vitesse SSD ne sont pas mesurées.
+
+[Formule, catalogue, sources et limites](backend/MODEL_ADVISOR.md). Les estimations restent distinctes des mesures et ne sont pas ajoutées aux exports communautaires.
 
 ## Modèles cloud via Ollama
 
