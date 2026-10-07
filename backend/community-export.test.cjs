@@ -43,7 +43,7 @@ assert(scope.benchmarkHelp('1er token (TTFT)').includes('thinking'));
 assert(scope.benchmarkHelp('RSS cumulée pic').includes('Metal/MLX'));
 const report = scope.buildCommunityV2([input], observedAt);
 validateReport(report);
-assert.equal(report.producer.version, '0.16.0');
+assert.equal(report.producer.version, '0.17.0');
 assert.equal(report.tests[0].resourceSamples.length, 7);
 assert.equal(report.schemaVersion, '2.0.0'); assert.equal(report.synthetic, false);
 assert.equal(report.tests[0].parameters.contextTokens, 8192);
@@ -70,7 +70,7 @@ assert.throws(() => validateReport(altered));
 (async () => {
   scope.exportCommunityJSON(); validateReport(JSON.parse(await downloaded.text()));
   scope.exportMarkdown(); const markdown = await downloaded.text();
-  assert(markdown.includes('LLM Benchmarker v0.16.0'));
+  assert(markdown.includes('LLM Benchmarker v0.17.0'));
   assert(markdown.includes('version 2.0.0')); assert(markdown.includes('Swap système'));
   assert(!markdown.includes(' |\\n| Source Swap'));
   const block = markdown.match(/\x60\x60\x60json\n([\s\S]*?)\n\x60\x60\x60/);

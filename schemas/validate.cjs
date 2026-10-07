@@ -3,8 +3,8 @@
 const fs = require('fs');
 const path = require('path');
 const schema = JSON.parse(fs.readFileSync(path.join(__dirname, 'community-v2.schema.json'), 'utf8'));
-function validateShape(value, rule, location = '$') {
-  if (rule.$ref) return validateShape(value, schema.$defs[rule.$ref.split('/').pop()], location);
+function validateShape(value, rule, location = '$', rootSchema = schema) {
+  if (rule.$ref) return validateShape(value, rootSchema.$defs[rule.$ref.split('/').pop()], location, rootSchema);
   const fail = message => { throw new Error(location + ': ' + message); };
   if (rule.type) {
     const types = [].concat(rule.type);
@@ -27,21 +27,23 @@ function validateShape(value, rule, location = '$') {
   if (Array.isArray(value)) {
     if (rule.minItems && value.length < rule.minItems) fail('too few items');
     if (rule.uniqueItems && new Set(value.map(v => JSON.stringify(v))).size !== value.length) fail('duplicate items');
-    if (rule.items) value.forEach((v, i) => validateShape(v, rule.items, location + '[' + i + ']'));
+    if (rule.items) value.forEach((v, i) => validateShape(v, rule.items, location + '[' + i + ']', rootSchema));
   }
   if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
     for (const k of rule.required || []) if (!(k in value)) fail('missing ' + k);
     for (const [k, v] of Object.entries(value)) {
-      if (rule.properties && rule.properties[k]) validateShape(v, rule.properties[k], location + '.' + k);
+      if (rule.properties && rule.properties[k]) validateShape(v, rule.properties[k], location + '.' + k, rootSchema);
       else if (rule.additionalProperties === false) fail('unexpected field ' + k);
     }
   }
-  const accepts = r => { try { validateShape(value, r, location); return true; } catch { return false; } };
+  const accepts = r => { try { validateShape(value, r, location, rootSchema); return true; } catch { return false; } };
   if (rule.oneOf && rule.oneOf.filter(accepts).length !== 1) fail('oneOf mismatch');
   if (rule.not && accepts(rule.not)) fail('forbidden combination');
 }
-function validateReport(report) {
-  validateShape(report, schema);
+function validateReport(report, contract = schema) {
+  // Array.forEach passes an index as its second argument; preserve that API usage.
+  if (!contract || typeof contract !== 'object' || !contract.$defs) contract = schema;
+  validateShape(report, contract, '$', contract);
   function checkReadings(value) {
     if (!value || typeof value !== 'object') return;
     if ('scope' in value && 'observedAt' in value && 'unit' in value && 'status' in value) {

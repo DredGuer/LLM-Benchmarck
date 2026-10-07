@@ -191,14 +191,20 @@ function communityFilename(results, at) {
   return 'LLMB-'+slug+'-community-v2-'+at.toISOString().replace(/[:.]/g,'-')+'.json';
 }
 
-function exportCommunityJSON() {
+function normalizedCommunityFilename(results, at) {
+  var models=new Set(results.map(r=>r.model)), first=results[0]||{};
+  var name=CatalogueNaming.model(first.model,first.modelMetadata).normalizedName.slice(0,140);
+  return 'LLMB-'+name+(models.size>1?'-et-'+(models.size-1)+'-autres-modeles':'')+'-normalized-2.3-'+at.toISOString().replace(/[:.]/g,'-')+'.json';
+}
+
+function exportCommunityJSON(normalized) {
   if (!state.results.length) { showToast('Aucun résultat à exporter', 'error'); return; }
-  var report = buildCommunityV2(state.results, new Date().toISOString());
+  var report = normalized === true ? buildNormalizedCommunity(state.results, new Date().toISOString()) : buildCommunityV2(state.results, new Date().toISOString());
   var blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json;charset=utf-8' });
   var url = URL.createObjectURL(blob), link = document.createElement('a');
-  link.href = url; link.download = communityFilename(state.results, new Date());
+  link.href = url; link.download = normalized === true ? normalizedCommunityFilename(state.results, new Date()) : communityFilename(state.results, new Date());
   link.click(); URL.revokeObjectURL(url);
-  showToast('Export communautaire v2 téléchargé', 'success');
+  showToast(normalized === true ? 'Export normalisé 2.3 téléchargé · importeur compatible requis' : 'Export compatible NVNC téléchargé', 'success');
 }
 
 // Explicit field selection: generated files, tool arguments, session tokens and paths are excluded.
@@ -215,4 +221,26 @@ function communityAgentic(a) {
       ...(f.sizeBytes!==undefined?{sizeBytes:f.sizeBytes}:{}),...(f.digest?{digest:f.digest}:{})})),
     evaluation:{taskSuccess:a.evaluation.taskSuccess,...(typeof a.evaluation.goalCompleted==='boolean'?{goalCompleted:a.evaluation.goalCompleted}:{}),...(a.evaluation.criteria?{criteria:a.evaluation.criteria.map(c=>({id:c.id,dimension:c.dimension,label:c.label,passed:c.passed}))}:{}),evaluator:a.evaluation.evaluator,evaluatorVersion:a.evaluation.evaluatorVersion,
       successRate:a.evaluation.successRate,toolCallCount:a.evaluation.toolCallCount,retryCount:a.evaluation.retryCount}};
+}
+
+
+// Opt-in contract: default and automated exports remain compatible with current NVNC.
+function buildNormalizedCommunity(results, generatedAt) {
+  var output=buildCommunityV2(results,generatedAt);
+  (output.reports||[output]).forEach(function(report) {
+    report.baseSchemaVersion=report.schemaVersion;report.schemaVersion='2.3.0';
+    report.machines.forEach(function(machine) {machine.naming=CatalogueNaming.hardware(machine);});
+    report.tests.forEach(function(test) {
+      var original=results.find(function(r){return r.model===test.model.id && (r.id===test.id || (!r.id && (r.finishedAt||r.timestamp)===test.finishedAt));})||{};
+      test.model.naming=CatalogueNaming.model(test.model.id,original.modelMetadata||{});
+      test.model.format=typeof original.modelMetadata?.format==='string'&&/^(gguf|mlx|safetensors)$/i.test(original.modelMetadata.format)?original.modelMetadata.format:test.model.naming.format;
+      if(test.participatingNodeIds.includes('inference-unknown') && (original.provenance?.inferenceEndpoint==='remote'||original.provenance?.attribution?.startsWith('remote-inference:'))) {
+        var provider=report.execution.runner.name==='Ollama' ? (original.provenance?.attribution?.startsWith('remote-inference:') ? 'OllamaCloud' : 'Ollama') : report.execution.runner.name;
+        var node=report.machines.find(n=>n.id==='inference-unknown');
+        node.naming=CatalogueNaming.hardware(node,provider);
+      }
+    });
+  });
+  if(output.reports)output.schemaVersion='1.1.0';
+  return output;
 }

@@ -2,7 +2,7 @@
 
 Benchmarkez vos modèles locaux ou vos API, conservez les campagnes dans une base SQLite locale et comparez leurs performances sur votre machine.
 
-**Interface v0.16.0 · protocole de mesure 0.09 · export communautaire 2.2.0 (anciens rapports 2.0.0/2.1.0 acceptés).** Documentation vérifiée le 7 octobre 2026. [Historique des versions et changements](CHANGELOG.md). Ces versions désignent des éléments différents ; la version 1.5.0 de `package.json` concerne le backend.
+**Interface v0.17.0 · protocole de mesure 0.09 · export communautaire 2.2.0 (anciens rapports 2.0.0/2.1.0 acceptés).** Documentation vérifiée le 7 octobre 2026. [Historique des versions et changements](CHANGELOG.md). Ces versions désignent des éléments différents ; la version 1.5.0 de `package.json` concerne le backend.
 
 Fonctions actuelles : runners locaux en premier, détection passive et installation/démarrage intégrés sur Apple Silicon, catalogue Ollama avec estimation RAM/disque et téléchargement local séquentiel, interface Simple/Pro et profils nommés de campagne, campagnes automatiques multi-modèles Ollama avec exports locaux classés, chauffe séparée, contexte Auto, identification Dense/MoE lorsqu’elle est disponible, inventaire Apple Silicon, suivi RSS/swap/MLX, exports Markdown/JSON, statistiques interactives, batterie de capacités agentiques et assistant d’analyse au choix. Les bulles **!** expliquent les réglages et mesures au clic, au clavier ou sur mobile.
 
@@ -330,3 +330,39 @@ Limite NVNC : 20 MiB par fichier, 32 rapports, 10 000 tests ; placements distrib
 ## Proposition de normalisation commune
 
 La [convention de nommage du matériel et des modèles](docs/normalisation-catalogue.md) est partagée avec NVNC-Tech. Version documentaire 0.1, à valider : noms courts, formats, quantifications, alias et compatibilité avec les exports existants. Son ajout ne change pas encore les imports, les exports ou les bases.
+
+
+## Noms catalogue normalisés (v0.17.0)
+
+LLM-Benchmarker applique la [convention commune 0.1](docs/normalisation-catalogue.md) aux noms proposés dans les résultats, les métadonnées du modèle et le Markdown. Les identifiants exacts envoyés au runner restent inchangés. Les campagnes automatiques continuent de produire le JSON compatible NVNC.
+
+Dans **Autres exports**, deux choix sont disponibles :
+
+- **JSON compatible NVNC** : rapport 2.0/2.1/2.2 ou bundle 1.0, comme avant. Utiliser ce choix avec l’importeur NVNC actuel.
+- **JSON normalisé · schéma 2.3** : noms normalisés, noms originaux, clés de rapprochement, source HF identifiable et révision si connue. Un ensemble de rapports devient un bundle 1.1. Ce format nécessite une mise à jour de l’importeur NVNC avant d’être envoyé ; aucun changement du site NVNC n’est effectué par cette mise à jour du benchmark.
+
+Exemples : `Apple_M3Pro_36Go_12CPU_18GPU`, `Gemma4_12B_MLX_NVFP4`. La famille exacte d’un Mac et sa taille ne sont pas devinées. La taille d’un modèle vient des métadonnées déclarées, jamais du seul tag commercial ; sans donnée, le nom contient `TailleInconnue`. Le nombre total de paramètres est utilisé pour les MoE. MLX/GGUF et quantification restent distincts. Les variantes et sources conservent leur identité ; les noms ne sont pas des clés uniques certifiées.
+
+Voir [l’implémentation et les limites](docs/normalisation-implementation.md).
+
+### Mise à jour sur macOS
+
+Dans le dossier du dépôt :
+
+```bash
+git pull --ff-only origin main
+```
+
+Arrêter le backend avec **Ctrl+C** dans son terminal, puis relancer :
+
+```bash
+npm start
+```
+
+Conserver le serveur de fichiers déjà lancé. S’il est arrêté, dans un autre terminal placé dans le même dossier :
+
+```bash
+python3 -m http.server 8001
+```
+
+Ouvrir `http://localhost:8001/llm-benchmarker.html`, puis recharger avec **⌘⇧R**. L’interface doit afficher **0.17.0**. La base SQLite et les résultats historiques sont conservés ; aucune migration manuelle de base n’est nécessaire.

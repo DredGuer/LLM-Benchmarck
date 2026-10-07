@@ -195,6 +195,7 @@ function renderResultCard(result) {
   var html = '<div class="result-card-header">';
   html += '<span class="prompt-type-emoji" style="font-size:1.4rem">' + result.promptEmoji + '</span>';
   html += '<span class="model-name">' + escapeHtml(result.model) + '</span>';
+  if(typeof CatalogueNaming==='object')html+='<small title="Nom de catalogue proposé ; identifiant runner conservé">'+escapeHtml(CatalogueNaming.model(result.model,result.modelMetadata).normalizedName)+'</small>';
   if (result.completion?.limitReached) html += '<span class="badge badge-orange">⚠️ Limite de tokens atteinte · réponse possiblement tronquée</span>';
   if (result.phase === 'warmup') html += '<span class="badge badge-orange">🔥 Chauffe · hors moyennes</span>';
   html += '<span class="badge badge-blue">' + escapeHtml(result.runner) + '</span>';
@@ -289,6 +290,10 @@ function buildMarkdownReport(results, now, communityExport) {
   }
   md += '---\n\n';
   md += '## 📈 Résumé des tests\n\n';
+  if(typeof CatalogueNaming==='object') {
+    md+='### Noms catalogue · convention 0.1\n\n| Identifiant original | Nom normalisé proposé | État |\n|---|---|---|\n';
+    var seenNames=new Set();results.forEach(function(r){var n=CatalogueNaming.model(r.model,r.modelMetadata);var hw=CatalogueNaming.hardware(r.env?.hardwareInventory?.machine);var key=n.normalizedName+hw.normalizedName;if(seenNames.has(key))return;seenNames.add(key);md+='| '+[n.originalName,n.normalizedName,n.provisional?'Provisoire':'Métadonnées disponibles'].map(markdownCell).join(' | ')+' |\n';md+='| Matériel local | '+markdownCell(hw.normalizedName)+' | '+(hw.provisional?'Famille/taille ou données à compléter':'Inventaire disponible')+' |\n';});md+='\nLes noms ne remplacent pas les identifiants, sources, mesures ou configurations ; le matériel local décrit le client pour une API distante.\n\n';
+  }
   md += '| # | Modèle | Runner | Type | Tokens | Tok/s moyen | TTFT (ms) | Temps total (s) | Source mémoire échantillonnée | Pic (MiB) | Moyenne (MiB) | Modèle chargé (GiB) | Source modèle chargé | Architecture | Contexte Auto · runner chargé (tokens) | Contexte max déclaré (tokens) | Statut |\n';
   md += '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|\n';
 

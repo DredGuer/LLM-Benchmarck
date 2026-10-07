@@ -11,16 +11,25 @@ Historique des changements de LLM Benchmarker. Les dates correspondent aux inté
 
 | Élément | Version | Référence |
 |---|---|---|
-| Application / interface / producteur des exports | **0.16.0** | `js/core/version.js` |
+| Application / interface / producteur des exports | **0.17.0** | `js/core/version.js` |
 | Backend Node | 1.5.0 | `package.json` |
 | Protocole de génération | 0.09 | `js/core/benchmark.js` |
 | Batterie agentique | 2.0.1 | `backend/agentic-suite.js` |
-| Rapport communautaire | 2.2.0 ; compatibilité 2.0.0/2.1.0 | `schemas/community-v2.schema.json` |
+| Rapport communautaire compatible NVNC | 2.2.0 ; compatibilité 2.0.0/2.1.0 | `schemas/community-v2.schema.json` |
+| Export normalisé optionnel | 2.3.0 / bundle 1.1.0 | `schemas/community-normalized.schema.json` |
 | Bundle de rapports communautaires | 1.0.0 | `schemas/community-bundle.schema.json` |
 | Catalogue / estimateur | 1.0.0 / 1.0.0 | `backend/model-catalog.json` / `backend/model-advisor.js` |
 | Inventaire Apple | 1.0.0 | `backend/apple-inventory.js` |
 
 Ces numéros désignent des composants différents. Les résultats historiques et exemples synthétiques conservent leur version d’origine. Le suffixe des URL de scripts sert à invalider le cache ; il ne désigne pas nécessairement la version de l’application.
+
+## [0.17.0] — 2026-10-07
+
+- Nommage catalogue selon la convention commune 0.1 : noms proposés dans les résultats, le panneau modèle et les rapports Markdown ; identifiants runner et historiques conservés.
+- Apple provisoire avec puce/mémoire/cœurs connus, GPU unique ou multiple et cloud ; capacités individuelles et unités explicites, données inconnues non inventées.
+- Métadonnées Ollama de format, taille déclarée et nom de base récupérées. Paramètres totaux MoE et variantes distingués, format MLX/GGUF séparé de la quantification.
+- Export normalisé optionnel 2.3.0 / bundle 1.1.0, avec noms originaux et source identifiable. Le JSON par défaut et les campagnes automatiques gardent le contrat compatible NVNC 2.0/2.1/2.2 / bundle 1.0 ; l’importeur NVNC actuel n’accepte pas encore le nouveau format.
+- Schémas et validateur normalisés, tests de convention/compatibilité/privacy, README et commandes Mac actualisés. Backend inchangé 1.5.0 ; aucune réécriture des résultats SQLite.
 
 ## [0.16.0] — 2026-10-07
 

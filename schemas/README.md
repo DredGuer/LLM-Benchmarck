@@ -205,3 +205,15 @@ Une campagne cloud à trois répétitions conserve un contexte Auto inconnu et u
 ## Import NVNC-Tech
 
 Voir [INTEROPERABILITY.md](INTEROPERABILITY.md) : contrat partagé, versionnement distinct de l’application, bundles, confidentialité et validation croisée.
+
+
+## Export catalogue normalisé optionnel (application 0.17.0)
+
+`community-normalized.schema.json` décrit le rapport 2.3.0, `community-normalized-bundle.schema.json` le bundle 1.1.0. Ces contrats ajoutent `baseSchemaVersion`, `machines[].naming` et `tests[].model.naming`, sans remplacer les identifiants et métriques originaux. Les schémas compatibles NVNC existants ne sont pas modifiés. L’importeur NVNC actuel refuse 2.3/1.1 ; conserver l’export compatible tant qu’il n’est pas mis à jour.
+
+```bash
+node backend/catalogue-naming.test.cjs
+node schemas/validate-normalized.cjs chemin-du-rapport-normalise.json
+```
+
+Les clés `matchKey` sont les noms normalisés en minuscules. Leur unicité n’est pas garantie : les sources, digests et variantes restent nécessaires au rapprochement. Voir [l’implémentation](../docs/normalisation-implementation.md).

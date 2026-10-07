@@ -328,7 +328,7 @@ function renderHardwareInventory(inventory) {
   var panel = document.getElementById('hardwareInventory');
   if (!panel) return;
   panel.textContent = '';
-  var n = inventory.machine, cpu = n.cpus[0];
+  var n = inventory.machine, cpu = n.cpus[0] || {};
   function row(label, value, source) {
     var line = document.createElement('div');
     line.style.marginBottom = '8px';
@@ -337,11 +337,12 @@ function renderHardwareInventory(inventory) {
     panel.appendChild(line);
   }
   function available(value) { return value == null ? 'Non disponible' : value; }
+  if(typeof CatalogueNaming==='object'){var naming=CatalogueNaming.hardware(n);row('Nom catalogue proposé',naming.normalizedName,'Convention 0.1 · '+(naming.provisional?'provisoire : données à compléter':'inventaire disponible'));}
   row('CPU', available(cpu.model), inventory.provenance.cpuModel);
   row('Cœurs physiques / logiques', available(cpu.physicalCores) + ' / ' + available(cpu.logicalCores), inventory.provenance.physicalCores + ' ; ' + inventory.provenance.logicalCores);
   row('Cœurs performance / efficacité', available(cpu.performanceCores) + ' / ' + available(cpu.efficiencyCores), inventory.provenance.coreClasses);
-  row('Fréquence CPU déclarée', cpu.frequency.value ? (cpu.frequency.value / 1e9).toFixed(2) + ' GHz' : 'Non disponible (pas une mesure en direct)', cpu.frequency.source);
-  row('RAM', (n.memory.physicalCapacity.value / Math.pow(1024, 3)).toFixed(1) + ' GiB · ' + (n.memory.architecture === 'unified' ? 'unifiée CPU/GPU' : 'séparée'), n.memory.physicalCapacity.source);
+  row('Fréquence CPU déclarée', cpu.frequency?.value ? (cpu.frequency.value / 1e9).toFixed(2) + ' GHz' : 'Non disponible (pas une mesure en direct)', cpu.frequency?.source);
+  row('RAM', (n.memory.physicalCapacity.value == null ? 'Non disponible' : (n.memory.physicalCapacity.value / Math.pow(1024, 3)).toFixed(1) + ' GiB') + ' · ' + (n.memory.architecture === 'unified' ? 'unifiée CPU/GPU' : 'séparée'), n.memory.physicalCapacity.source);
   n.gpus.forEach(function(gpu) { row('GPU', available(gpu.model) + ' · ' + available(gpu.computeUnits) + ' cœurs GPU', inventory.provenance.gpus); });
   if (!n.storage.length) row('Stockage', 'Non disponible', inventory.provenance.storage);
   n.storage.forEach(function(disk) { row('Stockage', available(disk.model) + ' · ' + disk.kind.toUpperCase() + ' / ' + disk.transport.toUpperCase() + ' · ' + (disk.capacity.value == null ? 'Capacité inconnue' : (disk.capacity.value / 1e9).toFixed(0) + ' GB'), disk.capacity.source); });

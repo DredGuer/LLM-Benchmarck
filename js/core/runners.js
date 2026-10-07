@@ -114,6 +114,9 @@ function parseModelMetadata(data, model) {
     activeExperts: architecture ? numeric(architecture + '.expert_used_count') : null,
     parameterCount: numeric('general.parameter_count'),
     contextMaxTokens: architecture ? numeric(architecture + '.context_length') : null,
+    baseName: typeof info['general.basename'] === 'string' ? info['general.basename'] : null,
+    format: typeof data.details?.format === 'string' ? data.details.format : null,
+    parameterSize: typeof data.details?.parameter_size === 'string' ? data.details.parameter_size : null,
     quantization: typeof data.details?.quantization_level === 'string' ? data.details.quantization_level : null
   };
 }
@@ -131,6 +134,7 @@ function renderModelMetadata(metadata) {
   var fullName = document.getElementById('modelFullName'); if(fullName)fullName.textContent=getSelectedModel()==='unknown-model'?'':getSelectedModel();
   if (!metadata) { panel.textContent = 'Informations du modèle non disponibles.'; return; }
   var cards = [
+    ['Nom catalogue · provisoire si incomplet', typeof CatalogueNaming === 'object' ? CatalogueNaming.model(metadata.model,metadata).normalizedName : metadata.model],
     ['Architecture', modelArchitectureText(metadata)],
     ['Paramètres totaux', metadata.parameterCount === null ? 'Inconnus' : (metadata.parameterCount / 1e9).toFixed(2) + ' milliards'],
     ['Quantification', metadata.quantization || 'Inconnue'],
