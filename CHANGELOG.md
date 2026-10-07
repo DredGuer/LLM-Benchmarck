@@ -1,5 +1,10 @@
 # Changelog
 
+## Non publié — documentation du 7 octobre 2026
+
+- Ajout de la proposition commune de nommage matériel/modèles v0.1, identique dans les deux dépôts.
+- Aucun changement logiciel ni migration ; mise en œuvre prévue après validation.
+
 Historique des changements de LLM Benchmarker. Les dates correspondent aux intégrations dans le dépôt. Les entrées antérieures à ce fichier ont été reconstituées à partir des commits ; ce ne sont pas des releases ou tags ajoutés rétroactivement.
 
 ## Versions actuelles

@@ -326,3 +326,7 @@ Dans **Campagne → Autres exports**, télécharger **l’export communautaire J
 Rapports 2.0/2.1/2.2 et bundles 1.0 reconnus. Chauffe, génération, agentique, échecs et résultats partiels restent distingués ; données manquantes conservées inconnues. Le TTFT MLX natif et son inventaire local sont maintenant correctement exportés ; une API distante conserve un matériel d’inférence inconnu. Les métriques RAM Ollama ne sont pas attribuées au runner MLX natif.
 
 Limite NVNC : 20 MiB par fichier, 32 rapports, 10 000 tests ; placements distribués/Exo et concurrence supérieure à 1 restent hors de cette étape. Un nom de modèle natif peut être importé sans fiche de catalogue ; le rapprochement catalogue doit être validé ultérieurement. [Contrat, contrôles et commandes de test](schemas/INTEROPERABILITY.md).
+
+## Proposition de normalisation commune
+
+La [convention de nommage du matériel et des modèles](docs/normalisation-catalogue.md) est partagée avec NVNC-Tech. Version documentaire 0.1, à valider : noms courts, formats, quantifications, alias et compatibilité avec les exports existants. Son ajout ne change pas encore les imports, les exports ou les bases.
