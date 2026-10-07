@@ -54,7 +54,7 @@ function buildCommunityV2(results, generatedAt) {
   var reports = [];
   groups.forEach(function(items) {
     var first = items[0], runner = first.runner || 'unknown';
-    var localRunner = !first.provenance?.attribution?.startsWith('remote-inference:') && ['Ollama', 'LM Studio', 'llama.cpp'].includes(runner);
+    var localRunner = !first.provenance?.attribution?.startsWith('remote-inference:') && ['Ollama', 'LM Studio', 'llama.cpp', 'MLX LM'].includes(runner) && first.provenance?.inferenceEndpoint !== 'remote';
     var inferenceNode = localRunner ? 'local' : 'inference-unknown';
     var machines = [communityMachine(first.env, generatedAt, 'local')];
     if (!localRunner) machines.push(communityMachine({}, generatedAt, inferenceNode));
@@ -159,7 +159,7 @@ function buildCommunityV2(results, generatedAt) {
             totalOutputTokens: metric(m.totalTokens, 'tokens', m.tokenCountSource || 'legacy-unknown-token-count', tokenKind),
             thinkingTokens: metric(null, 'tokens', 'not-separated'), answerTokens: metric(null, 'tokens', 'not-separated'),
             averageThroughput: metric(m.tokensPerSec, 'tokens/s', 'generated-tokens/total-test-seconds', 'estimated'),
-            ttft: metric(runner === 'Ollama' || r.agentic?.scenario ? m.ttft : null, 'ms', 'browser:first-response-segment', 'measured') },
+            ttft: metric(runner === 'Ollama' || runner === 'MLX LM' || r.agentic?.scenario ? m.ttft : null, 'ms', 'browser:first-response-segment', 'measured') },
           resourceSamples: samples.sort((a,b) => a.elapsedMs - b.elapsedMs), resourceSummaries: summaries
         };
         if (r.quality) test.quality = {status:r.quality.status,evaluatorId:r.quality.evaluatorId || null,evaluatorVersion:r.quality.evaluatorVersion || null,taskId:r.quality.taskId || null,

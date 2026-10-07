@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/DredGuer/LLM-Benchmarck/main/schemas/community-v2.schema.json",
+  "$id": "https://raw.githubusercontent.com/DredGuer/LLM-Benchmarker/main/schemas/community-v2.schema.json",
   "title": "LLM Benchmarker community report v2 (contract; collectors staged)",
   "type": "object",
   "additionalProperties": false,

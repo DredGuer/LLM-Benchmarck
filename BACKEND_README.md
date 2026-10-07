@@ -2,7 +2,7 @@
 
 [Guide de démarrage](README.md) · [Architecture](TECHNICAL_README.md)
 
-Le backend Node.js fournit à l’interface des mesures Ollama et des informations sur la machine où il s’exécute. Il exécute également les outils restreints de la batterie agentique. Il écrit aussi les exports locaux demandés par les campagnes automatiques. Il ne sert pas la page HTML et n’exécute pas les modèles. La version `package.json` 1.5.0 est distincte de l’interface v0.15.0 et du protocole 0.09.
+Le backend Node.js fournit à l’interface des mesures Ollama et des informations sur la machine où il s’exécute. Il exécute également les outils restreints de la batterie agentique. Il écrit aussi les exports locaux demandés par les campagnes automatiques. Il ne sert pas la page HTML et n’exécute pas les modèles. La version `package.json` 1.5.0 est distincte de l’interface v0.16.0 et du protocole 0.09.
 
 Le backend sauvegarde aussi campagnes et profils dans SQLite. Node ≥ 22.13.0 requis. [Guide SQLite, CRUD et migration](backend/DATABASE.md). Écoute réservée à 127.0.0.1.
 

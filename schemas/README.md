@@ -201,3 +201,7 @@ Pour le futur site : identifier d’abord `schema` et `schemaVersion`, valider l
 Le schéma 2.2.0 reste compatible. `tests[].provenance.inferenceEndpoint` décrit l’endpoint configuré du client : `loopback` peut donc être un proxy Ollama cloud. Le préfixe `remote-inference:` de `provenance.attribution` distingue les nouvelles passes distantes ; la source API ou l’inférence par convention de nom y est indiquée, sans URL. `participatingNodeIds` pointe alors vers `inference-unknown` ; l’inventaire `local` appartient au client, pas au moteur. Aucune ressource RSS/swap/MLX locale ne décrit cette inférence.
 
 Une campagne cloud à trois répétitions conserve un contexte Auto inconnu et une `cachePolicy` explicite, sans `campaignId` ni contexte local faussement validé. Les anciens résultats gardent leurs données et attribution d’origine ; ce correctif ne réinterprète pas rétroactivement leurs mesures. La version `producer.version` (0.12.1) est celle du logiciel exporteur ; `provenance.applicationVersion` reste celle de la passe.
+
+## Import NVNC-Tech
+
+Voir [INTEROPERABILITY.md](INTEROPERABILITY.md) : contrat partagé, versionnement distinct de l’application, bundles, confidentialité et validation croisée.

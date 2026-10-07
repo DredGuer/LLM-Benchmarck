@@ -2,7 +2,7 @@
 
 Benchmarkez vos modèles locaux ou vos API, conservez les campagnes dans une base SQLite locale et comparez leurs performances sur votre machine.
 
-**Interface v0.15.0 · protocole de mesure 0.09 · export communautaire 2.2.0 (anciens rapports 2.0.0/2.1.0 acceptés).** Documentation vérifiée le 6 octobre 2026. [Historique des versions et changements](CHANGELOG.md). Ces versions désignent des éléments différents ; la version 1.5.0 de `package.json` concerne le backend.
+**Interface v0.16.0 · protocole de mesure 0.09 · export communautaire 2.2.0 (anciens rapports 2.0.0/2.1.0 acceptés).** Documentation vérifiée le 7 octobre 2026. [Historique des versions et changements](CHANGELOG.md). Ces versions désignent des éléments différents ; la version 1.5.0 de `package.json` concerne le backend.
 
 Fonctions actuelles : runners locaux en premier, détection passive et installation/démarrage intégrés sur Apple Silicon, catalogue Ollama avec estimation RAM/disque et téléchargement local séquentiel, interface Simple/Pro et profils nommés de campagne, campagnes automatiques multi-modèles Ollama avec exports locaux classés, chauffe séparée, contexte Auto, identification Dense/MoE lorsqu’elle est disponible, inventaire Apple Silicon, suivi RSS/swap/MLX, exports Markdown/JSON, statistiques interactives, batterie de capacités agentiques et assistant d’analyse au choix. Les bulles **!** expliquent les réglages et mesures au clic, au clavier ou sur mobile.
 
@@ -318,3 +318,11 @@ Le logiciel est proposé gratuitement sous [licence Apache 2.0](LICENSE), avec l
 Un objectif agentique atteint ne signifie pas que tous les critères sont respectés. Une exécution peut terminer avec une conformité échouée, ou être arrêtée par un budget après production du fichier attendu. Les rapports distinguent exécution, objectif et conformité ; ils conservent les mesures disponibles sur les épreuves arrêtées. Le titre de chaque test précède désormais ses verdicts et sa version.
 
 Le swap occupé concerne toute la machine ; les deltas de lecture/écriture indiquent séparément les échanges pendant la mesure. Ces données ne prouvent ni que le modèle en est seul responsable, ni qu’il explique un ralentissement. Les budgets et évaluateurs actuels restent inchangés. La piste des tests granulaires de contexte et capacités, avec bornes manuelles/automatiques, est consignée dans [la roadmap](innovation.md) et n’est pas encore implémentée.
+
+## Partager vers NVNC-Tech (0.16.0)
+
+Dans **Campagne → Autres exports**, télécharger **l’export communautaire JSON**. Dans NVNC-Tech ≥ 0.3.1, choisir ce fichier, cliquer **Vérifier le format**, puis envoyer depuis son compte. Aucune clé NVNC ni envoi automatique n’est ajouté au benchmark. Ne pas envoyer la sauvegarde SQLite locale ou le Markdown : ils peuvent contenir prompts, réponses et traces privées.
+
+Rapports 2.0/2.1/2.2 et bundles 1.0 reconnus. Chauffe, génération, agentique, échecs et résultats partiels restent distingués ; données manquantes conservées inconnues. Le TTFT MLX natif et son inventaire local sont maintenant correctement exportés ; une API distante conserve un matériel d’inférence inconnu. Les métriques RAM Ollama ne sont pas attribuées au runner MLX natif.
+
+Limite NVNC : 20 MiB par fichier, 32 rapports, 10 000 tests ; placements distribués/Exo et concurrence supérieure à 1 restent hors de cette étape. Un nom de modèle natif peut être importé sans fiche de catalogue ; le rapprochement catalogue doit être validé ultérieurement. [Contrat, contrôles et commandes de test](schemas/INTEROPERABILITY.md).

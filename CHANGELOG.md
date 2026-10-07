@@ -6,7 +6,7 @@ Historique des changements de LLM Benchmarker. Les dates correspondent aux inté
 
 | Élément | Version | Référence |
 |---|---|---|
-| Application / interface / producteur des exports | **0.15.0** | `js/core/version.js` |
+| Application / interface / producteur des exports | **0.16.0** | `js/core/version.js` |
 | Backend Node | 1.5.0 | `package.json` |
 | Protocole de génération | 0.09 | `js/core/benchmark.js` |
 | Batterie agentique | 2.0.1 | `backend/agentic-suite.js` |
@@ -16,6 +16,13 @@ Historique des changements de LLM Benchmarker. Les dates correspondent aux inté
 | Inventaire Apple | 1.0.0 | `backend/apple-inventory.js` |
 
 Ces numéros désignent des composants différents. Les résultats historiques et exemples synthétiques conservent leur version d’origine. Le suffixe des URL de scripts sert à invalider le cache ; il ne désigne pas nécessairement la version de l’application.
+
+## [0.16.0] — 2026-10-07
+
+- Interopérabilité NVNC-Tech ≥ 0.3.1 : contrat communautaire 2.0/2.1/2.2 et bundle 1.0 inchangé, schémas partagés et fixtures produites par l’exporteur réel.
+- Attribution locale du runner MLX LM et export du TTFT réellement mesuré corrigés. Endpoint distant distingué du client local.
+- Identifiant public du schéma corrigé après renommage du dépôt. Provenance historique et versions des anciens tests préservées.
+- Guide export/import, confidentialité, limites et validation croisée ajoutés. Pas d’envoi automatique ni d’intégration Exo.
 
 ## [0.15.0] — 2026-10-06
 
